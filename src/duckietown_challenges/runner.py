@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import argparse
+import getpass
 import json
 import logging
 import os
 import shutil
+import sys
 import time
 
 from dt_shell.constants import DTShellConstants
@@ -27,15 +29,14 @@ def dt_challenges_evaluator():
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
-    elogger.info('hello')
-
     if parsed.continuous:
 
         while True:
             try:
                 go_(None)
             except NothingLeft:
-                elogger.info('No submissions available to evaluate.')
+                sys.stderr.write('.')
+                # elogger.info('No submissions available to evaluate.')
                 time.sleep(5)
 
     else:
@@ -57,14 +58,16 @@ class NothingLeft(Exception):
 
 
 def go_(submission_id):
-    elogger.info('Evaluating submission %s' % submission_id)
+
     token = get_token_from_shell_config()
     res = dtserver_work_submission(token, submission_id)
 
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
         raise NothingLeft(msg)
+    job_id = res['job_id']
 
+    elogger.info('Evaluating job %s' % job_id)
     # submission_id = result['submission_id']
     # parameters = result['parameters']
     # job_id = result['job_id']
@@ -78,7 +81,6 @@ def go_(submission_id):
             shutil.rmtree(d)
             os.makedirs(d)
 
-    job_id = res['job_id']
 
     challenge_name = res['challenge_name']
     solution_container = res['parameters']['hash']
@@ -86,18 +88,22 @@ def go_(submission_id):
     assert evaluation_protocol == 'p1'
 
     evaluation_container = res['challenge_parameters']['container']
-
+    # username = getpass.getuser()
+    username = os.getuid()
     compose = """
     
 version: '3'
+
 services:
   solution:
     image: {solution_container}
+    user: "{username}"
     volumes:
     - assets:/challenges/{challenge_name}/solution
     - {output_solution}:/challenges/{challenge_name}/output-solution
   evaluator:
     image: {evaluation_container} 
+    user: "{username}"
     volumes:
     - assets:/challenges/{challenge_name}/solution
     - {output_evaluation}:/challenges/{challenge_name}/output-evaluation
@@ -108,7 +114,8 @@ volumes:
            evaluation_container=evaluation_container,
            solution_container=solution_container,
            output_evaluation=output_evaluation,
-           output_solution=output_solution)
+           output_solution=output_solution,
+           username=username)
 
     with open('docker-compose.yaml', 'w') as f:
         f.write(compose)
