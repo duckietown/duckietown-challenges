@@ -4,16 +4,18 @@
 
 Install with:
 
-  $ pip install -U --user duckietown-challenges
+   $ pip install -U --user duckietown-challenges
   
 ## Evaluate everybody's submissions
 
 Help evaluate the Duckietown challenges by running:
 
-  $ dt-challenges-evaluator --continuous
+   $ dt-challenges-evaluator --continuous
   
 ## Evaluate a specific submission
 
-  $ dt-challenges-evaluator 42
+You can also specify a specific submission:
+
+   $ dt-challenges-evaluator 42
   
 where 42 is the submission id, which is given in the output of `dts challenges submit`.
