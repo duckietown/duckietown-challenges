@@ -1,13 +1,17 @@
 #!/usr/bin/env python
-
+import argparse
 import json
+import logging
 import os
 import shutil
-import sys
+import time
 
-import yaml
 from dt_shell.constants import DTShellConstants
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job
+
+logging.basicConfig()
+elogger = logging.getLogger('evaluator')
+elogger.setLevel(logging.DEBUG)
 
 
 def get_token_from_shell_config():
@@ -17,24 +21,50 @@ def get_token_from_shell_config():
     return config[DTShellConstants.DT1_TOKEN_CONFIG_KEY]
 
 
-def go():
-    submissions = map(int, sys.argv[1:])
-    if not submissions:
-        submissions = [None]
+def dt_challenges_evaluator():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--continuous", action="store_true", default=False)
+    parser.add_argument("extra", nargs=argparse.REMAINDER)
+    parsed = parser.parse_args()
 
-    for submission_id in submissions:
-        go_(submission_id)
+    elogger.info('hello')
+
+    if parsed.continuous:
+
+        while True:
+            try:
+                go_(None)
+            except NothingLeft:
+                elogger.info('No submissions available to evaluate.')
+                time.sleep(5)
+
+    else:
+        submissions = parsed.extra
+
+        if not submissions:
+            submissions = [None]
+
+        for submission_id in submissions:
+
+            try:
+                go_(submission_id)
+            except NothingLeft:
+                elogger.info('No submissions available to evaluate.')
+
+
+class NothingLeft(Exception):
+    pass
 
 
 def go_(submission_id):
+    elogger.info('Evaluating submission %s' % submission_id)
     token = get_token_from_shell_config()
     res = dtserver_work_submission(token, submission_id)
 
-    if not 'job_id' in res:
+    if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
-        print(msg)
-        return
-    #
+        raise NothingLeft(msg)
+
     # submission_id = result['submission_id']
     # parameters = result['parameters']
     # job_id = result['job_id']
@@ -94,7 +124,3 @@ volumes:
     stats = output
     result = output.pop('result')
     dtserver_report_job(token, job_id=job_id, stats=stats, result=result)
-
-
-if __name__ == '__main__':
-    go()

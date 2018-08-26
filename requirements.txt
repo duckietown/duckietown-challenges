@@ -1,1 +1,1 @@
-DuckietownShell
+duckietown-shell
