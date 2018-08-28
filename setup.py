@@ -16,15 +16,17 @@ def get_version(filename):
     return version
 
 
-mcdp_version = get_version(filename='src/duckietown_challenges/__init__.py')
+version = get_version(filename='src/duckietown_challenges/__init__.py')
 
 setup(name='duckietown-challenges',
-      version=mcdp_version,
-      download_url='http://github.com/duckietown/duckietown-challenges/tarball/%s' % mcdp_version,
+      version=version,
+      download_url='http://github.com/duckietown/duckietown-challenges/tarball/%s' % version,
       package_dir={'': 'src'},
       packages=find_packages('src'),
       install_requires=[
           'duckietown-shell',
+          'json',
+          'PyYAML',
       ],
 
       tests_require=[
