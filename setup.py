@@ -25,7 +25,6 @@ setup(name='duckietown-challenges',
       packages=find_packages('src'),
       install_requires=[
           'duckietown-shell',
-          'json',
           'PyYAML',
       ],
 
