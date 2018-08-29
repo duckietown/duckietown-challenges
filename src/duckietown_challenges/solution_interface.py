@@ -4,8 +4,7 @@ from abc import abstractmethod, ABCMeta
 import json
 import yaml
 
-CONFIG_LOCATION = '/challenges/description.yaml'
-OUTPUT_JSON = 'output.json'
+from duckietown_challenges import CONFIG_LOCATION, OUTPUT_JSON
 
 
 class ChallengeException(Exception):

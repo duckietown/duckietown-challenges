@@ -9,10 +9,13 @@ import tempfile
 import time
 import traceback
 
+import yaml
+
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
-from . import __version__
+from . import __version__, CONFIG_LOCATION, CHALLENGE_SOLUTION_OUTPUT, CHALLENGE_EVALUATION_OUTPUT, CHALLENGE_SOLUTION, \
+    CHALLENGE_EVALUATION
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -100,23 +103,31 @@ def go_(submission_id):
     try:
         wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
         elogger.debug('Using temporary dir %s' % wd)
-        # pwd = os.getcwd()
         output_solution = os.path.join(wd, 'output-solution')
         output_evaluation = os.path.join(wd, 'output-evaluation')
-
-        # for d in [output_evaluation, output_solution]:
-        #     if os.path.exists(d):
-        #         shutil.rmtree(d)
-        #         os.makedirs(d)
 
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
         evaluation_protocol = res['challenge_parameters']['protocol']
         assert evaluation_protocol == 'p1'
 
+        config_dir = os.path.join(wd, 'config')
+
         evaluation_container = res['challenge_parameters']['container']
         # username = getpass.getuser()
         username = os.getuid()
+
+        config = {
+            'input_dir': None,
+            'previous_step_dir': None,
+            'output_dir': CHALLENGE_SOLUTION_OUTPUT,
+            'temp_dir': None,
+        }
+        fn = os.path.join(config_dir, os.path.basename(CONFIG_LOCATION))
+        with open(fn, 'w') as f:
+            f.write(yaml.dump(config))
+
+
         compose = """
         
     version: '3'
@@ -126,23 +137,30 @@ def go_(submission_id):
         image: {solution_container}
         
         volumes:
-        - assets:/challenges/{challenge_name}/solution
-        - {output_solution}:/challenges/{challenge_name}/output-solution
+        - challenge_solution:{CHALLENGE_SOLUTION}
+        - {output_solution}:{CHALLENGE_SOLUTION_OUTPUT}
+        
       evaluator:
         image: {evaluation_container} 
         
         volumes:
-        - assets:/challenges/{challenge_name}/solution
-        - {output_evaluation}:/challenges/{challenge_name}/output-evaluation
-        
+        - challenge_solution:{CHALLENGE_SOLUTION}
+        - {output_evaluation}:{CHALLENGE_EVALUATION_OUTPUT}
+
     volumes:
-      assets:
+      challenge_solution:
+      
+      
     """.format(challenge_name=challenge_name,
                evaluation_container=evaluation_container,
                solution_container=solution_container,
                output_evaluation=output_evaluation,
                output_solution=output_solution,
-               username=username)
+               username=username,
+               CHALLENGE_SOLUTION_OUTPUT=CHALLENGE_SOLUTION_OUTPUT,
+               CHALLENGE_EVALUATION_OUTPUT=CHALLENGE_EVALUATION_OUTPUT,
+               CHALLENGE_SOLUTION=CHALLENGE_SOLUTION,
+               CHALLENGE_EVALUATION=CHALLENGE_EVALUATION)
 
         with open('docker-compose.yaml', 'w') as f:
             f.write(compose)
