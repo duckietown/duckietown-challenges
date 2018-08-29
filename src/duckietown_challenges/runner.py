@@ -15,7 +15,7 @@ from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
 from . import __version__, CONFIG_LOCATION, CHALLENGE_SOLUTION_OUTPUT, CHALLENGE_EVALUATION_OUTPUT, CHALLENGE_SOLUTION, \
-    CHALLENGE_EVALUATION
+    CHALLENGE_EVALUATION, CHALLENGE_DESCRIPTION
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -115,8 +115,8 @@ def go_(submission_id, do_pull):
         evaluation_protocol = res['challenge_parameters']['protocol']
         assert evaluation_protocol == 'p1'
 
-        config_dir = os.path.join(wd, 'config')
-        os.makedirs(config_dir)
+        challenge_description = os.path.join(wd, 'challenge-description')
+        os.makedirs(challenge_description)
 
         evaluation_container = res['challenge_parameters']['container']
         # username = getpass.getuser()
@@ -128,9 +128,11 @@ def go_(submission_id, do_pull):
             'output_dir': CHALLENGE_SOLUTION_OUTPUT,
             'temp_dir': None,
         }
-        fn = os.path.join(config_dir, os.path.basename(CONFIG_LOCATION))
+
+        fn = os.path.join(challenge_description, os.path.basename(CONFIG_LOCATION))
         with open(fn, 'w') as f:
             f.write(yaml.dump(config))
+        print('written config to %s' % fn)
 
 
         compose = """
@@ -143,6 +145,7 @@ def go_(submission_id, do_pull):
         
         volumes:
         - challenge_solution:{CHALLENGE_SOLUTION}
+        - {challenge_description}:{CHALLENGE_DESCRIPTION}
         - {output_solution}:{CHALLENGE_SOLUTION_OUTPUT}
         
       evaluator:
@@ -150,10 +153,11 @@ def go_(submission_id, do_pull):
         
         volumes:
         - challenge_solution:{CHALLENGE_SOLUTION}
+        - {challenge_description}:{CHALLENGE_DESCRIPTION}
         - {output_evaluation}:{CHALLENGE_EVALUATION_OUTPUT}
 
     volumes:
-      challenge_solution:
+      challenge_solution: 
       
       
     """.format(challenge_name=challenge_name,
@@ -164,9 +168,13 @@ def go_(submission_id, do_pull):
                username=username,
                CHALLENGE_SOLUTION_OUTPUT=CHALLENGE_SOLUTION_OUTPUT,
                CHALLENGE_EVALUATION_OUTPUT=CHALLENGE_EVALUATION_OUTPUT,
-               CHALLENGE_SOLUTION=CHALLENGE_SOLUTION,
-               CHALLENGE_EVALUATION=CHALLENGE_EVALUATION)
 
+               CHALLENGE_SOLUTION=CHALLENGE_SOLUTION,
+               CHALLENGE_EVALUATION=CHALLENGE_EVALUATION,
+               CHALLENGE_DESCRIPTION=CHALLENGE_DESCRIPTION,
+               challenge_description=challenge_description)
+
+        print(compose)
         with open('docker-compose.yaml', 'w') as f:
             f.write(compose)
 
