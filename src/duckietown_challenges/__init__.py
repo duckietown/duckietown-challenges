@@ -1,4 +1,4 @@
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 CHALLENGE_SOLUTION_OUTPUT = '/challenge-solution-output'
 CHALLENGE_EVALUATION_OUTPUT = '/challenge-evaluation-output'
