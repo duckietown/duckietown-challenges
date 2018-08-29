@@ -81,14 +81,14 @@ def get_challenge_interface():
 
         Raises InvalidConfiguration if some of the configuration is missing or invalid.
     """
-    return ConcreteChallengeInterface()
+    return ConcreteChallengeInterface(CONFIG_LOCATION)
 
 
 class ConcreteChallengeInterface(ChallengeInterface):
 
-    def __init__(self):
+    def __init__(self, filename):
 
-        data = yaml.load(open(CONFIG_LOCATION).read())
+        data = yaml.load(open(filename).read())
 
         try:
             self.input_dir = data.get('input_dir')
@@ -133,6 +133,7 @@ class ConcreteChallengeInterface(ChallengeInterface):
         if not self.input_dir:
             msg = 'There is no input dir defined.'
             raise NotAvailable(msg)
+        return self.input_dir
 
     def get_output_dir(self):
         return self.output_dir
@@ -140,8 +141,8 @@ class ConcreteChallengeInterface(ChallengeInterface):
     def get_temp_dir(self):
         return self.temp_dir
 
-    @abstractmethod
     def get_previous_step_dir(self):
         if not self.previous_step_dir:
             msg = 'No temporary dir is defined.'
             raise NotAvailable(msg)
+        return self.previous_step_dir
