@@ -1,4 +1,5 @@
 import os
+import sys
 from abc import abstractmethod, ABCMeta
 
 import json
@@ -79,9 +80,14 @@ def get_challenge_interface():
     """
         Gets the ChallengeInterface to use.
 
-        Raises InvalidConfiguration if some of the configuration is missing or invalid.
+        Exits with error code 1 if some of the configuration is missing or invalid.
     """
-    return ConcreteChallengeInterface(CONFIG_LOCATION)
+    try:
+        return ConcreteChallengeInterface(CONFIG_LOCATION)
+    except InvalidConfiguration as e:
+        msg = "Invalid configuration."
+        logger.error(msg)
+        sys.exit(1)
 
 
 class ConcreteChallengeInterface(ChallengeInterface):
