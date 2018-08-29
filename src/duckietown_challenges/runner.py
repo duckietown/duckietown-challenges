@@ -42,8 +42,12 @@ def dt_challenges_evaluator():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--continuous", action="store_true", default=False)
+    parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
+    print parsed
+
+    do_pull = not parsed.no_pull
 
     if parsed.continuous:
 
@@ -53,7 +57,7 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None)
+                go_(None, do_pull)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
@@ -76,7 +80,7 @@ def dt_challenges_evaluator():
 
         for submission_id in submissions:
             try:
-                go_(submission_id)
+                go_(submission_id, do_pull)
             except NothingLeft:
                 elogger.info('No submissions available to evaluate.')
 
@@ -85,7 +89,7 @@ class NothingLeft(Exception):
     pass
 
 
-def go_(submission_id):
+def go_(submission_id, do_pull):
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
     res = dtserver_work_submission(token, submission_id, machine_id)
@@ -112,6 +116,7 @@ def go_(submission_id):
         assert evaluation_protocol == 'p1'
 
         config_dir = os.path.join(wd, 'config')
+        os.makedirs(config_dir)
 
         evaluation_container = res['challenge_parameters']['container']
         # username = getpass.getuser()
@@ -165,11 +170,13 @@ def go_(submission_id):
         with open('docker-compose.yaml', 'w') as f:
             f.write(compose)
 
-        cmd = ['docker-compose', 'pull']
-        ret = os.system(" ".join(cmd))
-        if ret != 0:
-            msg = 'Could not run docker-compose.'
-            raise Exception(msg)
+        if do_pull:
+            cmd = ['docker-compose', 'pull']
+            ret = os.system(" ".join(cmd))
+            if ret != 0:
+                msg = 'Could not run docker-compose pull.'
+                raise Exception(msg)
+
         cmd = ['docker-compose', 'up']
         ret = os.system(" ".join(cmd))
         if ret != 0:
@@ -178,13 +185,16 @@ def go_(submission_id):
 
         output_f = os.path.join(output_evaluation, 'output.json')
         output = json.loads(open(output_f).read())
-        print(json.dumps(output, indent=4))
+        elogger.debug("output from evaluator: %s" % json.dumps(output, indent=4))
         stats = output
         result = output.pop('result')
-        dtserver_report_job(token, job_id=job_id, stats=stats, result=result)
+        dtserver_report_job(token, job_id=job_id, stats=stats, result=result,
+                            machine_id=machine_id)
     except NothingLeft:
         raise
     except Exception as e:  # XXX
+        elogger.error(e)
         result = 'failed'
         stats = {'exception': traceback.format_exc(e)}
-        dtserver_report_job(token, job_id, result, stats)
+        dtserver_report_job(token, job_id, result=result, stats=stats,
+                            machine_id=machine_id)

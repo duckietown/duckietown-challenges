@@ -115,7 +115,15 @@ class ConcreteChallengeInterface(ChallengeInterface):
         if not os.path.exists(self.temp_dir):
             os.makedirs(self.temp_dir)
 
-    def write_json_output(self, data):
+    def declare_success(self, data):
+        res = json.dumps(data)
+        data['ok'] = True
+        fn = os.path.join(self.output_dir, OUTPUT_JSON)
+        with open(fn, 'w') as f:
+            f.write(res)
+
+    def declare_failure(self, data):
+        data['ok'] = False
         res = json.dumps(data)
         fn = os.path.join(self.output_dir, OUTPUT_JSON)
         with open(fn, 'w') as f:
