@@ -1,4 +1,4 @@
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 import os
 CHALLENGE_SOLUTION_OUTPUT = '/challenge-solution-output'
 CHALLENGE_EVALUATION_OUTPUT = '/challenge-evaluation-output'
@@ -11,3 +11,5 @@ OUTPUT_JSON = 'output.json'
 
 from .runner import dt_challenges_evaluator
 from .solution_interface import *
+
+print('duckietown-challenges version %s' % __version__)
