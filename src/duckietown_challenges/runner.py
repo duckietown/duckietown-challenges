@@ -27,7 +27,12 @@ def get_token_from_shell_config():
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
     data = open(path).read()
     config = json.loads(data)
-    return config[DTShellConstants.DT1_TOKEN_CONFIG_KEY]
+    k = DTShellConstants.DT1_TOKEN_CONFIG_KEY
+    if k not in config:
+        msg = 'Please set a Duckietown Token using the command `dts tok set`.'
+        raise Exception(msg)
+    else:
+        return config[k]
 
 
 def dt_challenges_evaluator():
@@ -62,7 +67,7 @@ def dt_challenges_evaluator():
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
-                time.sleep(timeout * multiplier)
+                # time.sleep(timeout * multiplier)
                 # elogger.info('No submissions available to evaluate.')
             except ConnectionError as e:
                 elogger.error(e)
@@ -71,7 +76,8 @@ def dt_challenges_evaluator():
                 msg = 'Uncaught exception: %s' % e
                 elogger.error(msg)
                 multiplier *= 1.5
-                time.sleep(timeout * multiplier)
+
+            time.sleep(timeout * multiplier)
 
     else:
         submissions = parsed.extra
