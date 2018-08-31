@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import getpass
 import json
 import logging
 import os
@@ -9,13 +10,13 @@ import tempfile
 import time
 import traceback
 
-import yaml
-
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
-
 from . import __version__
+from .challenge_results import read_challenge_results
+from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
+    CHALLENGE_EVALUATION_OUTPUT_DIR
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -106,75 +107,72 @@ def go_(submission_id, do_pull):
 
     try:
         wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
-        elogger.debug('Using temporary dir %s' % wd)
-        output_solution = os.path.join(wd, 'output-solution')
-        output_evaluation = os.path.join(wd, 'output-evaluation')
 
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
-        evaluation_protocol = res['challenge_parameters']['protocol']
+        challenge_parameters = res['challenge_parameters']
+        print(challenge_parameters)
+        evaluation_protocol = challenge_parameters['protocol']
         assert evaluation_protocol == 'p1'
 
-        challenge_description = os.path.join(wd, 'challenge-description')
-        os.makedirs(challenge_description)
+        evaluation_container = challenge_parameters['container']
 
-        evaluation_container = res['challenge_parameters']['container']
-        # username = getpass.getuser()
-        username = os.getuid()
+        UID = os.getuid()
+        USERNAME = getpass.getuser()
 
-        config = {
-            'input_dir': None,
-            'previous_step_dir': None,
-            'output_dir': CHALLENGE_SOLUTION_OUTPUT,
-            'temp_dir': None,
-        }
-
-        fn = os.path.join(challenge_description, os.path.basename(CONFIG_LOCATION))
-        with open(fn, 'w') as f:
-            f.write(yaml.dump(config))
-        print('written config to %s' % fn)
-
+        challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
+        challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
+        challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
+        challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
 
         compose = """
         
     version: '3'
-    environment:
-    
     services:
       solution:
       
         image: {solution_container}
+        environment:
+            username: {USERNAME}
+            uid: {UID}
         
         volumes:
-        - challenge_solution:{CHALLENGE_SOLUTION}
-        - {challenge_description}:{CHALLENGE_DESCRIPTION}
-        - {output_solution}:{CHALLENGE_SOLUTION_OUTPUT}
+        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
+        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
+        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
+        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
         
       evaluator:
         image: {evaluation_container} 
+        environment:
+            username: {USERNAME}
+            uid: {UID}
         
         volumes:
-        - challenge_solution:{CHALLENGE_SOLUTION}
-        - {challenge_description}:{CHALLENGE_DESCRIPTION}
-        - {output_evaluation}:{CHALLENGE_EVALUATION_OUTPUT}
-
-    volumes:
-      challenge_solution: 
-      
-      
+        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
+        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
+        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
+        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+    # volumes:
+    #   CHALLENGE_SOLUTION_OUTPUT_DIR:
+    #   CHALLENGE_EVALUATION_OUTPUT_DIR:
+    #   CHALLENGE_DESCRIPTION_DIR:
+    #   CHALLENGE_RESULTS_DIR:
+    #   
+    #   
     """.format(challenge_name=challenge_name,
                evaluation_container=evaluation_container,
                solution_container=solution_container,
-               output_evaluation=output_evaluation,
-               output_solution=output_solution,
-               username=username,
-               CHALLENGE_SOLUTION_OUTPUT=CHALLENGE_SOLUTION_OUTPUT,
-               CHALLENGE_EVALUATION_OUTPUT=CHALLENGE_EVALUATION_OUTPUT,
-
-               CHALLENGE_SOLUTION=CHALLENGE_SOLUTION,
-               CHALLENGE_EVALUATION=CHALLENGE_EVALUATION,
-               CHALLENGE_DESCRIPTION=CHALLENGE_DESCRIPTION,
-               challenge_description=challenge_description)
+               USERNAME=USERNAME,
+               UID=UID,
+               challenge_solution_output_dir=challenge_solution_output_dir,
+               CHALLENGE_SOLUTION_OUTPUT_DIR=CHALLENGE_SOLUTION_OUTPUT_DIR,
+               challenge_results_dir=challenge_results_dir,
+               CHALLENGE_RESULTS_DIR=CHALLENGE_RESULTS_DIR,
+               challenge_description_dir=challenge_description_dir,
+               CHALLENGE_DESCRIPTION_DIR=CHALLENGE_DESCRIPTION_DIR,
+               challenge_evaluation_output_dir=challenge_evaluation_output_dir,
+               CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
         print(compose)
         with open('docker-compose.yaml', 'w') as f:
@@ -193,12 +191,9 @@ def go_(submission_id, do_pull):
             msg = 'Could not run docker-compose.'
             raise Exception(msg)
 
-        output_f = os.path.join(output_evaluation, 'output.json')
-        output = json.loads(open(output_f).read())
-        elogger.debug("output from evaluator: %s" % json.dumps(output, indent=4))
-        stats = output
-        result = output.pop('result')
-        dtserver_report_job(token, job_id=job_id, stats=stats, result=result,
+        cr = read_challenge_results(wd)
+
+        dtserver_report_job(token, job_id=job_id, stats=cr.get_stats(), result=cr.get_result(),
                             machine_id=machine_id)
     except NothingLeft:
         raise

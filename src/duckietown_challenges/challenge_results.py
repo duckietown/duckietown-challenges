@@ -1,9 +1,8 @@
+import os
 from collections import OrderedDict
 
-import os
-from .yaml_utils import write_yaml, read_yaml_file
 from .constants import CHALLENGE_RESULTS_YAML
-
+from .yaml_utils import write_yaml, read_yaml_file
 
 
 class ChallengeResults(object):
@@ -12,7 +11,6 @@ class ChallengeResults(object):
         self.status = status
         self.msg = msg
         self.scores = scores
-
 
     def to_yaml(self):
         data = OrderedDict()
@@ -27,6 +25,14 @@ class ChallengeResults(object):
         msg = data['msg']
         scores = data['scores']
         return ChallengeResults(status, msg, scores)
+
+    def get_result(self):
+        return self.status
+
+    def get_stats(self):
+        stats = OrderedDict()
+        stats['scores'] = self.scores
+        return stats
 
 
 def declare_challenge_results(root, cr):
