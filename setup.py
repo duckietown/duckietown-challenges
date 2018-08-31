@@ -26,6 +26,8 @@ setup(name='duckietown-challenges',
       install_requires=[
           # 'duckietown-shell',
           'PyYAML',
+          'ruamel.ordereddict',
+          'ruamel.yaml',
       ],
 
       tests_require=[
