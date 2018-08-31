@@ -236,7 +236,7 @@ def wrap_evaluator(evaluator, cie=None):
     except Exception as e:
         dclogger.error(traceback.format_exc(e))
     else:
-        cie.after_prepare()
+        cie.after_score()
 
 
 def wrap_solution(solution, cis=None):

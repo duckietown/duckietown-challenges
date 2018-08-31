@@ -108,6 +108,11 @@ def go_(submission_id, do_pull):
     try:
         wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
 
+        LAST = 'last'
+        if os.path.lexists(LAST):
+            os.unlink(LAST)
+        os.symlink(wd, LAST)
+
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
         challenge_parameters = res['challenge_parameters']
