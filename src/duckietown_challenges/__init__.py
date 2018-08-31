@@ -14,5 +14,6 @@ from .exceptions import *
 from .challenge_evaluator import *
 from .challenge_solution import *
 from .challenge_results import *
+from .cie_concrete import *
 
 dclogger.info('duckietown-challenges %s' % __version__)
