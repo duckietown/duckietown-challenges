@@ -68,10 +68,10 @@ def dt_challenges_evaluator():
                 elogger.error(e)
                 multiplier *= 1.5
             except Exception as e:
-                msg = 'Weird exception: %s' % e
+                msg = 'Uncaught exception: %s' % e
                 elogger.error(msg)
                 multiplier *= 1.5
-
+                time.sleep(timeout * multiplier)
 
     else:
         submissions = parsed.extra
