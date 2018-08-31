@@ -8,13 +8,13 @@ import socket
 import sys
 import tempfile
 import time
-import traceback
 
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
+
 from . import __version__
-from .challenge_results import read_challenge_results
+from .challenge_results import read_challenge_results,  ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR
 
@@ -202,15 +202,22 @@ def go_(submission_id, do_pull):
             msg = 'Could not run docker-compose.'
             raise Exception(msg)
 
-        cr = read_challenge_results(wd)
+        try:
+            cr = read_challenge_results(wd)
+        except Exception as e:
+            msg = 'Could not read the challenge results:\n%s' % e
+            elogger.error(msg)
+            status = ChallengeResultsStatus.ERROR
+            cr = ChallengeResults(status, msg, scores={})
 
-        dtserver_report_job(token, job_id=job_id, stats=cr.get_stats(), result=cr.get_result(),
+        dtserver_report_job(token, job_id=job_id, stats=cr.get_stats(), result=cr.get_status(),
                             machine_id=machine_id)
     except NothingLeft:
         raise
     except Exception as e:  # XXX
+        msg = 'Uncaught exception:\n%s' % e
         elogger.error(e)
-        result = 'failed'
-        stats = {'exception': traceback.format_exc(e)}
-        dtserver_report_job(token, job_id, result=result, stats=stats,
+        status = ChallengeResultsStatus.ERROR
+        cr = ChallengeResults(status, msg, scores={})
+        dtserver_report_job(token, job_id, result=cr.get_status(), stats=cr.get_stats(),
                             machine_id=machine_id)
