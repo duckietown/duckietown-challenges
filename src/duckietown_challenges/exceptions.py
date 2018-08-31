@@ -15,3 +15,6 @@ class InvalidSubmission(Exception):
     """ Can be raised by evaluator """
     pass
 
+
+class InvalidEvaluator(Exception):
+    pass

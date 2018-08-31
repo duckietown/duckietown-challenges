@@ -1,13 +1,14 @@
 import os
 from collections import OrderedDict
 
-from .constants import CHALLENGE_RESULTS_YAML
+from .constants import CHALLENGE_RESULTS_YAML, ChallengeResultsStatus
 from .yaml_utils import write_yaml, read_yaml_file
 
 
 class ChallengeResults(object):
 
     def __init__(self, status, msg, scores):
+        assert status in ChallengeResultsStatus.ALL, (status, ChallengeResultsStatus.ALL)
         self.status = status
         self.msg = msg
         self.scores = scores
@@ -26,7 +27,7 @@ class ChallengeResults(object):
         scores = data['scores']
         return ChallengeResults(status, msg, scores)
 
-    def get_result(self):
+    def get_status(self):
         return self.status
 
     def get_stats(self):

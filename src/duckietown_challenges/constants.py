@@ -15,9 +15,12 @@ CHALLENGE_EVALUATION_DIR = 'challenge-evaluation'
 CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, 'description.yaml')
 
 
-CHALLENGE_STATUS_SUCCESS = 'success'
-CHALLENGE_STATUS_FAILED = 'failed'
-CHALLENGE_STATUS_FAULT = 'fault-evaluator'
+class ChallengeResultsStatus(object):
+    SUCCESS = 'success'
+    FAILED = 'failed'  # the solution failed
+    ERROR = 'error'  # there was a problem with the evaluation (but not the solution)
+
+    ALL = [SUCCESS, FAILED, ERROR]
 
 
 CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')

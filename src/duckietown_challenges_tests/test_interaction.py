@@ -1,10 +1,10 @@
 import os
 import tempfile
 
-from duckietown_challenges import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution, read_challenge_results
+from duckietown_challenges import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution, read_challenge_results, \
+    ChallengeResultsStatus, wrap_solution, wrap_evaluator
 from duckietown_challenges.challenge_evaluator import ChallengeEvaluator
 from duckietown_challenges.challenge_solution import ChallengeSolution
-from duckietown_challenges.cie_concrete import ChallengeInterfaceEvaluatorConcrete, ChallengeInterfaceSolutionConcrete
 from duckietown_challenges.utils import write_data_to_file
 
 FN1 = 'c1'
@@ -66,29 +66,76 @@ class S1(ChallengeSolution):
         # TODO: declare_failure
 
 
+from multiprocessing import Process
+
+
+def run_interaction(S, E):
+    root = tempfile.mkdtemp()
+    print('Root: %s' % root)
+
+    def process_evaluator():
+        wrap_evaluator(E, root=root)
+
+    def process_solution():
+        wrap_solution(S, root=root)
+
+    p_e = Process(target=process_evaluator)
+    p_e.start()
+    p_s = Process(target=process_solution)
+    p_s.start()
+    p_e.join()
+
+    #
+    # E.prepare(cie)
+    # cie.after_prepare()
+    # cis = ChallengeInterfaceSolutionConcrete(root)
+    # S.run(cis)
+    # cis.after_run()
+    # E.score(cie)
+    # cie.after_score()
+    cr = read_challenge_results(root)
+    return cr
+
+
 def test_interaction1():
     S = S1()
     E = E1()
-    root = tempfile.mkdtemp()
-    cie = ChallengeInterfaceEvaluatorConcrete(root)
-    E.prepare(cie)
-    cie.after_prepare()
-    cis = ChallengeInterfaceSolutionConcrete(root)
-    S.run(cis)
-    cis.after_run()
-    E.score(cie)
-    cie.after_score()
-
-    cr = read_challenge_results(root)
+    cr = run_interaction(S, E)
+    assert cr.get_status() == ChallengeResultsStatus.SUCCESS
     assert cr.scores[SCORE1] == SCORE1_VAL, cr.scores
 
-    # TODO: read scores
 
-    #
-    #
-    # with get_temp_ci() as ci:
-    #     wrap_solution(sol1, ci=ci)
-    #     wrap_evaluator(sol1, ci=ci)
-    #
-    # results = ci.read_evaluation()
-    # assert results.status == STATUS_FAILED
+def test_no_scores():
+    class ENoScores(ChallengeEvaluator):
+
+        def prepare(self, cie):
+            cie.set_challenge_parameters({K1: V1})
+
+        def score(self, cie):
+            pass
+
+    class SDummy(ChallengeSolution):
+
+        def run(self, cis):
+            cis.set_solution_output_dict({K1: V1})
+
+    cr = run_interaction(SDummy(), ENoScores())
+    assert cr.get_status() == ChallengeResultsStatus.ERROR
+
+
+def test_no_solution_output():
+    class EDummy(ChallengeEvaluator):
+
+        def prepare(self, cie):
+            cie.set_challenge_parameters({K1: V1})
+
+        def score(self, cie):
+            pass
+
+    class SDummy(ChallengeSolution):
+
+        def run(self, cis):
+            pass  # cis.set_solution_output_dict({K1: V1})
+
+    cr = run_interaction(SDummy(), EDummy())
+    assert cr.get_status() == ChallengeResultsStatus.FAILED

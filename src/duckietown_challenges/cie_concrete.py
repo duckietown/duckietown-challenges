@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 import tempfile
 import time
 import traceback
@@ -7,12 +8,11 @@ from collections import namedtuple
 
 from . import dclogger
 from .constants import CHALLENGE_DESCRIPTION_YAML, CHALLENGE_SOLUTION_OUTPUT_YAML, CHALLENGE_SOLUTION_OUTPUT_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR
+    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, ChallengeResultsStatus
+from .exceptions import InvalidSubmission, InvalidEvaluator
+from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
-
-
-from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
 
 ChallengeFile = namedtuple('ChallengeFile', 'basename from_file description')
 ReportedScore = namedtuple('ReportedScore', 'name value description')
@@ -98,7 +98,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
     def after_run(self):
         if not self.solution_output_dict:
             msg = 'solution_output_dict not set.'
-            raise Exception(msg)  # XXX
+            raise InvalidSubmission(msg)  # XXX
         else:
             fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
             write_yaml(self.solution_output_dict, fn)
@@ -111,13 +111,17 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         return wait_for_file(fn, timeout=10, wait=1)
 
 
+class Timeout(Exception):
+    pass
+
+
 def wait_for_file(fn, timeout, wait):
     t0 = time.time()
     while not os.path.exists(fn):
         dclogger.debug('Output %s not ready yet' % fn)
         if time.time() - t0 > timeout:
-            msg = 'Timeout.'
-            raise Exception(msg)
+            msg = 'Timeout while waiting for %s.' % fn
+            raise Timeout(msg)
         time.sleep(wait)
 
 
@@ -145,7 +149,11 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
     def wait_for_solution(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
-        return wait_for_file(fn, timeout=10, wait=1)
+        try:
+            return wait_for_file(fn, timeout=10, wait=1)
+        except Timeout as e:
+            msg = 'Time out: %s' % e
+            raise InvalidSubmission(msg)
 
     def get_solution_output_dict(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
@@ -155,7 +163,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
         if not os.path.exists(fn):
             msg = 'Could not find file %r' % fn
-            raise Exception(msg)
+            raise InvalidSubmission(msg)
         return fn
 
     def get_solution_output_files(self):
@@ -166,7 +174,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def set_score(self, name, value, description=None):
         if name in self.scores:
             msg = 'Already know score %r' % name
-            raise ValueError(msg)
+            raise InvalidEvaluator(msg)
 
         self.scores[name] = ReportedScore(name, value, description)
 
@@ -185,26 +193,25 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def after_prepare(self):
         if not self.parameters:
             msg = 'Parameters not set.'
-            raise Exception(msg)  # XXX
+            raise InvalidEvaluator(msg)  # XXX
 
         d = os.path.join(self.root, CHALLENGE_DESCRIPTION_DIR)
         self.challenge_files.write(d)
 
         fn = os.path.join(self.root, CHALLENGE_DESCRIPTION_YAML)
         write_yaml(self.parameters, fn)
-    
 
     def after_score(self):
         # self.evaluation_files = {}  # -> ChallengeFile
         # self.scores = {}  # str -> ReportedScore
         if not self.scores:
             msg = 'No scores created'
-            raise Exception(msg)  # XXX
+            raise InvalidEvaluator(msg)  # XXX
 
         d = os.path.join(self.root, CHALLENGE_EVALUATION_OUTPUT_DIR)
         self.evaluation_files.write(d)
 
-        status = 'success'
+        status = ChallengeResultsStatus.SUCCESS
         msg = None
         scores = {}
         for k, v in self.scores.items():
@@ -217,32 +224,47 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 from .challenge_results import ChallengeResults, declare_challenge_results
 
 
-def wrap_evaluator(evaluator, cie=None):
-    if cie is None:
-        root = '/'
-        cie = ChallengeInterfaceEvaluatorConcrete(root=root)
+def wrap_evaluator(evaluator, root='/'):
+    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
     try:
         evaluator.prepare(cie)
-    except Exception as e:
-        dclogger.error(traceback.format_exc(e))
-    else:
+
         cie.after_prepare()
 
-    cie.wait_for_solution()
+        cie.wait_for_solution()
 
-    try:
         evaluator.score(cie)
-    except Exception as e:
-        dclogger.error(traceback.format_exc(e))
-    else:
+
         cie.after_score()
 
+    except InvalidEvaluator as e:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        dclogger.error(msg)
 
-def wrap_solution(solution, cis=None):
-    if cis is None:
-        root = '/'
-        cis = ChallengeInterfaceSolutionConcrete(root=root)
+        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
+    except InvalidSubmission as e:
+        msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
+        dclogger.error(msg)
+
+        cr = ChallengeResults(ChallengeResultsStatus.FAILED, msg, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
+    except Exception as e:
+        msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
+        dclogger.error(msg)
+
+        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
+
+def wrap_solution(solution, root='/'):
+    cis = ChallengeInterfaceSolutionConcrete(root=root)
 
     cis.wait_for_preparation()
 
