@@ -14,8 +14,8 @@ import yaml
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
-from . import __version__, CONFIG_LOCATION, CHALLENGE_SOLUTION_OUTPUT, CHALLENGE_EVALUATION_OUTPUT, CHALLENGE_SOLUTION, \
-    CHALLENGE_EVALUATION, CHALLENGE_DESCRIPTION
+
+from . import __version__
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -138,9 +138,11 @@ def go_(submission_id, do_pull):
         compose = """
         
     version: '3'
+    environment:
     
     services:
       solution:
+      
         image: {solution_container}
         
         volumes:
