@@ -192,26 +192,26 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         fn = os.path.join(self.root, CHALLENGE_DESCRIPTION_YAML)
         write_yaml(self.parameters, fn)
+    
 
+    def after_score(self):
+        # self.evaluation_files = {}  # -> ChallengeFile
+        # self.scores = {}  # str -> ReportedScore
+        if not self.scores:
+            msg = 'No scores created'
+            raise Exception(msg)  # XXX
 
-def after_score(self):
-    # self.evaluation_files = {}  # -> ChallengeFile
-    # self.scores = {}  # str -> ReportedScore
-    if not self.scores:
-        msg = 'No scores created'
-        raise Exception(msg)  # XXX
+        d = os.path.join(self.root, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        self.evaluation_files.write(d)
 
-    d = os.path.join(self.root, CHALLENGE_EVALUATION_OUTPUT_DIR)
-    self.evaluation_files.write(d)
+        status = 'success'
+        msg = None
+        scores = {}
+        for k, v in self.scores.items():
+            scores[k] = v.value
+        cr = ChallengeResults(status, msg, scores)
 
-    status = 'success'
-    msg = None
-    scores = {}
-    for k, v in self.scores.items():
-        scores[k] = v.value
-    cr = ChallengeResults(status, msg, scores)
-
-    declare_challenge_results(self.root, cr)
+        declare_challenge_results(self.root, cr)
 
 
 from .challenge_results import ChallengeResults, declare_challenge_results
