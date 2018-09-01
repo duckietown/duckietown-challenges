@@ -33,6 +33,7 @@ class ChallengeResults(object):
     def get_stats(self):
         stats = OrderedDict()
         stats['scores'] = self.scores
+        stats['msg'] = self.msg
         return stats
 
 

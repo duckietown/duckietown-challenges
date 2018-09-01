@@ -99,7 +99,12 @@ class NothingLeft(Exception):
 def go_(submission_id, do_pull):
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
-    res = dtserver_work_submission(token, submission_id, machine_id)
+
+    evaluator_version = __version__
+
+    process_id = str(os.getpid())
+
+    res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version)
 
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
@@ -210,8 +215,6 @@ def go_(submission_id, do_pull):
             status = ChallengeResultsStatus.ERROR
             cr = ChallengeResults(status, msg, scores={})
 
-        dtserver_report_job(token, job_id=job_id, stats=cr.get_stats(), result=cr.get_status(),
-                            machine_id=machine_id)
     except NothingLeft:
         raise
     except Exception as e:  # XXX
@@ -219,5 +222,16 @@ def go_(submission_id, do_pull):
         elogger.error(e)
         status = ChallengeResultsStatus.ERROR
         cr = ChallengeResults(status, msg, scores={})
-        dtserver_report_job(token, job_id, result=cr.get_status(), stats=cr.get_stats(),
-                            machine_id=machine_id)
+
+    dtserver_report_job(token,
+                        job_id=job_id,
+                        stats=cr.get_stats(),
+                        result=cr.get_status(),
+                        machine_id=machine_id,
+                        process_id=process_id,
+                        evaluation_container=evaluation_container,
+                        evaluator_version=evaluator_version)
+        #
+        # process_id = data['process_id']
+        # evaluator_version = data['evaluator_version']
+        # evaluation_container = data['evaluation_container']
