@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import getpass
 import json
 import logging
 import os
@@ -7,12 +8,15 @@ import socket
 import sys
 import tempfile
 import time
-import traceback
 
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
+
 from . import __version__
+from .challenge_results import read_challenge_results,  ChallengeResults, ChallengeResultsStatus
+from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
+    CHALLENGE_EVALUATION_OUTPUT_DIR
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -23,7 +27,12 @@ def get_token_from_shell_config():
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
     data = open(path).read()
     config = json.loads(data)
-    return config[DTShellConstants.DT1_TOKEN_CONFIG_KEY]
+    k = DTShellConstants.DT1_TOKEN_CONFIG_KEY
+    if k not in config:
+        msg = 'Please set a Duckietown Token using the command `dts tok set`.'
+        raise Exception(msg)
+    else:
+        return config[k]
 
 
 def dt_challenges_evaluator():
@@ -39,8 +48,12 @@ def dt_challenges_evaluator():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--continuous", action="store_true", default=False)
+    parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
+    print parsed
+
+    do_pull = not parsed.no_pull
 
     if parsed.continuous:
 
@@ -50,20 +63,21 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None)
+                go_(None, do_pull)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
-                time.sleep(timeout * multiplier)
+                # time.sleep(timeout * multiplier)
                 # elogger.info('No submissions available to evaluate.')
             except ConnectionError as e:
                 elogger.error(e)
                 multiplier *= 1.5
             except Exception as e:
-                msg = 'Weird exception: %s' % e
+                msg = 'Uncaught exception: %s' % e
                 elogger.error(msg)
                 multiplier *= 1.5
 
+            time.sleep(timeout * multiplier)
 
     else:
         submissions = parsed.extra
@@ -73,7 +87,7 @@ def dt_challenges_evaluator():
 
         for submission_id in submissions:
             try:
-                go_(submission_id)
+                go_(submission_id, do_pull)
             except NothingLeft:
                 elogger.info('No submissions available to evaluate.')
 
@@ -82,10 +96,15 @@ class NothingLeft(Exception):
     pass
 
 
-def go_(submission_id):
+def go_(submission_id, do_pull):
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
-    res = dtserver_work_submission(token, submission_id, machine_id)
+
+    evaluator_version = __version__
+
+    process_id = str(os.getpid())
+
+    res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version)
 
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
@@ -99,74 +118,120 @@ def go_(submission_id):
 
     try:
         wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
-        elogger.debug('Using temporary dir %s' % wd)
-        # pwd = os.getcwd()
-        output_solution = os.path.join(wd, 'output-solution')
-        output_evaluation = os.path.join(wd, 'output-evaluation')
 
-        # for d in [output_evaluation, output_solution]:
-        #     if os.path.exists(d):
-        #         shutil.rmtree(d)
-        #         os.makedirs(d)
+        LAST = 'last'
+        if os.path.lexists(LAST):
+            os.unlink(LAST)
+        os.symlink(wd, LAST)
 
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
-        evaluation_protocol = res['challenge_parameters']['protocol']
+        challenge_parameters = res['challenge_parameters']
+        print(challenge_parameters)
+        evaluation_protocol = challenge_parameters['protocol']
         assert evaluation_protocol == 'p1'
 
-        evaluation_container = res['challenge_parameters']['container']
-        # username = getpass.getuser()
-        username = os.getuid()
+        evaluation_container = challenge_parameters['container']
+
+        UID = os.getuid()
+        USERNAME = getpass.getuser()
+
+        challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
+        challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
+        challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
+        challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
+
         compose = """
         
     version: '3'
-    
     services:
       solution:
+      
         image: {solution_container}
+        environment:
+            username: {USERNAME}
+            uid: {UID}
         
         volumes:
-        - assets:/challenges/{challenge_name}/solution
-        - {output_solution}:/challenges/{challenge_name}/output-solution
+        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
+        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
+        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
+        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+        
       evaluator:
         image: {evaluation_container} 
+        environment:
+            username: {USERNAME}
+            uid: {UID}
         
         volumes:
-        - assets:/challenges/{challenge_name}/solution
-        - {output_evaluation}:/challenges/{challenge_name}/output-evaluation
-        
-    volumes:
-      assets:
+        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
+        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
+        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
+        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+    # volumes:
+    #   CHALLENGE_SOLUTION_OUTPUT_DIR:
+    #   CHALLENGE_EVALUATION_OUTPUT_DIR:
+    #   CHALLENGE_DESCRIPTION_DIR:
+    #   CHALLENGE_RESULTS_DIR:
+    #   
+    #   
     """.format(challenge_name=challenge_name,
                evaluation_container=evaluation_container,
                solution_container=solution_container,
-               output_evaluation=output_evaluation,
-               output_solution=output_solution,
-               username=username)
+               USERNAME=USERNAME,
+               UID=UID,
+               challenge_solution_output_dir=challenge_solution_output_dir,
+               CHALLENGE_SOLUTION_OUTPUT_DIR=CHALLENGE_SOLUTION_OUTPUT_DIR,
+               challenge_results_dir=challenge_results_dir,
+               CHALLENGE_RESULTS_DIR=CHALLENGE_RESULTS_DIR,
+               challenge_description_dir=challenge_description_dir,
+               CHALLENGE_DESCRIPTION_DIR=CHALLENGE_DESCRIPTION_DIR,
+               challenge_evaluation_output_dir=challenge_evaluation_output_dir,
+               CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
+        print(compose)
         with open('docker-compose.yaml', 'w') as f:
             f.write(compose)
 
-        cmd = ['docker-compose', 'pull']
-        ret = os.system(" ".join(cmd))
-        if ret != 0:
-            msg = 'Could not run docker-compose.'
-            raise Exception(msg)
+        if do_pull:
+            cmd = ['docker-compose', 'pull']
+            ret = os.system(" ".join(cmd))
+            if ret != 0:
+                msg = 'Could not run docker-compose pull.'
+                raise Exception(msg)
+
         cmd = ['docker-compose', 'up']
         ret = os.system(" ".join(cmd))
         if ret != 0:
             msg = 'Could not run docker-compose.'
             raise Exception(msg)
 
-        output_f = os.path.join(output_evaluation, 'output.json')
-        output = json.loads(open(output_f).read())
-        print(json.dumps(output, indent=4))
-        stats = output
-        result = output.pop('result')
-        dtserver_report_job(token, job_id=job_id, stats=stats, result=result)
+        try:
+            cr = read_challenge_results(wd)
+        except Exception as e:
+            msg = 'Could not read the challenge results:\n%s' % e
+            elogger.error(msg)
+            status = ChallengeResultsStatus.ERROR
+            cr = ChallengeResults(status, msg, scores={})
+
     except NothingLeft:
         raise
     except Exception as e:  # XXX
-        result = 'failed'
-        stats = {'exception': traceback.format_exc(e)}
-        dtserver_report_job(token, job_id, result, stats)
+        msg = 'Uncaught exception:\n%s' % e
+        elogger.error(e)
+        status = ChallengeResultsStatus.ERROR
+        cr = ChallengeResults(status, msg, scores={})
+
+    dtserver_report_job(token,
+                        job_id=job_id,
+                        stats=cr.get_stats(),
+                        result=cr.get_status(),
+                        machine_id=machine_id,
+                        process_id=process_id,
+                        evaluation_container=evaluation_container,
+                        evaluator_version=evaluator_version)
+        #
+        # process_id = data['process_id']
+        # evaluator_version = data['evaluator_version']
+        # evaluation_container = data['evaluation_container']

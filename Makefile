@@ -14,3 +14,13 @@ upload:
 	rm -f dist/*
 	python setup.py sdist
 	twine upload dist/*
+
+
+build:
+	docker build -t andreacensi/dt-challenges-evaluator .
+
+build-no-cache:
+	docker build --no-cache -t andreacensi/dt-challenges-evaluator .
+
+push:
+	docker push andreacensi/dt-challenges-evaluator
