@@ -1,3 +1,4 @@
 -e git://github.com/duckietown/duckietown-shell.git@v2#egg=duckietown-shell
 ruamel.ordereddict
 ruamel.yaml
+docker

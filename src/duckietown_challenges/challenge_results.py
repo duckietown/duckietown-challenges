@@ -46,7 +46,9 @@ def declare_challenge_results(root, cr):
 
 def read_challenge_results(root):
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
-
+    if not os.path.exists(fn):
+        msg = 'File %r does not exist.' % fn
+        raise Exception(msg)
     data = read_yaml_file(fn)
 
     return ChallengeResults.from_yaml(data)

@@ -8,13 +8,14 @@ import socket
 import sys
 import tempfile
 import time
+import traceback
 
 from dt_shell.constants import DTShellConstants
-from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
+from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment, \
+    get_dockerhub_username
 from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
-
 from . import __version__
-from .challenge_results import read_challenge_results,  ChallengeResults, ChallengeResultsStatus
+from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR
 
@@ -51,9 +52,15 @@ def dt_challenges_evaluator():
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
-    print parsed
 
     do_pull = not parsed.no_pull
+
+    try:
+        docker_username = get_dockerhub_username()
+    except Exception:
+        msg = 'Skipping push because docker_username is not set.'
+        elogger.debug(msg)
+        docker_username = None
 
     if parsed.continuous:
 
@@ -63,7 +70,7 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None, do_pull)
+                go_(None, do_pull, docker_username)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
@@ -87,7 +94,7 @@ def dt_challenges_evaluator():
 
         for submission_id in submissions:
             try:
-                go_(submission_id, do_pull)
+                go_(submission_id, do_pull, docker_username)
             except NothingLeft:
                 elogger.info('No submissions available to evaluate.')
 
@@ -96,7 +103,7 @@ class NothingLeft(Exception):
     pass
 
 
-def go_(submission_id, do_pull):
+def go_(submission_id, do_pull, docker_username):
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
 
@@ -115,7 +122,9 @@ def go_(submission_id, do_pull):
     # submission_id = result['submission_id']
     # parameters = result['parameters']
     # job_id = result['job_id']
+    evaluation_container = None
 
+    artifacts_image = size = None
     try:
         wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
 
@@ -140,6 +149,10 @@ def go_(submission_id, do_pull):
         challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
         challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
         challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
+
+        for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
+                  challenge_evaluation_output_dir]:
+            os.makedirs(d)
 
         compose = """
         
@@ -190,48 +203,85 @@ def go_(submission_id, do_pull):
                challenge_evaluation_output_dir=challenge_evaluation_output_dir,
                CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
+        df = os.path.join(wd, 'Dockerfile')
+        with open(df, 'w') as f:
+            f.write("""
+FROM scratch
+COPY . /jobs/%s
+            
+            """ % job_id)
+
+        dcfn = os.path.join(wd, 'docker-compose.yaml')
+
         print(compose)
-        with open('docker-compose.yaml', 'w') as f:
+        with open(dcfn, 'w') as f:
             f.write(compose)
 
         if do_pull:
-            cmd = ['docker-compose', 'pull']
+            cmd = ['docker-compose', '-f', dcfn, 'pull']
             ret = os.system(" ".join(cmd))
             if ret != 0:
                 msg = 'Could not run docker-compose pull.'
                 raise Exception(msg)
 
-        cmd = ['docker-compose', 'up']
+        cmd = ['docker-compose', '-f', dcfn, 'up']
         ret = os.system(" ".join(cmd))
         if ret != 0:
             msg = 'Could not run docker-compose.'
             raise Exception(msg)
 
+        # os.system('find %s' % wd)
         try:
             cr = read_challenge_results(wd)
         except Exception as e:
-            msg = 'Could not read the challenge results:\n%s' % e
+            msg = 'Could not read the challenge results:\n%s' % traceback.format_exc(e)
             elogger.error(msg)
             status = ChallengeResultsStatus.ERROR
             cr = ChallengeResults(status, msg, scores={})
 
+        if docker_username is not None:
+            import docker
+            client = docker.from_env()
+
+            tag = '%s/jobs:%s' % (docker_username, job_id)
+            out = client.images.build(path=wd, tag=tag)
+            for line in out:
+                print(line)
+
+            image = client.images.get(tag)
+            artifacts_image = '%s@%s' % (tag, image.id)
+
+            size = image.attrs['Size']
+
+            print(artifacts_image)
+
+            elogger.info('Pushing image %s' % tag)
+            client.images.push(tag)
+        else:
+            size = artifacts_image = None
+
+
     except NothingLeft:
         raise
     except Exception as e:  # XXX
-        msg = 'Uncaught exception:\n%s' % e
-        elogger.error(e)
+        msg = 'Uncaught exception:\n%s' % traceback.format_exc()
+        elogger.error(msg)
         status = ChallengeResultsStatus.ERROR
         cr = ChallengeResults(status, msg, scores={})
 
+    stats = cr.get_stats()
+    if artifacts_image:
+        stats['artifacts'] = dict(size=size, image=artifacts_image)
+
     dtserver_report_job(token,
                         job_id=job_id,
-                        stats=cr.get_stats(),
+                        stats=stats,
                         result=cr.get_status(),
                         machine_id=machine_id,
                         process_id=process_id,
                         evaluation_container=evaluation_container,
                         evaluator_version=evaluator_version)
-        #
-        # process_id = data['process_id']
-        # evaluator_version = data['evaluator_version']
-        # evaluation_container = data['evaluation_container']
+    #
+    # process_id = data['process_id']
+    # evaluator_version = data['evaluator_version']
+    # evaluation_container = data['evaluation_container']

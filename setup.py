@@ -28,6 +28,7 @@ setup(name='duckietown-challenges',
           'PyYAML',
           'ruamel.ordereddict',
           'ruamel.yaml',
+          'docker',
       ],
 
       tests_require=[
