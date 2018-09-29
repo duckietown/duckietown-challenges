@@ -16,11 +16,16 @@ upload:
 	twine upload dist/*
 
 
+branch=$(shell git rev-parse --abbrev-ref HEAD)
+
+name=duckietown/dt-challenges-evaluator:$(branch)
+
 build:
-	docker build -t andreacensi/dt-challenges-evaluator .
+	docker build -t $(name) .
 
 build-no-cache:
-	docker build --no-cache -t andreacensi/dt-challenges-evaluator .
+	docker build --no-cache -t $(name) .
 
 push:
-	docker push andreacensi/dt-challenges-evaluator
+	docker push $(name)
+
