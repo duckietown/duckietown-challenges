@@ -4,6 +4,7 @@ import getpass
 import json
 import logging
 import os
+import platform
 import socket
 import sys
 import tempfile
@@ -103,7 +104,44 @@ class NothingLeft(Exception):
     pass
 
 
+def get_features():
+    import psutil
+
+    features = {}
+
+    machine = platform.machine()
+    features['linux'] = sys.platform.startswith('linux')
+    features['mac'] = sys.platform.startswith('darwin')
+    features['x86_64'] = (machine == 'x86_64')
+    features['armv7l'] = (machine == 'armv7l')
+    meminfo = psutil.virtual_memory()
+    # svmem(total=16717422592, available=5376126976, percent=67.8, used=10359984128, free=1831890944, active=7191916544, inactive=2325667840, buffers=525037568, cached=4000509952, shared=626225152)
+
+    features['ram_total_mb'] = int(meminfo.total / (1024 * 1024.0))
+    features['ram_available_mb'] = int(meminfo.available / (1024 * 1024.0))
+    features['nprocessors'] = psutil.cpu_count()
+    features['processor_frequency_mhz'] = int(psutil.cpu_freq().max)
+    f = psutil.cpu_percent(interval=0.2)
+    features['processor_free_percent'] = int(100.0 - f)
+    features['p1'] = True
+
+    disk = psutil.disk_usage(os.getcwd())
+
+    features['disk_total_mb'] = disk.total / (1024 * 1024)
+    features['disk_available_mb'] = disk.free / (1024 * 1024)
+    features['picamera'] = False
+    features['nduckiebots'] = False
+    features['map_3x3'] = False
+
+    print yaml.dump(features)
+    return features
+
+
+import yaml
+
+
 def go_(submission_id, do_pull, docker_username):
+    features = get_features()
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
 
@@ -111,11 +149,14 @@ def go_(submission_id, do_pull, docker_username):
 
     process_id = str(os.getpid())
 
-    res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version)
+    res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version,
+                                   features=features)
 
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
         raise NothingLeft(msg)
+
+    elogger.info(res)
     job_id = res['job_id']
 
     elogger.info('Evaluating job %s' % job_id)
@@ -133,12 +174,17 @@ def go_(submission_id, do_pull, docker_username):
             os.unlink(LAST)
         os.symlink(wd, LAST)
 
+
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
         challenge_parameters = res['challenge_parameters']
-        print(challenge_parameters)
-        evaluation_protocol = challenge_parameters['protocol']
-        assert evaluation_protocol == 'p1'
+
+        # evaluation_protocol = challenge_parameters['protocol']
+        # assert evaluation_protocol == 'p1'
+        if res['protocol'] != 'p1':
+            msg = 'invalid protocol %s' % res['protocol']
+            elogger.error(msg)
+            raise Exception(msg)
 
         evaluation_container = challenge_parameters['container']
 
