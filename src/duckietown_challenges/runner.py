@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+import StringIO
 import argparse
 import getpass
 import json
 import logging
+import mimetypes
 import os
 import platform
 import socket
@@ -10,11 +12,13 @@ import sys
 import tempfile
 import time
 import traceback
+from collections import OrderedDict
 
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment, \
     get_dockerhub_username
-from dt_shell.remote import dtserver_work_submission, dtserver_report_job, ConnectionError
+from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
+
 from . import __version__
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
@@ -174,11 +178,25 @@ def go_(submission_id, do_pull, docker_username):
             os.unlink(LAST)
         os.symlink(wd, LAST)
 
-
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
         challenge_parameters = res['challenge_parameters']
+        aws_config = res['aws_config']
+        bucket_name = aws_config['bucket_name']
+        aws_access_key_id = aws_config['aws_access_key_id']
+        aws_secret_access_key = aws_config['aws_secret_access_key']
+        aws_root_path = aws_config['path']
+        import boto3
+        s3 = boto3.resource("s3",
+                            aws_access_key_id=aws_access_key_id,
+                            aws_secret_access_key=aws_secret_access_key)
 
+        s = 'initial data'
+        data = StringIO.StringIO(s)
+        print('trying bucket connection')
+        object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
+        object.upload_fileobj(data)
+        print('uploaded')
         # evaluation_protocol = challenge_parameters['protocol']
         # assert evaluation_protocol == 'p1'
         if res['protocol'] != 'p1':
@@ -249,13 +267,13 @@ def go_(submission_id, do_pull, docker_username):
                challenge_evaluation_output_dir=challenge_evaluation_output_dir,
                CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
-        df = os.path.join(wd, 'Dockerfile')
-        with open(df, 'w') as f:
-            f.write("""
-FROM scratch
-COPY . /jobs/%s
-            
-            """ % job_id)
+        #         df = os.path.join(wd, 'Dockerfile')
+        #         with open(df, 'w') as f:
+        #             f.write("""
+        # FROM scratch
+        # COPY . /jobs/%s
+        #
+        #             """ % job_id)
 
         dcfn = os.path.join(wd, 'docker-compose.yaml')
 
@@ -285,26 +303,57 @@ COPY . /jobs/%s
             status = ChallengeResultsStatus.ERROR
             cr = ChallengeResults(status, msg, scores={})
 
-        if docker_username is not None:
-            import docker
-            client = docker.from_env()
+        create_index_files(wd, job_id=job_id)
+        toupload = OrderedDict()
+        for dirpath, dirnames, filenames in os.walk(wd):
+            for f in filenames:
+                rpath = os.path.join(os.path.relpath(dirpath, wd), f)
+                if rpath.startswith('./'):
+                    rpath = rpath[2:]
+                toupload[rpath] = os.path.join(dirpath, f)
 
-            tag = '%s/jobs:%s' % (docker_username, job_id)
-            out = client.images.build(path=wd, tag=tag)
-            for line in out:
-                print(line)
+        uploaded = []
+        for rpath, realfile in toupload.items():
+            object_key = os.path.join(aws_root_path, rpath)
+            statinfo = os.stat(realfile)
+            size = statinfo.st_size
 
-            image = client.images.get(tag)
-            artifacts_image = '%s@%s' % (tag, image.id)
+            print('uploading %.1fMB %s to %s from %s' % (size / (1024 * 1024.0), rpath, object_key, realfile))
 
-            size = image.attrs['Size']
+            mime_type, _encoding = mimetypes.guess_type(realfile)
 
-            print(artifacts_image)
+            print('guessed %s' % mime_type)
+            if mime_type is None:
+                if realfile.endswith('.yaml'):
+                    mime_type = 'text/yaml'
+                else:
+                    mime_type = 'binary/octet-stream'
 
-            elogger.info('Pushing image %s' % tag)
-            client.images.push(tag)
-        else:
-            size = artifacts_image = None
+            aws_object = s3.Object(bucket_name, object_key)
+            aws_object.upload_file(realfile, ExtraArgs={'ContentType': mime_type})
+            uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
+                                 mime_type=mime_type, rpath=rpath))
+
+        # if docker_username is not None:
+        #     import docker
+        #     client = docker.from_env()
+        #
+        #     tag = '%s/jobs:%s' % (docker_username, job_id)
+        #     out = client.images.build(path=wd, tag=tag)
+        #     for line in out:
+        #         print(line)
+        #
+        #     image = client.images.get(tag)
+        #     artifacts_image = '%s@%s' % (tag, image.id)
+        #
+        #     size = image.attrs['Size']
+        #
+        #     print(artifacts_image)
+        #
+        #     elogger.info('Pushing image %s' % tag)
+        #     client.images.push(tag)
+        # else:
+        #     size = artifacts_image = None
 
 
     except NothingLeft:
@@ -314,6 +363,7 @@ COPY . /jobs/%s
         elogger.error(msg)
         status = ChallengeResultsStatus.ERROR
         cr = ChallengeResults(status, msg, scores={})
+        uploaded = []
 
     stats = cr.get_stats()
     if artifacts_image:
@@ -326,8 +376,65 @@ COPY . /jobs/%s
                         machine_id=machine_id,
                         process_id=process_id,
                         evaluation_container=evaluation_container,
-                        evaluator_version=evaluator_version)
+                        evaluator_version=evaluator_version,
+                        uploaded=uploaded)
     #
     # process_id = data['process_id']
     # evaluator_version = data['evaluator_version']
     # evaluation_container = data['evaluation_container']
+
+
+def dtserver_report_job(token, job_id, result, stats, machine_id,
+                        process_id, evaluation_container, evaluator_version, uploaded):
+    endpoint = '/take-submission'
+    method = 'POST'
+    data = {'job_id': job_id,
+            'result': result,
+            'stats': stats,
+            'machine_id': machine_id,
+            'process_id': process_id,
+            'evaluation_container': evaluation_container,
+            'evaluator_version': evaluator_version,
+            'uploaded': uploaded
+            }
+    return make_server_request(token, endpoint, data=data, method=method)
+
+
+def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features):
+    endpoint = '/take-submission'
+    method = 'GET'
+    data = {'submission_id': submission_id,
+            'machine_id': machine_id,
+            'process_id': process_id,
+            'evaluator_version': evaluator_version,
+            'features': features}
+    return make_server_request(token, endpoint, data=data, method=method)
+
+
+def create_index_files(wd, job_id):
+    for root, dirnames, filenames in os.walk(wd, followlinks=True):
+        print(root, dirnames, filenames)
+        index = os.path.join(root, 'index.html')
+        if not os.path.exists(index):
+            with open(index, 'w') as f:
+                f.write(create_index(root, dirnames, filenames, job_id))
+
+
+def create_index(root, dirnames, filenames, job_id):
+
+    s = "<html><head></head><body>\n"
+
+    url = DEFAULT_DTSERVER + '/humans/jobs/%s' % job_id
+    s += '<p>These are the output for <a href="%s">Job %s</a>' % (url, job_id)
+    s += '<table>'
+
+    for d in dirnames:
+        s += '\n<tr><td></td><td><a href="%s">%s/</td></tr>' % (d, d)
+
+    for f in filenames:
+        size = os.stat(os.path.join(root, f)).st_size
+        s += '\n<tr><td>%.3f MB</td><td><a href="%s">%s</td></tr>' % (size / (1024 * 1024.0), f, f)
+
+    s += '\n</table>'
+    s += '\n</body></head>'
+    return s
