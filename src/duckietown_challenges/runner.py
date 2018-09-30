@@ -7,6 +7,7 @@ import logging
 import mimetypes
 import os
 import platform
+import random
 import socket
 import sys
 import tempfile
@@ -42,7 +43,7 @@ def get_token_from_shell_config():
 
 
 def dt_challenges_evaluator():
-    elogger.info("dt-challenges-evaluator %s" % __version__)
+    elogger.info("dt-challenges-evaluator (DTC %s)" % __version__)
 
     check_docker_environment()
     try:
@@ -59,13 +60,13 @@ def dt_challenges_evaluator():
     parsed = parser.parse_args()
 
     do_pull = not parsed.no_pull
-
-    try:
-        docker_username = get_dockerhub_username()
-    except Exception:
-        msg = 'Skipping push because docker_username is not set.'
-        elogger.debug(msg)
-        docker_username = None
+    #
+    # try:
+    #     docker_username = get_dockerhub_username()
+    # except Exception:
+    #     msg = 'Skipping push because docker_username is not set.'
+    #     elogger.debug(msg)
+    #     docker_username = None
 
     if parsed.continuous:
 
@@ -75,7 +76,7 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None, do_pull, docker_username)
+                go_(None, do_pull)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
@@ -99,7 +100,7 @@ def dt_challenges_evaluator():
 
         for submission_id in submissions:
             try:
-                go_(submission_id, do_pull, docker_username)
+                go_(submission_id, do_pull)
             except NothingLeft:
                 elogger.info('No submissions available to evaluate.')
 
@@ -147,7 +148,7 @@ def get_features():
 import yaml
 
 
-def go_(submission_id, do_pull, docker_username):
+def go_(submission_id, do_pull):
     features = get_features()
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
@@ -284,14 +285,26 @@ def go_(submission_id, do_pull, docker_username):
         with open(dcfn, 'w') as f:
             f.write(compose)
 
+        project = 'job%s-%s' % (job_id, random.randint(1, 10000))
         if do_pull:
-            cmd = ['docker-compose', '-f', dcfn, 'pull']
+            print('pulling containers')
+            cmd = ['docker-compose', '-p', project, '-f', dcfn, 'pull']
             ret = os.system(" ".join(cmd))
             if ret != 0:
                 msg = 'Could not run docker-compose pull.'
                 raise Exception(msg)
 
-        cmd = ['docker-compose', '-f', dcfn, 'up']
+        cmd = ['docker-compose', '-p', project, '-f', dcfn, 'build', '--no-cache']
+        ret = os.system(" ".join(cmd))
+        if ret != 0:
+            msg = 'Could not run docker-compose build.'
+            raise Exception(msg)
+
+        print('running containers')
+        cmd = ['docker-compose',
+               '-p', project,
+               '-f', dcfn, 'up', '--force-recreate',
+               '--remove-orphans', '--abort-on-container-exit']
         ret = os.system(" ".join(cmd))
         if ret != 0:
             msg = 'Could not run docker-compose.'

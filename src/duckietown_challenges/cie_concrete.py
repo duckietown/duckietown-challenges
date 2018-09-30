@@ -108,7 +108,10 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
 
     def wait_for_preparation(self):
         fn = os.path.join(self.root, CHALLENGE_DESCRIPTION_YAML)
-        return wait_for_file(fn, timeout=10, wait=1)
+        return wait_for_file(fn, timeout=TIMEOUT_PREPARATION, wait=1)
+
+
+TIMEOUT_PREPARATION = 6000
 
 
 class Timeout(Exception):

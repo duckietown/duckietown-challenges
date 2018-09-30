@@ -15,9 +15,9 @@ STATE_SUCCESS = 'SUCCESS'
 STATE_FAILED = 'FAILED'
 
 
-# POSSIBLE_STATUS = ['evaluating', 'timeout', 'success', 'failed', 'error']  # XXX
+
 ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
-#['success', 'error', 'failed']  # XXX
+
 allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 
