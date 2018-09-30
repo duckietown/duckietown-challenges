@@ -113,6 +113,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
 
 
 TIMEOUT_PREPARATION = 6000
+TIMEOUT_SOLUTION = 6000
 
 
 class Timeout(Exception):
@@ -154,7 +155,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def wait_for_solution(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
         try:
-            return wait_for_file(fn, timeout=10, wait=1)
+            return wait_for_file(fn, timeout=TIMEOUT_SOLUTION, wait=1)
         except Timeout as e:
             msg = 'Time out: %s' % e
             raise InvalidSubmission(msg)
