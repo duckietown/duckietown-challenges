@@ -124,7 +124,10 @@ def get_features():
     features['ram_total_mb'] = int(meminfo.total / (1024 * 1024.0))
     features['ram_available_mb'] = int(meminfo.available / (1024 * 1024.0))
     features['nprocessors'] = psutil.cpu_count()
-    features['processor_frequency_mhz'] = int(psutil.cpu_freq().max)
+    cpu_freq = psutil.cpu_freq()
+    if cpu_freq is not None:
+        # None on Docker
+        features['processor_frequency_mhz'] = int(psutil.cpu_freq().max)
     f = psutil.cpu_percent(interval=0.2)
     features['processor_free_percent'] = int(100.0 - f)
     features['p1'] = True
