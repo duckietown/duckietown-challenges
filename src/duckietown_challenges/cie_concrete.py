@@ -75,6 +75,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         if not os.path.exists(fn):
             msg = 'Could not get file %r' % fn
             raise ValueError(msg)
+        return fn
 
     def set_solution_output_dict(self, data):
         self.solution_output_dict = data
