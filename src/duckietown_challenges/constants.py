@@ -21,6 +21,6 @@ class ChallengeResultsStatus(object):
     ERROR = 'error'  # there was a problem with the evaluation (but not the solution)
 
     ALL = [SUCCESS, FAILED, ERROR]
-
+    # XXX: to merge
 
 CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')

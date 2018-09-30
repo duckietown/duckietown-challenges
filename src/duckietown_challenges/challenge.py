@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import yaml
 from contracts import raise_wrapped, check_isinstance
+from duckietown_challenges import ChallengesConstants
 
 
 class InvalidChallengeDescription(Exception):
@@ -12,8 +13,11 @@ STATE_START = 'START'
 STATE_ERROR = 'ERROR'
 STATE_SUCCESS = 'SUCCESS'
 STATE_FAILED = 'FAILED'
-POSSIBLE_STATUS = ['evaluating', 'timeout', 'success', 'failed', 'error']  # XXX
-ALLOWED_CONDITION_TRIGGERS = ['success', 'error', 'failed']  # XXX
+
+
+# POSSIBLE_STATUS = ['evaluating', 'timeout', 'success', 'failed', 'error']  # XXX
+ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
+#['success', 'error', 'failed']  # XXX
 allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 
@@ -80,13 +84,15 @@ class ChallengeTransitions(object):
         assert status[STATE_START] == 'success'
         for k in status:
             assert k == STATE_START or k in self.steps, k
-            assert status[k] in POSSIBLE_STATUS
+            assert status[k] in ChallengesConstants.ALLOWED_JOB_STATUS
 
         to_activate = []
         for t in self.transitions:
             if t.first in status and status[t.first] == t.condition:
                 dclogger.debug('Transition %s is activated' % str(t))
-                if t.second in status:
+
+                like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
+                if t.second in status and status[t.second] not in like_it_does_not_exist:
                     dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
