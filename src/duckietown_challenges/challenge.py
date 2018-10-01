@@ -3,7 +3,7 @@ from collections import namedtuple
 import yaml
 from contracts import raise_wrapped, check_isinstance
 from duckietown_challenges import ChallengesConstants
-
+from . import dclogger
 
 class InvalidChallengeDescription(Exception):
     pass
@@ -13,8 +13,6 @@ STATE_START = 'START'
 STATE_ERROR = 'ERROR'
 STATE_SUCCESS = 'SUCCESS'
 STATE_FAILED = 'FAILED'
-
-
 
 ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
 
@@ -55,6 +53,10 @@ Transition = namedtuple('Transition', 'first condition second')
 from datetime import datetime
 
 
+class InvalidSteps(Exception):
+    pass
+
+
 class ChallengeTransitions(object):
     def __init__(self, transitions, steps):
         self.transitions = []
@@ -82,9 +84,16 @@ class ChallengeTransitions(object):
         assert isinstance(status, dict)
         assert STATE_START in status
         assert status[STATE_START] == 'success'
-        for k in status:
-            assert k == STATE_START or k in self.steps, k
-            assert status[k] in ChallengesConstants.ALLOWED_JOB_STATUS
+        status = dict(**status)
+        for k, ks in list(status.items()):
+            if k != STATE_START and k not in self.steps:
+                msg = 'Ignoring invalid step %s -> %s' % (k, ks)
+                dclogger.error(msg)
+                status.pop(k)
+            if ks not in ChallengesConstants.ALLOWED_JOB_STATUS:
+                msg = 'Ignoring invalid step %s -> %s' % (k, ks)
+                dclogger.error(msg)
+                status.pop(k)
 
         to_activate = []
         for t in self.transitions:
@@ -186,4 +195,4 @@ class ChallengeDescription(object):
         return yaml.dump(self.as_dict())
 
 
-from . import dclogger
+
