@@ -16,8 +16,7 @@ import traceback
 from collections import OrderedDict
 
 from dt_shell.constants import DTShellConstants
-from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment, \
-    get_dockerhub_username
+from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
 
 from . import __version__
@@ -60,13 +59,6 @@ def dt_challenges_evaluator():
     parsed = parser.parse_args()
 
     do_pull = not parsed.no_pull
-    #
-    # try:
-    #     docker_username = get_dockerhub_username()
-    # except Exception:
-    #     msg = 'Skipping push because docker_username is not set.'
-    #     elogger.debug(msg)
-    #     docker_username = None
 
     if parsed.continuous:
 
@@ -101,8 +93,14 @@ def dt_challenges_evaluator():
         for submission_id in submissions:
             try:
                 go_(submission_id, do_pull)
-            except NothingLeft:
-                elogger.info('No submissions available to evaluate.')
+            except NothingLeft as e:
+                if submission_id is None:
+                    msg = 'No submissions available to evaluate.'
+                else:
+                    msg = 'Could not evaluate submission %s.' % submission_id
+
+                msg += '\n' + str(e)
+                elogger.error(msg)
 
 
 class NothingLeft(Exception):
@@ -143,11 +141,9 @@ def get_features():
 
     features['gpu'] = os.path.exists('/proc/driver/nvidia/version')
 
-    print yaml.dump(features)
+    elogger.debug(json.dumps(features, indent=4))
+
     return features
-
-
-import yaml
 
 
 def go_(submission_id, do_pull):
@@ -284,7 +280,6 @@ def go_(submission_id, do_pull):
                challenge_evaluation_output_dir=challenge_evaluation_output_dir,
                CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
-
         dcfn = os.path.join(wd, 'docker-compose.yaml')
 
         print(compose)
@@ -381,6 +376,7 @@ def go_(submission_id, do_pull):
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
 
+
 def dtserver_report_job(token, job_id, result, stats, machine_id,
                         process_id, evaluation_container, evaluator_version, uploaded):
     endpoint = '/take-submission'
@@ -418,7 +414,6 @@ def create_index_files(wd, job_id):
 
 
 def create_index(root, dirnames, filenames, job_id):
-
     s = "<html><head></head><body>\n"
 
     url = DEFAULT_DTSERVER + '/humans/jobs/%s' % job_id
