@@ -182,9 +182,11 @@ def go_(submission_id, do_pull):
             os.unlink(LAST)
         os.symlink(wd, LAST)
 
+        # you get this from the server
         challenge_name = res['challenge_name']
         solution_container = res['parameters']['hash']
         challenge_parameters = res['challenge_parameters']
+        # AWS config
         aws_config = res['aws_config']
         bucket_name = aws_config['bucket_name']
         aws_access_key_id = aws_config['aws_access_key_id']
@@ -208,13 +210,19 @@ def go_(submission_id, do_pull):
             elogger.error(msg)
             raise Exception(msg)
 
+        # the evaluation container
         evaluation_container = challenge_parameters['container']
 
         UID = os.getuid()
         USERNAME = getpass.getuser()
 
+        # four directories
+
+        # output for the sub
         challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
+        # the yaml with the scores
         challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
+        # the results of the "preparation" step
         challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
         challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
 
@@ -256,16 +264,10 @@ def go_(submission_id, do_pull):
         - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
         - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
         - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+
     networks:
       evaluation:
         
-    # volumes:
-    #   CHALLENGE_SOLUTION_OUTPUT_DIR:
-    #   CHALLENGE_EVALUATION_OUTPUT_DIR:
-    #   CHALLENGE_DESCRIPTION_DIR:
-    #   CHALLENGE_RESULTS_DIR:
-    #   
-    #   
     """.format(challenge_name=challenge_name,
                evaluation_container=evaluation_container,
                solution_container=solution_container,
@@ -280,13 +282,6 @@ def go_(submission_id, do_pull):
                challenge_evaluation_output_dir=challenge_evaluation_output_dir,
                CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
 
-        #         df = os.path.join(wd, 'Dockerfile')
-        #         with open(df, 'w') as f:
-        #             f.write("""
-        # FROM scratch
-        # COPY . /jobs/%s
-        #
-        #             """ % job_id)
 
         dcfn = os.path.join(wd, 'docker-compose.yaml')
 
@@ -359,27 +354,6 @@ def go_(submission_id, do_pull):
             uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
                                  mime_type=mime_type, rpath=rpath))
 
-        # if docker_username is not None:
-        #     import docker
-        #     client = docker.from_env()
-        #
-        #     tag = '%s/jobs:%s' % (docker_username, job_id)
-        #     out = client.images.build(path=wd, tag=tag)
-        #     for line in out:
-        #         print(line)
-        #
-        #     image = client.images.get(tag)
-        #     artifacts_image = '%s@%s' % (tag, image.id)
-        #
-        #     size = image.attrs['Size']
-        #
-        #     print(artifacts_image)
-        #
-        #     elogger.info('Pushing image %s' % tag)
-        #     client.images.push(tag)
-        # else:
-        #     size = artifacts_image = None
-
 
     except NothingLeft:
         raise
@@ -394,6 +368,7 @@ def go_(submission_id, do_pull):
     if artifacts_image:
         stats['artifacts'] = dict(size=size, image=artifacts_image)
 
+    # REST call to the duckietown chalenges server
     dtserver_report_job(token,
                         job_id=job_id,
                         stats=stats,
@@ -403,11 +378,6 @@ def go_(submission_id, do_pull):
                         evaluation_container=evaluation_container,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
-    #
-    # process_id = data['process_id']
-    # evaluator_version = data['evaluator_version']
-    # evaluation_container = data['evaluation_container']
-
 
 def dtserver_report_job(token, job_id, result, stats, machine_id,
                         process_id, evaluation_container, evaluator_version, uploaded):
