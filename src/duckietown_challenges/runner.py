@@ -264,16 +264,10 @@ def go_(submission_id, do_pull):
         - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
         - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
         - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+
     networks:
       evaluation:
         
-    # volumes:
-    #   CHALLENGE_SOLUTION_OUTPUT_DIR:
-    #   CHALLENGE_EVALUATION_OUTPUT_DIR:
-    #   CHALLENGE_DESCRIPTION_DIR:
-    #   CHALLENGE_RESULTS_DIR:
-    #   
-    #   
     """.format(challenge_name=challenge_name,
                evaluation_container=evaluation_container,
                solution_container=solution_container,
