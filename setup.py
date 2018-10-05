@@ -30,6 +30,7 @@ setup(name='duckietown-challenges',
           'ruamel.yaml',
           'docker',
           'psutil',
+          'boto3==1.9.14'
       ],
 
       tests_require=[
