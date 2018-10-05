@@ -1,9 +1,12 @@
 from collections import namedtuple
+from datetime import datetime
 
 import yaml
 from contracts import raise_wrapped, check_isinstance
 from duckietown_challenges import ChallengesConstants
+
 from . import dclogger
+
 
 class InvalidChallengeDescription(Exception):
     pass
@@ -48,9 +51,27 @@ class ChallengeStep(object):
         return ChallengeStep(name, title, description, evaluation_parameters,
                              features_required)
 
+    def update_container(self):
+        x = self.evaluation_parameters['container']
+
+        self.evaluation_parameters['container'] = get_latest(x)
+
+
+def get_latest(image_name):
+    if '@' in image_name:
+        msg = 'The image %r already has a qualified hash. Not updating.' % image_name
+        dclogger.warning(msg)
+        return
+    import docker
+    client = docker.from_env()
+    dclogger.info('Finding latest version of %s' % image_name)
+    image = client.images.get(image_name)
+    fq = image_name + '@' + image.id
+    dclogger.info('updated %s -> %r' % (image_name, fq))
+    return fq
+
 
 Transition = namedtuple('Transition', 'first condition second')
-from datetime import datetime
 
 
 class InvalidSteps(Exception):
@@ -193,6 +214,3 @@ class ChallengeDescription(object):
 
     def as_yaml(self):
         return yaml.dump(self.as_dict())
-
-
-

@@ -141,6 +141,8 @@ def get_features():
     features['nduckiebots'] = False
     features['map_3x3'] = False
 
+    features['gpu'] = os.path.exists('/proc/driver/nvidia/version')
+
     print yaml.dump(features)
     return features
 
