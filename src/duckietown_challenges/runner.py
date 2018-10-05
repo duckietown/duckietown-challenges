@@ -120,6 +120,7 @@ def get_features():
     features['x86_64'] = (machine == 'x86_64')
     features['armv7l'] = (machine == 'armv7l')
     meminfo = psutil.virtual_memory()
+
     # svmem(total=16717422592, available=5376126976, percent=67.8, used=10359984128, free=1831890944, active=7191916544, inactive=2325667840, buffers=525037568, cached=4000509952, shared=626225152)
 
     features['ram_total_mb'] = int(meminfo.total / (1024 * 1024.0))
@@ -224,7 +225,7 @@ def go_(submission_id, do_pull):
 
         compose = """
         
-    version: '3'
+    version: '2.3'
     services:
       solution:
       
@@ -234,7 +235,7 @@ def go_(submission_id, do_pull):
             uid: {UID}
         networks:
             - evaluation
-               
+        runtime: nvidia
         
         volumes:
         - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
