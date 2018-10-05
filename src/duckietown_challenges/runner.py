@@ -232,6 +232,9 @@ def go_(submission_id, do_pull):
         environment:
             username: {USERNAME}
             uid: {UID}
+        networks:
+            - evaluation
+               
         
         volumes:
         - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
@@ -244,12 +247,18 @@ def go_(submission_id, do_pull):
         environment:
             username: {USERNAME}
             uid: {UID}
-        
+        networks:
+            evaluation:
+                aliases:
+                    - evaluator
         volumes:
         - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
         - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
         - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
         - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+    networks:
+      evaluation:
+        
     # volumes:
     #   CHALLENGE_SOLUTION_OUTPUT_DIR:
     #   CHALLENGE_EVALUATION_OUTPUT_DIR:
