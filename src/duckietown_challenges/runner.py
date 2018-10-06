@@ -140,6 +140,7 @@ def get_features():
     features['picamera'] = False
     features['nduckiebots'] = False
     features['map_3x3'] = False
+    features['gpu'] = os.path.isdir('/proc/driver/nvidia/gpus/')
 
     print yaml.dump(features)
     return features
