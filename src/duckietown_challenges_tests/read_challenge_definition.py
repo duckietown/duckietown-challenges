@@ -1,12 +1,13 @@
 import yaml
 from comptests import comptest, run_module_tests
 
-from duckietown_challenges.challenge import ChallengeDescription
-
+from duckietown_challenges.challenge import ChallengeDescription, ServiceDefinition, EvaluationParameters
 # language=yaml
+from duckietown_challenges.utils import InvalidConfiguration
+
 data = """
 
-name: "challenge-short"
+challenge: "challenge-short"
 title: "The title"
 description: |
 
@@ -22,10 +23,10 @@ roles:
     grant: true
     moderate: true
     snoop: true
-  group:de:
-    grant: false
-    moderate: true
-    snoop: true
+  # group:de:
+  #   grant: false
+  #   moderate: true
+  #   snoop: true
 
 steps:
 
@@ -34,7 +35,14 @@ steps:
     description: |
       Description in Markdown
     evaluation_parameters:
-      image: Image/name
+        version: '3'
+        services:
+            evaluator:
+                image: Image/name
+            solution:
+                image: SUBMISSION_CONTAINER
+            
+    timeout: 100
     features_required:
       arm: true
       ram_mb: 8000
@@ -44,11 +52,19 @@ steps:
     description: |
       Description in Markdown
     evaluation_parameters:
-      image: Image/name
+        version: '3'
+        services:
+            evaluator:
+                image: Image/name
+                environment: {}
+            solution:
+                image: SUBMISSION_CONTAINER            
     features_required:
       arm: true
       ram_mb: 8000
-      
+    timeout: 100
+        
+        
 transitions:
   # We start with the state START triggering step1
   - [START, success, step1]
@@ -78,7 +94,6 @@ def read_challenge_1():
     d2 = yaml.load(y)
     print y
     c = ChallengeDescription.from_yaml(d2)
-
 
     assert c.title
     assert len(c.get_steps()) == 2
@@ -139,7 +154,79 @@ def read_challenge_1():
     assert steps == [], steps
 
 
+@comptest
+def empty_services():
+    data = """
+version: '3'
+services:
 
+"""
+    assert_raises_s(InvalidConfiguration, 'Expected dict', test_reading_evaluation_parameters, data)
+
+@comptest
+def empty_services():
+    data = """
+version: '3'
+services: {}
+
+"""
+    assert_raises_s(InvalidConfiguration, 'expected dict', test_reading_evaluation_parameters, data)
+
+
+@comptest
+def missing_services():
+    data = """
+version: '3'
+
+
+"""
+    assert_raises_s(InvalidConfiguration, "KeyError: 'services'", test_reading_evaluation_parameters, data)
+
+
+@comptest
+def extra_field():
+    data = """
+version: '3'
+services:
+    one:
+        image: image
+    solution:
+        image: SUBMISSION_CONTAINER
+another:
+"""
+    assert_raises_s(InvalidConfiguration, "Invalid fields ['another']", test_reading_evaluation_parameters, data)
+
+
+def assert_raises_s(E, contained, f, *args):
+    try:
+        f(*args)
+    except E as e:
+        s = str(e)
+        if contained not in s:
+            msg = 'Expected %r in error:\n%s' % (contained, s)
+            raise Exception(msg)
+    else:
+        msg = 'Expected to find exception %s' % str(E)
+        raise Exception(msg)
+
+
+def test_reading(s):
+    d = yaml.load(s)
+    c0 = ChallengeDescription.from_yaml(d)
+    return c0
+
+
+def test_reading_service(s):
+    d = yaml.load(s)
+    c0 = ServiceDefinition.from_yaml(d)
+    return c0
+
+
+
+def test_reading_evaluation_parameters(s):
+    d = yaml.load(s)
+    c0 = EvaluationParameters.from_yaml(d)
+    return c0
 
 if __name__ == '__main__':
     run_module_tests()

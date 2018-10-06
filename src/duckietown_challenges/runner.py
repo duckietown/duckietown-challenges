@@ -9,16 +9,21 @@ import os
 import platform
 import random
 import socket
+import subprocess
 import sys
 import tempfile
 import time
 import traceback
 from collections import OrderedDict
 
+import yaml
+from botocore.exceptions import ClientError
+
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
-
+from duckietown_challenges.challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
+from duckietown_challenges.utils import safe_yaml_dump
 from . import __version__
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
@@ -55,11 +60,25 @@ def dt_challenges_evaluator():
     parser = argparse.ArgumentParser()
     parser.add_argument("--continuous", action="store_true", default=False)
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
+    parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
+    parser.add_argument("--features", default='{}')
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
-    do_pull = not parsed.no_pull
+    try:
+        more_features = yaml.load(parsed.features)
+    except Exception as e:
+        msg = 'Could not evaluate your YAML string %r:\n%s' % (parsed.features, e)
+        raise Exception(msg)
 
+    if not isinstance(more_features, dict):
+        msg = 'I expected that the features are a dict; obtained %s: %r' % (type(more_features).__name__, more_features)
+        raise Exception(msg)
+
+    do_pull = not parsed.no_pull
+    do_upload = not parsed.no_upload
+
+    args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features)
     if parsed.continuous:
 
         timeout = 5.0  # seconds
@@ -68,7 +87,7 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None, do_pull)
+                go_(None, **args)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
@@ -92,7 +111,7 @@ def dt_challenges_evaluator():
 
         for submission_id in submissions:
             try:
-                go_(submission_id, do_pull)
+                go_(submission_id, **args)
             except NothingLeft as e:
                 if submission_id is None:
                     msg = 'No submissions available to evaluate.'
@@ -107,7 +126,7 @@ class NothingLeft(Exception):
     pass
 
 
-def get_features():
+def get_features(more_features):
     import psutil
 
     features = {}
@@ -141,13 +160,19 @@ def get_features():
 
     features['gpu'] = os.path.exists('/proc/driver/nvidia/version')
 
+    for k, v in more_features.items():
+        if k in features:
+            msg = 'Using %r = %r instead of %r' % (k, features[k], more_features[k])
+            elogger.info(msg)
+        features[k] = v
+
     elogger.debug(json.dumps(features, indent=4))
 
     return features
 
 
-def go_(submission_id, do_pull):
-    features = get_features()
+def go_(submission_id, do_pull, more_features, do_upload):
+    features = get_features(more_features)
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
 
@@ -162,14 +187,13 @@ def go_(submission_id, do_pull):
         msg = 'Could not find jobs: %s' % res['msg']
         raise NothingLeft(msg)
 
-    elogger.info(res)
+    elogger.info(safe_yaml_dump(res))
     job_id = res['job_id']
 
     elogger.info('Evaluating job %s' % job_id)
     # submission_id = result['submission_id']
     # parameters = result['parameters']
     # job_id = result['job_id']
-    evaluation_container = None
 
     artifacts_image = size = None
     try:
@@ -181,27 +205,29 @@ def go_(submission_id, do_pull):
         os.symlink(wd, LAST)
 
         # you get this from the server
-        challenge_name = res['challenge_name']
+
         solution_container = res['parameters']['hash']
-        challenge_parameters = res['challenge_parameters']
+        challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
         # AWS config
         aws_config = res['aws_config']
-        bucket_name = aws_config['bucket_name']
-        aws_access_key_id = aws_config['aws_access_key_id']
-        aws_secret_access_key = aws_config['aws_secret_access_key']
-        aws_root_path = aws_config['path']
-        import boto3
-        s3 = boto3.resource("s3",
-                            aws_access_key_id=aws_access_key_id,
-                            aws_secret_access_key=aws_secret_access_key)
+        if aws_config and do_upload:
+            bucket_name = aws_config['bucket_name']
+            aws_access_key_id = aws_config['aws_access_key_id']
+            aws_secret_access_key = aws_config['aws_secret_access_key']
+            aws_root_path = aws_config['path']
+            import boto3
+            s3 = boto3.resource("s3",
+                                aws_access_key_id=aws_access_key_id,
+                                aws_secret_access_key=aws_secret_access_key)
 
-        s = 'initial data'
-        data = StringIO.StringIO(s)
-        print('trying bucket connection')
-        object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
-        object.upload_fileobj(data)
-        print('uploaded')
-        # evaluation_protocol = challenge_parameters['protocol']
+            s = 'initial data'
+            data = StringIO.StringIO(s)
+            elogger.debug('trying bucket connection')
+            s3_object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
+            s3_object.upload_fileobj(data)
+            elogger.debug('uploaded')
+
+            # evaluation_protocol = challenge_parameters['protocol']
         # assert evaluation_protocol == 'p1'
         if res['protocol'] != 'p1':
             msg = 'invalid protocol %s' % res['protocol']
@@ -209,12 +235,30 @@ def go_(submission_id, do_pull):
             raise Exception(msg)
 
         # the evaluation container
-        evaluation_container = challenge_parameters['container']
+        config = challenge_parameters_.as_dict()
+        elogger.info('This is the base config:\n%s' % safe_yaml_dump(config))
 
+        # Adding the submission container
+        for service in config['services'].values():
+            if service['image'] == SUBMISSION_CONTAINER_TAG:
+                service['image'] = solution_container
+                break
+        else:
+            msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
+            raise Exception(msg)
+
+        elogger.info('Now:\n%s' % safe_yaml_dump(config))
+
+        # adding extra environment variables:
         UID = os.getuid()
         USERNAME = getpass.getuser()
+        extra_environment = dict(username=USERNAME, uid=UID,
+                                 challenge_name=res['challenge_name'],
+                                 challenge_step_name=res['step_name'])
+        for service in config['services'].values():
+            service['environment'].update(extra_environment)
 
-        # four directories
+        # add volumes
 
         # output for the sub
         challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
@@ -227,81 +271,63 @@ def go_(submission_id, do_pull):
         for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
                   challenge_evaluation_output_dir]:
             os.makedirs(d)
+        volumes = [
+            challenge_solution_output_dir + ':' + '/' + CHALLENGE_SOLUTION_OUTPUT_DIR,
+            challenge_results_dir + ':' + '/' + CHALLENGE_RESULTS_DIR,
+            challenge_description_dir + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
+            challenge_evaluation_output_dir + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
+        ]
+        for service in config['services'].values():
+            assert 'volumes' not in service
+            service['volumes'] = volumes
 
-        compose = """
-        
-    version: '3'
-    services:
-      solution:
-      
-        image: {solution_container}
-        environment:
-            username: {USERNAME}
-            uid: {UID}
-        networks:
-            - evaluation
-               
-        
-        volumes:
-        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
-        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
-        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
-        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
-        
-      evaluator:
-        image: {evaluation_container} 
-        environment:
-            username: {USERNAME}
-            uid: {UID}
-        networks:
-            evaluation:
-                aliases:
-                    - evaluator
-        volumes:
-        - {challenge_solution_output_dir}:/{CHALLENGE_SOLUTION_OUTPUT_DIR}
-        - {challenge_results_dir}:/{CHALLENGE_RESULTS_DIR}
-        - {challenge_description_dir}:/{CHALLENGE_DESCRIPTION_DIR}
-        - {challenge_evaluation_output_dir}:/{CHALLENGE_EVALUATION_OUTPUT_DIR}
+        # adding network evaluation
 
-    networks:
-      evaluation:
-        
-    """.format(challenge_name=challenge_name,
-               evaluation_container=evaluation_container,
-               solution_container=solution_container,
-               USERNAME=USERNAME,
-               UID=UID,
-               challenge_solution_output_dir=challenge_solution_output_dir,
-               CHALLENGE_SOLUTION_OUTPUT_DIR=CHALLENGE_SOLUTION_OUTPUT_DIR,
-               challenge_results_dir=challenge_results_dir,
-               CHALLENGE_RESULTS_DIR=CHALLENGE_RESULTS_DIR,
-               challenge_description_dir=challenge_description_dir,
-               CHALLENGE_DESCRIPTION_DIR=CHALLENGE_DESCRIPTION_DIR,
-               challenge_evaluation_output_dir=challenge_evaluation_output_dir,
-               CHALLENGE_EVALUATION_OUTPUT_DIR=CHALLENGE_EVALUATION_OUTPUT_DIR)
+        elogger.info('Now:\n%s' % safe_yaml_dump(config))
+
+        NETWORK_NAME = 'evaluation'
+        networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
+        for service in config['services'].values():
+            service['networks'] = networks_evaluator
+        config['networks'] = dict(evaluation=None)
+
+        config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
+        elogger.debug('YAML:\n' + config_yaml)
 
         dcfn = os.path.join(wd, 'docker-compose.yaml')
 
-        print(compose)
+        # elogger.info('Compose file: \n%s ' % compose)
         with open(dcfn, 'w') as f:
-            f.write(compose)
+            f.write(config_yaml)
+
+        def capture_docker_compose_logs():
+            cmd = ["docker-compose", "logs", "--no-color"]
+            try:
+                out = subprocess.check_output(cmd, cwd=wd)
+            except subprocess.CalledProcessError as e:
+                return '(could not read logs: %s)' % e
+
+            return out
 
         project = 'job%s-%s' % (job_id, random.randint(1, 10000))
         if do_pull:
-            print('pulling containers')
-            cmd = ['docker-compose', '-p', project, '-f', dcfn, 'pull']
-            ret = os.system(" ".join(cmd))
-            if ret != 0:
-                msg = 'Could not run docker-compose pull.'
+            elogger.info('pulling containers')
+            cmd = ['docker-compose', '-p', project, 'pull']
+            try:
+                subprocess.check_call(cmd, cwd=wd)
+            except subprocess.CalledProcessError as e:
+                msg = 'Could not run docker-compose pull: %s' % e
                 raise Exception(msg)
 
+        elogger.info('running docker-compose build')
         cmd = ['docker-compose', '-p', project, '-f', dcfn, 'build', '--no-cache']
         ret = os.system(" ".join(cmd))
         if ret != 0:
             msg = 'Could not run docker-compose build.'
+            msg += '\n' + capture_docker_compose_logs()
             raise Exception(msg)
 
-        print('running containers')
+        elogger.info('Running containers')
         cmd = ['docker-compose',
                '-p', project,
                '-f', dcfn, 'up', '--force-recreate',
@@ -309,6 +335,7 @@ def go_(submission_id, do_pull):
         ret = os.system(" ".join(cmd))
         if ret != 0:
             msg = 'Could not run docker-compose.'
+            msg += '\n' + capture_docker_compose_logs()
             raise Exception(msg)
 
         # os.system('find %s' % wd)
@@ -329,33 +356,22 @@ def go_(submission_id, do_pull):
                     rpath = rpath[2:]
                 toupload[rpath] = os.path.join(dirpath, f)
 
-        uploaded = []
-        for rpath, realfile in toupload.items():
-            object_key = os.path.join(aws_root_path, rpath)
-            statinfo = os.stat(realfile)
-            size = statinfo.st_size
-
-            print('uploading %.1fMB %s to %s from %s' % (size / (1024 * 1024.0), rpath, object_key, realfile))
-
-            mime_type, _encoding = mimetypes.guess_type(realfile)
-
-            print('guessed %s' % mime_type)
-            if mime_type is None:
-                if realfile.endswith('.yaml'):
-                    mime_type = 'text/yaml'
-                else:
-                    mime_type = 'binary/octet-stream'
-
-            aws_object = s3.Object(bucket_name, object_key)
-            aws_object.upload_file(realfile, ExtraArgs={'ContentType': mime_type})
-            uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
-                                 mime_type=mime_type, rpath=rpath))
-
+        if not aws_config:
+            msg = 'Not uploading artefacts because AWS config not passed.'
+            elogger.info(msg)
+            uploaded = []
+        else:
+            if do_upload:
+                uploaded = upload(aws_config, toupload)
+            else:
+                msg = 'Skipping uploading of %s files' % len(toupload)
+                elogger.info(msg)
+                uploaded = []
 
     except NothingLeft:
         raise
     except Exception as e:  # XXX
-        msg = 'Uncaught exception:\n%s' % traceback.format_exc()
+        msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
         elogger.error(msg)
         status = ChallengeResultsStatus.ERROR
         cr = ChallengeResults(status, msg, scores={})
@@ -372,13 +388,80 @@ def go_(submission_id, do_pull):
                         result=cr.get_status(),
                         machine_id=machine_id,
                         process_id=process_id,
-                        evaluation_container=evaluation_container,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
 
 
+def upload(aws_config, toupload):
+    bucket_name = aws_config['bucket_name']
+    aws_access_key_id = aws_config['aws_access_key_id']
+    aws_secret_access_key = aws_config['aws_secret_access_key']
+    # aws_root_path = aws_config['path']
+    aws_path_by_value = aws_config['path_by_value']
+    import boto3
+    s3 = boto3.resource("s3",
+                        aws_access_key_id=aws_access_key_id,
+                        aws_secret_access_key=aws_secret_access_key)
+
+    uploaded = []
+    for rpath, realfile in toupload.items():
+
+        sha256hex = compute_sha256hex(realfile)
+
+        # path_by_value
+        object_key = os.path.join(aws_path_by_value, 'sha256', sha256hex)
+
+        # object_key = os.path.join(aws_root_path, rpath)
+        statinfo = os.stat(realfile)
+        size = statinfo.st_size
+
+        elogger.info('uploading %.1fMB %s to %s from %s' % (size / (1024 * 1024.0), rpath, object_key, realfile))
+
+        mime_type, _encoding = mimetypes.guess_type(realfile)
+
+        if mime_type is None:
+            if realfile.endswith('.yaml'):
+                mime_type = 'text/yaml'
+            else:
+                mime_type = 'binary/octet-stream'
+
+        aws_object = s3.Object(bucket_name, object_key)
+        try:
+            aws_object.load()
+            elogger.info('Object %s already exists' % rpath)
+        except ClientError as e:
+            not_found = e.response['Error']['Code'] == '404'
+            if not_found:
+                aws_object.upload_file(realfile, ExtraArgs={'ContentType': mime_type})
+            else:
+                raise
+        uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
+                             mime_type=mime_type, rpath=rpath, sha256hex=sha256hex))
+
+    return uploaded
+
+
+def object_exists(s3, bucket, key):
+    from botocore.exceptions import ClientError
+    try:
+        h = s3.head_object(Bucket=bucket, Key=key)
+        print h
+    except ClientError as e:
+        return int(e.response['Error']['Code']) != 404
+    return True
+
+
+def compute_sha256hex(filename):
+    cmd = ['shasum', '-a', '256', filename]
+    res = subprocess.check_output(cmd)
+    tokens = res.split()
+    h = tokens[0]
+    assert len(h) == len('08c1fe03d3a6ef7dbfaccc04613ca561b11b5fd7e9d66b643436eb611dfba348')
+    return h
+
+
 def dtserver_report_job(token, job_id, result, stats, machine_id,
-                        process_id, evaluation_container, evaluator_version, uploaded):
+                        process_id, evaluator_version, uploaded):
     endpoint = '/take-submission'
     method = 'POST'
     data = {'job_id': job_id,
@@ -386,7 +469,6 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             'stats': stats,
             'machine_id': machine_id,
             'process_id': process_id,
-            'evaluation_container': evaluation_container,
             'evaluator_version': evaluator_version,
             'uploaded': uploaded
             }

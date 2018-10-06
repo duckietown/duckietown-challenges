@@ -1,6 +1,10 @@
 import os
 
-from . import dclogger
+import decorator
+import yaml
+
+from . import dclogger, InvalidConfiguration
+
 
 def write_data_to_file(data, filename):
     """
@@ -25,12 +29,11 @@ def write_data_to_file(data, filename):
                 dclogger.debug('already up to date %s' % (filename))
             return
 
-    tmp = filename+'.tmp'
+    tmp = filename + '.tmp'
     with open(tmp, 'w') as f:
         f.write(data)
     os.rename(tmp, filename)
     dclogger.debug('Written to: %s' % (filename))
-
 
 
 def expand_all(filename):
@@ -82,3 +85,29 @@ def d8n_mkdirs_thread_safe(dst):
         if err.errno != 17:  # file exists
             raise
 
+
+
+from contracts import indent, raise_wrapped
+
+
+@decorator.decorator
+def wrap_config_reader(f, x, *args, **kwargs):
+    """ Decorator for a function that takes a dict """
+
+    # def f2(x, *args, **kwargs):
+    try:
+        return f(x, *args, **kwargs)
+    except InvalidConfiguration as e:
+        msg = 'Could not interpret the configuration data using %s()' % f.__name__
+        msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
+        raise_wrapped(InvalidConfiguration, e, msg, compact=True)
+    except Exception as e:
+        msg = 'Could not interpret the configuration data using %s()' % f.__name__
+        msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
+        raise_wrapped(InvalidConfiguration, e, msg, compact=False)
+    # return f2
+
+
+def safe_yaml_dump(x):
+    s = yaml.safe_dump(x, encoding='utf-8', indent=4, allow_unicode=True)
+    return s

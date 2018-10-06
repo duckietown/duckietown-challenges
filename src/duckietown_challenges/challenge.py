@@ -3,8 +3,9 @@ from datetime import datetime
 
 import yaml
 from contracts import raise_wrapped, check_isinstance
-from duckietown_challenges import ChallengesConstants
 
+from duckietown_challenges import ChallengesConstants
+from duckietown_challenges.utils import wrap_config_reader
 from . import dclogger
 
 
@@ -24,37 +25,156 @@ allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 class ChallengeStep(object):
     def __init__(self, name, title, description, evaluation_parameters,
-                 features_required):
+                 features_required, timeout):
         self.name = name
         self.title = title
         self.description = description
-        check_isinstance(evaluation_parameters, dict)
+        check_isinstance(evaluation_parameters, EvaluationParameters)
         self.evaluation_parameters = evaluation_parameters
         check_isinstance(features_required, dict)
         self.features_required = features_required
+        self.timeout = timeout
 
     def as_dict(self):
         data = {}
         data['title'] = self.title
         data['description'] = self.description
-        data['evaluation_parameters'] = self.evaluation_parameters
+        data['evaluation_parameters'] = self.evaluation_parameters.as_dict()
         data['features_required'] = self.features_required
+        data['timeout'] = self.timeout
         return data
 
     @staticmethod
-    def from_yaml(name, data):
-        title = data['title']
-        description = data['description']
-        evaluation_parameters = data['evaluation_parameters']
-        features_required = data['features_required']
+    @wrap_config_reader
+    def from_yaml(data0, name):
+        if not isinstance(data0, dict):
+            msg = 'Need dict, got %s' % data0
+            raise ValueError(msg)
+
+        data = data0.copy()
+
+        title = data.pop('title')
+        description = data.pop('description')
+        evaluation_parameters = EvaluationParameters.from_yaml(data.pop('evaluation_parameters'))
+        features_required = data.pop('features_required')
+
+        timeout = data.pop('timeout')
+
+        if data:
+            msg = 'Extra fields: %s' % list(data)
+            raise ValueError(msg)
 
         return ChallengeStep(name, title, description, evaluation_parameters,
-                             features_required)
+                             features_required, timeout=timeout)
 
-    def update_container(self):
-        x = self.evaluation_parameters['container']
+    def update_image(self):
+        self.evaluation_parameters.update_image()
 
-        self.evaluation_parameters['container'] = get_latest(x)
+SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
+
+class EvaluationParameters(object):
+    """
+        You can specify these fields for the docker file:
+
+            version: '3'
+
+            services:
+                evaluator:
+                    image: imagename
+                    environment:
+                        var: var
+                solution: # For the solution container
+                    image: SUBMISSION_CONTAINER
+                    environment:
+                        var: var
+
+    """
+
+    def __init__(self, version, services):
+        self.version = version
+        self.services = services
+
+    @staticmethod
+    @wrap_config_reader
+    def from_yaml(d0):
+        if not isinstance(d0, dict):
+            msg = 'Expected dict, got %s' % d0.__repr__()
+            raise ValueError(msg)
+        d = dict(**d0)
+        services_ = d.pop('services')
+        if not isinstance(services_, dict):
+            msg = 'Expected dict got %s' % services_.__repr__()
+            raise ValueError(msg)
+
+        if not services_:
+            msg = 'No services described.'
+            raise ValueError(msg)
+
+        version = d.pop('version', '3')
+
+        services = {}
+        for k, v in services_.items():
+            services[k] = ServiceDefinition.from_yaml(v)
+
+        if d:
+            msg = 'Invalid fields %s' % list(d)
+            raise ValueError(msg)
+
+        # check that there is at least a service with the image called
+        # SUBMISSION_CONTAINER
+        n = 0
+        for service_definition in services.values():
+            if service_definition.image == SUBMISSION_CONTAINER_TAG:
+              n += 1
+        if n == 0:
+            msg = 'I expect one of the services to have "image: %s".' % SUBMISSION_CONTAINER_TAG
+            raise ValueError(msg)
+        if n>1:
+            msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
+            raise ValueError(msg)
+
+        return EvaluationParameters(services=services, version=version)
+
+    def as_dict(self):
+        services = dict([(k, v.as_dict()) for k, v in self.services.items()])
+        return dict(version=self.version, services=services)
+
+
+class ServiceDefinition(object):
+    def __init__(self, image, environment):
+        check_isinstance(environment, dict)
+        check_isinstance(image, (unicode, str))
+        self.image = str(image)
+        self.environment = environment
+
+    def update_image(self):
+        self.image = get_latest(self.image)
+
+    @staticmethod
+    @wrap_config_reader
+    def from_yaml(d0):
+        if not isinstance(d0, dict):
+            msg = 'Expected dict, got %s' % d0.__repr__()
+            raise ValueError(msg)
+        d = dict(**d0)
+        if 'image' in d:
+            image = d.pop('image')
+        elif 'container' in d:
+            image = d.pop('container')
+        else:
+            msg = 'Need parameter "image": %s' % d0
+            raise ValueError(msg)
+        environment = d.pop('environment', {})
+        if environment is None:
+            environment = {}
+
+        if d:
+            msg = 'Extra fields: %s' % d0
+            raise ValueError(msg)
+        return ServiceDefinition(image, environment)
+
+    def as_dict(self):
+        return dict(image=self.image, environment=self.environment)
 
 
 def get_latest(image_name):
@@ -66,6 +186,11 @@ def get_latest(image_name):
     client = docker.from_env()
     dclogger.info('Finding latest version of %s' % image_name)
     image = client.images.get(image_name)
+    if ':' in image_name:
+        # remove tag
+        image_name_no_tag = image_name[:image_name.index(':')]
+        image_name = image_name_no_tag
+
     fq = image_name + '@' + image.id
     dclogger.info('updated %s -> %r' % (image_name, fq))
     return fq
@@ -171,6 +296,7 @@ class ChallengeDescription(object):
         return self.ct.get_next_steps(status)
 
     @staticmethod
+    @wrap_config_reader
     def from_yaml(data):
         try:
             name = data['challenge']
@@ -185,7 +311,7 @@ class ChallengeDescription(object):
             steps = data['steps']
             Steps = {}
             for k, v in steps.items():
-                Steps[k] = ChallengeStep.from_yaml(name, v)
+                Steps[k] = ChallengeStep.from_yaml(v, k)
 
             return ChallengeDescription(name, title, description,
                                         protocol, date_open, date_close, Steps,

@@ -29,3 +29,10 @@ build-no-cache:
 push:
 	docker push $(name)
 
+
+
+tests-clean:
+	rm -rf out-comptests
+
+tests:
+	comptests --nonose duckietown_challenges_tests
