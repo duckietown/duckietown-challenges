@@ -4,3 +4,4 @@ ruamel.yaml
 docker
 psutil
 boto3==1.9.14
+ansi2html

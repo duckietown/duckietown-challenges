@@ -1,3 +1,4 @@
+import math
 import os
 
 import decorator
@@ -86,7 +87,6 @@ def d8n_mkdirs_thread_safe(dst):
             raise
 
 
-
 from contracts import indent, raise_wrapped
 
 
@@ -111,3 +111,40 @@ def wrap_config_reader(f, x, *args, **kwargs):
 def safe_yaml_dump(x):
     s = yaml.safe_dump(x, encoding='utf-8', indent=4, allow_unicode=True)
     return s
+
+
+def friendly_size(b):
+    if b == 0:
+        return 'empty'
+
+    if b < 1024:
+        return '%d  B' % b
+
+    if b < 1024 * 1024:
+        kbs = math.ceil(b / 1024.0)
+        return '%d KB' % kbs
+
+    if b < 1024 * 1024 * 1024:
+        mbs = math.ceil(b / (1024.0 * 1024.0))
+        return '%d MB' % mbs
+
+    gbs = b / (1024.0 * 1024.0 * 1024)
+    return '$.2f GB' % gbs
+
+def friendly_size2(b):
+    if b == 0:
+        return 'empty'
+
+    if b < 1024:
+        return '%d  B' % b
+
+    if b < 1024 * 1024:
+        kbs = b / 1024.0
+        return '%.2f KB' % kbs
+
+    if b < 1024 * 1024 * 1024:
+        mbs = b / (1024.0 * 1024.0)
+        return '%.2f MB' % mbs
+
+    gbs = b / (1024.0 * 1024.0 * 1024)
+    return '%.2f GB' % gbs

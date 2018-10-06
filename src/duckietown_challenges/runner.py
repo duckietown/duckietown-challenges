@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import StringIO
 import argparse
+import copy
 import getpass
 import json
 import logging
@@ -8,6 +9,7 @@ import mimetypes
 import os
 import platform
 import random
+import shutil
 import socket
 import subprocess
 import sys
@@ -17,13 +19,12 @@ import traceback
 from collections import OrderedDict
 
 import yaml
-from botocore.exceptions import ClientError
 
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
 from duckietown_challenges.challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
-from duckietown_challenges.utils import safe_yaml_dump
+from duckietown_challenges.utils import safe_yaml_dump, friendly_size
 from . import __version__
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
@@ -61,6 +62,7 @@ def dt_challenges_evaluator():
     parser.add_argument("--continuous", action="store_true", default=False)
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
+    parser.add_argument("--no-delete", dest='no_delete', action="store_true", default=False)
     parser.add_argument("--features", default='{}')
     parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
@@ -77,8 +79,10 @@ def dt_challenges_evaluator():
 
     do_pull = not parsed.no_pull
     do_upload = not parsed.no_upload
+    delete = not parsed.no_delete
 
-    args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features)
+    args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features,
+                delete=delete)
     if parsed.continuous:
 
         timeout = 5.0  # seconds
@@ -171,7 +175,7 @@ def get_features(more_features):
     return features
 
 
-def go_(submission_id, do_pull, more_features, do_upload):
+def go_(submission_id, do_pull, more_features, do_upload, delete):
     features = get_features(more_features)
     token = get_token_from_shell_config()
     machine_id = socket.gethostname()
@@ -236,7 +240,7 @@ def go_(submission_id, do_pull, more_features, do_upload):
 
         # the evaluation container
         config = challenge_parameters_.as_dict()
-        elogger.info('This is the base config:\n%s' % safe_yaml_dump(config))
+        # elogger.info('This is the base config:\n%s' % safe_yaml_dump(config))
 
         # Adding the submission container
         for service in config['services'].values():
@@ -246,8 +250,6 @@ def go_(submission_id, do_pull, more_features, do_upload):
         else:
             msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
             raise Exception(msg)
-
-        elogger.info('Now:\n%s' % safe_yaml_dump(config))
 
         # adding extra environment variables:
         UID = os.getuid()
@@ -272,23 +274,27 @@ def go_(submission_id, do_pull, more_features, do_upload):
                   challenge_evaluation_output_dir]:
             os.makedirs(d)
         volumes = [
-            challenge_solution_output_dir + ':' + '/' + CHALLENGE_SOLUTION_OUTPUT_DIR,
-            challenge_results_dir + ':' + '/' + CHALLENGE_RESULTS_DIR,
-            challenge_description_dir + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
-            challenge_evaluation_output_dir + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
+            './' + CHALLENGE_SOLUTION_OUTPUT_DIR + ':' + '/' + CHALLENGE_SOLUTION_OUTPUT_DIR,
+            './' + CHALLENGE_RESULTS_DIR + ':' + '/' + CHALLENGE_RESULTS_DIR,
+            './' + CHALLENGE_DESCRIPTION_DIR + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
+            './' + CHALLENGE_EVALUATION_OUTPUT_DIR + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
         ]
+
         for service in config['services'].values():
             assert 'volumes' not in service
-            service['volumes'] = volumes
+            service['volumes'] = copy.deepcopy(volumes)
 
-        # adding network evaluation
+        # adding logging
+        # for service in config['services'].values():
+        #     options = dict()
+        #     service['logging'] = dict(driver='json-file', options=options)
 
         elogger.info('Now:\n%s' % safe_yaml_dump(config))
 
         NETWORK_NAME = 'evaluation'
         networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
         for service in config['services'].values():
-            service['networks'] = networks_evaluator
+            service['networks'] = copy.deepcopy(networks_evaluator)
         config['networks'] = dict(evaluation=None)
 
         config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
@@ -300,45 +306,63 @@ def go_(submission_id, do_pull, more_features, do_upload):
         with open(dcfn, 'w') as f:
             f.write(config_yaml)
 
-        def capture_docker_compose_logs():
-            cmd = ["docker-compose", "logs", "--no-color"]
-            try:
-                out = subprocess.check_output(cmd, cwd=wd)
-            except subprocess.CalledProcessError as e:
-                return '(could not read logs: %s)' % e
+        def run_docker(cmd0):
+            elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % wd)
 
-            return out
+            cmd0 = ['docker-compose', '-p', project] + cmd0
+            try:
+                return subprocess.check_output(cmd0, cwd=wd)
+            except subprocess.CalledProcessError as e:
+                msg = 'Could not run %s: %s' % (cmd0, e)
+                raise Exception(msg)
 
         project = 'job%s-%s' % (job_id, random.randint(1, 10000))
         if do_pull:
             elogger.info('pulling containers')
-            cmd = ['docker-compose', '-p', project, 'pull']
-            try:
-                subprocess.check_call(cmd, cwd=wd)
-            except subprocess.CalledProcessError as e:
-                msg = 'Could not run docker-compose pull: %s' % e
-                raise Exception(msg)
+            cmd = ['pull']
+            run_docker(cmd)
 
-        elogger.info('running docker-compose build')
-        cmd = ['docker-compose', '-p', project, '-f', dcfn, 'build', '--no-cache']
-        ret = os.system(" ".join(cmd))
-        if ret != 0:
-            msg = 'Could not run docker-compose build.'
-            msg += '\n' + capture_docker_compose_logs()
-            raise Exception(msg)
+        elogger.info('Creating containers')
+        cmd = ['create', '--force-recreate']
+        run_docker(cmd)
+
+        # Get names of containers
 
         elogger.info('Running containers')
-        cmd = ['docker-compose',
-               '-p', project,
-               '-f', dcfn, 'up', '--force-recreate',
-               '--remove-orphans', '--abort-on-container-exit']
-        ret = os.system(" ".join(cmd))
-        if ret != 0:
-            msg = 'Could not run docker-compose.'
-            msg += '\n' + capture_docker_compose_logs()
-            raise Exception(msg)
+        cmd = ['up',
+               # '--remove-orphans',
+               '--abort-on-container-exit'
+               ]
+        run_docker(cmd)
 
-        # os.system('find %s' % wd)
+        # cmd = ['ps']
+        # print run_docker(cmd)
+
+        for service in config['services']:
+            cmd = ['ps', '-q', service]
+
+            container = run_docker(cmd).strip()  # \n at the end
+            elogger.info(container)
+
+            cmd = ['docker', 'logs', '--details', '--timestamps', container]
+            try:
+                logs = subprocess.check_output(cmd, cwd=wd)
+            except subprocess.CalledProcessError as e:
+                msg = 'Could not run %s: %s' % (cmd, e)
+                raise Exception(msg)
+
+            # elogger.debug(logs)
+            fn = os.path.join(wd, 'log-%s.txt' % service)
+            with open(fn, 'w') as f:
+                f.write(logs)
+
+            from ansi2html import Ansi2HTMLConverter
+            conv = Ansi2HTMLConverter()
+            html = conv.convert(logs)
+            fn = os.path.join(wd, 'log-%s.html' % service)
+            with open(fn, 'w') as f:
+                f.write(html)
+
         try:
             cr = read_challenge_results(wd)
         except Exception as e:
@@ -347,7 +371,13 @@ def go_(submission_id, do_pull, more_features, do_upload):
             status = ChallengeResultsStatus.ERROR
             cr = ChallengeResults(status, msg, scores={})
 
-        create_index_files(wd, job_id=job_id)
+        # cmd = ['rm', '-v', '-f', '-s']
+        if delete:
+            cmd = ['down']
+            run_docker(cmd)
+
+        # create_index_files(wd, job_id=job_id)
+
         toupload = OrderedDict()
         for dirpath, dirnames, filenames in os.walk(wd):
             for f in filenames:
@@ -367,6 +397,9 @@ def go_(submission_id, do_pull, more_features, do_upload):
                 msg = 'Skipping uploading of %s files' % len(toupload)
                 elogger.info(msg)
                 uploaded = []
+
+        if delete:
+            shutil.rmtree(wd)
 
     except NothingLeft:
         raise
@@ -392,13 +425,21 @@ def go_(submission_id, do_pull, more_features, do_upload):
                         uploaded=uploaded)
 
 
+#
+# def copy_logs():
+#
+
+
 def upload(aws_config, toupload):
+    import boto3
+    from botocore.exceptions import ClientError
+
     bucket_name = aws_config['bucket_name']
     aws_access_key_id = aws_config['aws_access_key_id']
     aws_secret_access_key = aws_config['aws_secret_access_key']
     # aws_root_path = aws_config['path']
     aws_path_by_value = aws_config['path_by_value']
-    import boto3
+
     s3 = boto3.resource("s3",
                         aws_access_key_id=aws_access_key_id,
                         aws_secret_access_key=aws_secret_access_key)
@@ -415,8 +456,6 @@ def upload(aws_config, toupload):
         statinfo = os.stat(realfile)
         size = statinfo.st_size
 
-        elogger.info('uploading %.1fMB %s to %s from %s' % (size / (1024 * 1024.0), rpath, object_key, realfile))
-
         mime_type, _encoding = mimetypes.guess_type(realfile)
 
         if mime_type is None:
@@ -428,17 +467,25 @@ def upload(aws_config, toupload):
         aws_object = s3.Object(bucket_name, object_key)
         try:
             aws_object.load()
-            elogger.info('Object %s already exists' % rpath)
+            # elogger.info('Object %s already exists' % rpath)
+            status = 'known'
+            elogger.info('%15s %8s  %s' % (status, friendly_size(size), rpath))
+
         except ClientError as e:
             not_found = e.response['Error']['Code'] == '404'
             if not_found:
+                status = 'uploading'
+                elogger.info('%15s %8s  %s' % (status, friendly_size(size), rpath))
                 aws_object.upload_file(realfile, ExtraArgs={'ContentType': mime_type})
+
             else:
                 raise
+
         uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
                              mime_type=mime_type, rpath=rpath, sha256hex=sha256hex))
 
     return uploaded
+
 
 
 def object_exists(s3, bucket, key):
