@@ -161,6 +161,7 @@ def get_features(more_features):
     features['picamera'] = False
     features['nduckiebots'] = False
     features['map_3x3'] = False
+    features['gpu'] = os.path.isdir('/proc/driver/nvidia/gpus/')
 
     features['gpu'] = os.path.exists('/proc/driver/nvidia/version')
 
