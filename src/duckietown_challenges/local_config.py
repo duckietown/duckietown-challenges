@@ -17,6 +17,6 @@ def read_challenge_info(dirname):
         challenge_name = data['challenge']
 
         return ChallengeInfoLocal(challenge_name)
-    except Exception as e:
+    except BaseException as e:
         msg = 'Could not read file %r: %s' % (fn, e)
         raise Exception(msg)

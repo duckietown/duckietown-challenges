@@ -98,7 +98,7 @@ def wrap_config_reader(f, x, *args, **kwargs):
         msg = 'Could not interpret the configuration data using %s()' % f.__name__
         msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
         raise_wrapped(InvalidConfiguration, e, msg, compact=True)
-    except Exception as e:
+    except BaseException as e:
         msg = 'Could not interpret the configuration data using %s()' % f.__name__
         msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
         raise_wrapped(InvalidConfiguration, e, msg, compact=False)

@@ -74,7 +74,7 @@ def dt_challenges_evaluator():
 
     try:
         more_features = yaml.load(parsed.features)
-    except Exception as e:
+    except BaseException as e:
         msg = 'Could not evaluate your YAML string %r:\n%s' % (parsed.features, e)
         raise Exception(msg)
 
@@ -108,7 +108,7 @@ def dt_challenges_evaluator():
             except ConnectionError as e:
                 elogger.error(e)
                 multiplier *= 1.5
-            except Exception as e:
+            except BaseException as e:
                 msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
                 elogger.error(msg)
                 multiplier *= 1.5
@@ -357,7 +357,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         try:
             cr = read_challenge_results(wd)
-        except Exception as e:
+        except BaseException as e:
             msg = 'Could not read the challenge results:\n%s' % traceback.format_exc(e)
             elogger.error(msg)
             status = ChallengeResultsStatus.ERROR
@@ -388,7 +388,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
     except NothingLeft:
         raise
-    except Exception as e:  # XXX
+    except BaseException as e:  # XXX
         msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
         elogger.error(msg)
         status = ChallengeResultsStatus.ERROR
