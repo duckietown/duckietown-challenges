@@ -1,3 +1,4 @@
+
 class ChallengesConstants(object):
     # status for submission
     STATUS_SUBMITTED = 'submitted'

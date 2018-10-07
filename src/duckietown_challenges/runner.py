@@ -23,8 +23,8 @@ import yaml
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
-from duckietown_challenges.challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
-from duckietown_challenges.utils import safe_yaml_dump, friendly_size
+from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
+from .utils import safe_yaml_dump, friendly_size
 from . import __version__
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
@@ -425,11 +425,6 @@ def go_(submission_id, do_pull, more_features, do_upload, delete):
                         uploaded=uploaded)
 
 
-#
-# def copy_logs():
-#
-
-
 def upload(aws_config, toupload):
     import boto3
     from botocore.exceptions import ClientError
@@ -485,7 +480,6 @@ def upload(aws_config, toupload):
                              mime_type=mime_type, rpath=rpath, sha256hex=sha256hex))
 
     return uploaded
-
 
 
 def object_exists(s3, bucket, key):

@@ -2,11 +2,10 @@ from collections import namedtuple
 from datetime import datetime
 
 import yaml
-from contracts import raise_wrapped, check_isinstance
 
-from duckietown_challenges import ChallengesConstants
-from duckietown_challenges.utils import wrap_config_reader
 from . import dclogger
+from .challenges_constants import ChallengesConstants
+from .utils import raise_wrapped, check_isinstance, wrap_config_reader
 
 
 class InvalidChallengeDescription(Exception):
@@ -70,7 +69,9 @@ class ChallengeStep(object):
     def update_image(self):
         self.evaluation_parameters.update_image()
 
+
 SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
+
 
 class EvaluationParameters(object):
     """
@@ -125,11 +126,11 @@ class EvaluationParameters(object):
         n = 0
         for service_definition in services.values():
             if service_definition.image == SUBMISSION_CONTAINER_TAG:
-              n += 1
+                n += 1
         if n == 0:
             msg = 'I expect one of the services to have "image: %s".' % SUBMISSION_CONTAINER_TAG
             raise ValueError(msg)
-        if n>1:
+        if n > 1:
             msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
             raise ValueError(msg)
 
