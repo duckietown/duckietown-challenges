@@ -17,4 +17,4 @@ COPY setup.py /project/setup.py
 
 RUN cd /project && python setup.py install
 
-CMD dt-challenges-evaluator --continuous
+ENTRYPOINT ["/usr/local/bin/dt-challenges-evaluator"]

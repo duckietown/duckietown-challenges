@@ -23,12 +23,12 @@ import yaml
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
-from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
-from .utils import safe_yaml_dump, friendly_size
 from . import __version__
+from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR
+from .utils import safe_yaml_dump, friendly_size
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -49,7 +49,7 @@ def get_token_from_shell_config():
 
 def dt_challenges_evaluator():
     elogger.info("dt-challenges-evaluator (DTC %s)" % __version__)
-
+    elogger.info('called with:\n%s' % sys.argv)
     check_docker_environment()
     try:
         check_executable_exists('docker-compose')
@@ -63,8 +63,13 @@ def dt_challenges_evaluator():
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
     parser.add_argument("--no-delete", dest='no_delete', action="store_true", default=False)
+    parser.add_argument("--machine-id", default=None, help='Machine name')
+    parser.add_argument("--name",  default=None, help='Evaluator name')
+    parser.add_argument("--submission", default=None, help='evaluate this particular submission')
+    parser.add_argument("--reset", dest='reset', action="store_true", default=False,
+                        help='Reset submission')
     parser.add_argument("--features", default='{}')
-    parser.add_argument("extra", nargs=argparse.REMAINDER)
+    # parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
     try:
@@ -80,9 +85,13 @@ def dt_challenges_evaluator():
     do_pull = not parsed.no_pull
     do_upload = not parsed.no_upload
     delete = not parsed.no_delete
+    reset = parsed.reset
+    evaluator_name = parsed.name
+    machine_id = parsed.machine_id or socket.gethostname()
+
 
     args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features,
-                delete=delete)
+                delete=delete, evaluator_name=evaluator_name, machine_id=machine_id)
     if parsed.continuous:
 
         timeout = 5.0  # seconds
@@ -91,7 +100,7 @@ def dt_challenges_evaluator():
         while True:
             multiplier = min(multiplier, max_multiplier)
             try:
-                go_(None, **args)
+                go_(None, reset=False, **args)
                 multiplier = 1.0
             except NothingLeft:
                 sys.stderr.write('.')
@@ -108,14 +117,14 @@ def dt_challenges_evaluator():
             time.sleep(timeout * multiplier)
 
     else:
-        submissions = parsed.extra
-
-        if not submissions:
+        if parsed.submission:
+            submissions = [parsed.submission]
+        else:
             submissions = [None]
 
         for submission_id in submissions:
             try:
-                go_(submission_id, **args)
+                go_(submission_id, reset=reset, **args)
             except NothingLeft as e:
                 if submission_id is None:
                     msg = 'No submissions available to evaluate.'
@@ -175,17 +184,16 @@ def get_features(more_features):
     return features
 
 
-def go_(submission_id, do_pull, more_features, do_upload, delete):
+def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluator_name, machine_id):
     features = get_features(more_features)
     token = get_token_from_shell_config()
-    machine_id = socket.gethostname()
-
+    # machine_id = socket.gethostname()
     evaluator_version = __version__
 
-    process_id = str(os.getpid())
+    process_id = evaluator_name
 
     res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version,
-                                   features=features)
+                                   features=features, reset=reset)
 
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
@@ -195,9 +203,6 @@ def go_(submission_id, do_pull, more_features, do_upload, delete):
     job_id = res['job_id']
 
     elogger.info('Evaluating job %s' % job_id)
-    # submission_id = result['submission_id']
-    # parameters = result['parameters']
-    # job_id = result['job_id']
 
     artifacts_image = size = None
     try:
@@ -284,11 +289,6 @@ def go_(submission_id, do_pull, more_features, do_upload, delete):
             assert 'volumes' not in service
             service['volumes'] = copy.deepcopy(volumes)
 
-        # adding logging
-        # for service in config['services'].values():
-        #     options = dict()
-        #     service['logging'] = dict(driver='json-file', options=options)
-
         elogger.info('Now:\n%s' % safe_yaml_dump(config))
 
         NETWORK_NAME = 'evaluation'
@@ -307,9 +307,10 @@ def go_(submission_id, do_pull, more_features, do_upload, delete):
             f.write(config_yaml)
 
         def run_docker(cmd0):
-            elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % wd)
 
             cmd0 = ['docker-compose', '-p', project] + cmd0
+            elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % wd)
+
             try:
                 return subprocess.check_output(cmd0, cwd=wd)
             except subprocess.CalledProcessError as e:
@@ -516,14 +517,15 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features):
+def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset):
     endpoint = '/take-submission'
     method = 'GET'
     data = {'submission_id': submission_id,
             'machine_id': machine_id,
             'process_id': process_id,
             'evaluator_version': evaluator_version,
-            'features': features}
+            'features': features,
+            'reset': reset}
     return make_server_request(token, endpoint, data=data, method=method)
 
 
