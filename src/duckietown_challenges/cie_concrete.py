@@ -84,7 +84,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         self.failure_declared = True
         self.failure_declared_msg = msg
 
-    def set_solution_output_file(self, basename, from_file, description):
+    def set_solution_output_file(self, basename, from_file, description=None):
         self.solution_output_files.add(basename, from_file, description)
 
     def info(self, s):
@@ -183,7 +183,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         self.scores[name] = ReportedScore(name, value, description)
 
-    def set_evaluation_file(self, basename, from_file, description):
+    def set_evaluation_file(self, basename, from_file, description=None):
         self.evaluation_files.add(basename, from_file, description)
 
     def info(self, s):

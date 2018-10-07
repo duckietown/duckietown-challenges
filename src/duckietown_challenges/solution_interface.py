@@ -37,7 +37,7 @@ class ChallengeInterfaceEvaluator(object):
         pass
 
     @abstractmethod
-    def set_evaluation_file(self, basename, from_file, description):
+    def set_evaluation_file(self, basename, from_file, description=None):
         pass
 
     @abstractmethod
@@ -81,7 +81,7 @@ class ChallengeInterfaceSolution(object):
         pass
 
     @abstractmethod
-    def set_solution_output_file(self, basename, from_file, description):
+    def set_solution_output_file(self, basename, from_file, description=None):
         pass
 
     @abstractmethod
