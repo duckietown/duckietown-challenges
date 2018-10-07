@@ -324,10 +324,24 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
 from .challenge_results import ChallengeResults, declare_challenge_results
 
+# from evaluator
 SPECIAL_ABORT = 'abort'
+# from submission
+SPECIAL_INVALID_ENVIRONMENT = 'invalid-environment'
+SPECIAL_INVALID_EVALUATOR = 'invalid-evaluator'
+SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
 def wrap_evaluator(evaluator, root='/'):
+    def declare(status, message):
+        if status != ChallengeResultsStatus.SUCCESS:
+            dclogger.error(status)
+        else:
+            dclogger.info('Completed.')
+        cr = ChallengeResults(status, message, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
     try:
@@ -343,50 +357,36 @@ def wrap_evaluator(evaluator, root='/'):
         cie.wait_for_solution()
 
         out = cie.get_solution_output_dict()
-        if 'failure' in out:
-            msg = out['failure']
-            cr = ChallengeResults(ChallengeResultsStatus.FAILED, msg, {})
-            declare_challenge_results(root, cr)
-            sys.exit(0)
-        elif 'error' in out:
-            msg = out['error']
-            cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-            declare_challenge_results(root, cr)
-            sys.exit(0)
+
+        if SPECIAL_INVALID_ENVIRONMENT in out:
+            raise InvalidEnvironment(out[SPECIAL_INVALID_ENVIRONMENT])
+        elif SPECIAL_INVALID_EVALUATOR in out:
+            raise InvalidEvaluator(out[SPECIAL_INVALID_EVALUATOR])
+        elif SPECIAL_INVALID_SUBMISSION in out:
+            raise InvalidSubmission(out[SPECIAL_INVALID_SUBMISSION])
         else:
             evaluator.score(cie)
             cie.after_score()
 
-    except InvalidEnvironment as e:
-        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
-
-        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
-    except InvalidEvaluator as e:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
-
-        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
-
+    # failure
     except InvalidSubmission as e:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
+        declare(ChallengeResultsStatus.FAILED, msg)
 
-        cr = ChallengeResults(ChallengeResultsStatus.FAILED, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
+    # error of evaluator
+    except InvalidEvaluator as e:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
+
+    # error of environment (not distinguished so far)
+
+    except InvalidEnvironment as e:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
 
     except Exception as e:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
-
-        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
+        declare(ChallengeResultsStatus.ERROR, msg)
 
 
 def wrap_solution(solution, root='/'):
@@ -398,7 +398,7 @@ def wrap_solution(solution, root='/'):
             cis.get_current_step()
         except InvalidEnvironment:
             raise
-        except Exception as e:
+        except BaseException as e:
             msg = 'Invalid environment: %s' % e
             raise InvalidEnvironment(msg)
 
@@ -417,7 +417,7 @@ def wrap_solution(solution, root='/'):
             solution.run(cis)
         except (InvalidSubmission, InvalidEnvironment, InvalidEvaluator):
             raise
-        except Exception as e:
+        except BaseException as e:
             msg = "Uncaught exception in solution:\n%s" % traceback.format_exc(e)
             raise InvalidSubmission(msg)
 
@@ -432,19 +432,19 @@ def wrap_solution(solution, root='/'):
     except InvalidEnvironment as e:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
         cis.error(msg)
-        cis.set_solution_output_dict(dict(error=msg))
+        cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
     except InvalidEvaluator as e:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
         cis.error(msg)
-        cis.set_solution_output_dict(dict(error=msg))
+        cis.set_solution_output_dict({SPECIAL_INVALID_EVALUATOR: msg})
     except InvalidSubmission as e:
         msg = 'Invalid solution:\n%s' % e
         cis.error(msg)
-        cis.set_solution_output_dict(dict(failure=msg))
-    except Exception as e:
+        cis.set_solution_output_dict({SPECIAL_INVALID_SUBMISSION: msg})
+    except BaseException as e:
         msg = 'Uncaught exception: invalid wrap_evaluator:\n%s' % traceback.format_exc(e)
         cis.error(msg)
-        cis.set_solution_output_dict(dict(error=msg))
+        cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
     finally:
         fn = os.path.join(cis.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
         write_yaml(cis.solution_output_dict, fn)
