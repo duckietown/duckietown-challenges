@@ -64,7 +64,7 @@ def dt_challenges_evaluator():
     parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
     parser.add_argument("--no-delete", dest='no_delete', action="store_true", default=False)
     parser.add_argument("--machine-id", default=None, help='Machine name')
-    parser.add_argument("--name",  default=None, help='Evaluator name')
+    parser.add_argument("--name", default=None, help='Evaluator name')
     parser.add_argument("--submission", default=None, help='evaluate this particular submission')
     parser.add_argument("--reset", dest='reset', action="store_true", default=False,
                         help='Reset submission')
@@ -86,9 +86,8 @@ def dt_challenges_evaluator():
     do_upload = not parsed.no_upload
     delete = not parsed.no_delete
     reset = parsed.reset
-    evaluator_name = parsed.name
+    evaluator_name = parsed.name or 'p-%s' % os.getpid()
     machine_id = parsed.machine_id or socket.gethostname()
-
 
     args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features,
                 delete=delete, evaluator_name=evaluator_name, machine_id=machine_id)
