@@ -369,6 +369,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         # create_index_files(wd, job_id=job_id)
 
+        elogger.info('Results:\n%s' % cr.__repr__())
         toupload = get_files_to_upload(wd)
 
         if not aws_config:
