@@ -18,3 +18,7 @@ class InvalidSubmission(Exception):
 
 class InvalidEvaluator(Exception):
     pass
+
+class InvalidEnvironment(Exception):
+    pass
+

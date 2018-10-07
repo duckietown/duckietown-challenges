@@ -5,6 +5,22 @@ class ChallengeInterfaceEvaluator(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def get_current_step(self):
+        """ Returns the current step. """
+
+    @abstractmethod
+    def get_completed_steps(self):
+        """ Returns the previous steps as a list of string """
+
+    @abstractmethod
+    def get_completed_step_evaluation_files(self, step_name):
+        """ Returns a list of names for the files completed in a previous step. """
+
+    @abstractmethod
+    def get_completed_step_evaluation_file(self, step_name, basename):
+        """ Returns a filename for one of the files completed in a previous step."""
+
+    @abstractmethod
     def set_challenge_parameters(self, data):
         pass
 
@@ -38,6 +54,10 @@ class ChallengeInterfaceEvaluator(object):
 
     @abstractmethod
     def set_evaluation_file(self, basename, from_file, description=None):
+        pass
+
+    @abstractmethod
+    def set_evaluation_file_from_data(self, basename, contents, description=None):
         pass
 
     @abstractmethod
@@ -77,11 +97,15 @@ class ChallengeInterfaceSolution(object):
         pass
 
     @abstractmethod
-    def declare_failure(self, data):
+    def declare_failure(self, msg):
         pass
 
     @abstractmethod
     def set_solution_output_file(self, basename, from_file, description=None):
+        pass
+
+    @abstractmethod
+    def set_solution_output_file_from_data(self, basename, contents, description=None):
         pass
 
     @abstractmethod
@@ -95,6 +119,22 @@ class ChallengeInterfaceSolution(object):
     @abstractmethod
     def debug(self, s):
         pass
+
+    @abstractmethod
+    def get_current_step(self):
+        """ Returns the current step. """
+
+    @abstractmethod
+    def get_completed_steps(self):
+        """ Returns the previous steps as a list of string """
+
+    @abstractmethod
+    def get_completed_step_solution_files(self, step_name):
+        """ Returns a list of names for the files completed in a previous step. """
+
+    @abstractmethod
+    def get_completed_step_solution_file(self, step_name, basename):
+        """ Returns a filename for one of the files completed in a previous step."""
 
 
 def check_valid_basename():

@@ -27,7 +27,7 @@ from . import __version__
 from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR
+    CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME
 from .utils import safe_yaml_dump, friendly_size
 
 logging.basicConfig()
@@ -259,9 +259,10 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         # adding extra environment variables:
         UID = os.getuid()
         USERNAME = getpass.getuser()
-        extra_environment = dict(username=USERNAME, uid=UID,
-                                 challenge_name=res['challenge_name'],
-                                 challenge_step_name=res['step_name'])
+        extra_environment = dict(username=USERNAME, uid=UID)
+        extra_environment[ENV_CHALLENGE_NAME] = res['challenge_name']
+        extra_environment[ENV_CHALLENGE_STEP_NAME] = res['step_name']
+
         for service in config['services'].values():
             service['environment'].update(extra_environment)
 
@@ -368,13 +369,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         # create_index_files(wd, job_id=job_id)
 
-        toupload = OrderedDict()
-        for dirpath, dirnames, filenames in os.walk(wd):
-            for f in filenames:
-                rpath = os.path.join(os.path.relpath(dirpath, wd), f)
-                if rpath.startswith('./'):
-                    rpath = rpath[2:]
-                toupload[rpath] = os.path.join(dirpath, f)
+        toupload = get_files_to_upload(wd)
 
         if not aws_config:
             msg = 'Not uploading artefacts because AWS config not passed.'
@@ -413,6 +408,17 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                         process_id=process_id,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
+
+
+def get_files_to_upload(path):
+    toupload = OrderedDict()
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            rpath = os.path.join(os.path.relpath(dirpath, path), f)
+            if rpath.startswith('./'):
+                rpath = rpath[2:]
+            toupload[rpath] = os.path.join(dirpath, f)
+    return toupload
 
 
 def logs_for_container(client, container_id):
