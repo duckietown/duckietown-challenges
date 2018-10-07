@@ -347,7 +347,7 @@ def wrap_evaluator(evaluator, root='/'):
     try:
         try:
             evaluator.prepare(cie)
-        except Exception as e:
+        except BaseException as e:
             msg = 'Preparation aborted:\n%s' % traceback.format_exc(e)
             cie.set_challenge_parameters({SPECIAL_ABORT: msg})
             raise
@@ -384,7 +384,7 @@ def wrap_evaluator(evaluator, root='/'):
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
-    except Exception as e:
+    except BaseException as e:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
