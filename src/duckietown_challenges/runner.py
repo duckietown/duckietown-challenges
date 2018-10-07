@@ -214,7 +214,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         os.symlink(wd, LAST)
 
         # you get this from the server
-
+        steps2artefacts = res['steps2artefacts']
         solution_container = res['parameters']['hash']
         challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
         # AWS config

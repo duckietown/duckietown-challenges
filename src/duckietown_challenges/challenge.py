@@ -214,6 +214,23 @@ class ChallengeTransitions(object):
             assert condition in ALLOWED_CONDITION_TRIGGERS, condition
             self.transitions.append(Transition(first, condition, second))
 
+    def __repr__(self):
+        return u"\n".join(self.steps_explanation())
+
+    def steps_explanation(self):
+        ts = []
+        for first, condition, second in self.transitions:
+            if first == STATE_START:
+                ts.append('At the beginning execute step `%s`.' % second)
+            else:
+                if second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+                    ts.append('If step `%s` finishes with status `%s`, then declare the submission `%s`.' %
+                              (first, condition, second))
+                else:
+                    ts.append('If step `%s` finishes with status `%s`, then execute step `%s`.' %
+                              (first, condition, second))
+        return ts
+
     def get_next_steps(self, status):
         """ status is a dictionary from step ID to
             status.
