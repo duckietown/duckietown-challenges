@@ -20,6 +20,11 @@ class ChallengeInterfaceEvaluator(object):
     def get_completed_step_evaluation_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
 
+    def get_completed_step_evaluation_file_contents(self, step_name, basename):
+        fn = self.get_completed_step_evaluation_file(step_name, basename)
+        with open(fn) as f:
+            return f.read()
+
     @abstractmethod
     def set_challenge_parameters(self, data):
         pass
@@ -135,6 +140,11 @@ class ChallengeInterfaceSolution(object):
     @abstractmethod
     def get_completed_step_solution_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
+
+    def get_completed_step_solution_file_contents(self, step_name, basename):
+        fn = self.get_completed_step_solution_file(step_name, basename)
+        with open(fn) as f:
+            return f.read()
 
 
 def check_valid_basename():
