@@ -178,7 +178,7 @@ def get_features(more_features):
             elogger.info(msg)
         features[k] = v
 
-    elogger.debug(json.dumps(features, indent=4))
+    # elogger.debug(json.dumps(features, indent=4))
 
     return features
 
@@ -188,7 +188,8 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
     token = get_token_from_shell_config()
     # machine_id = socket.gethostname()
     evaluator_version = __version__
-
+    import docker
+    client = docker.from_env()
     process_id = evaluator_name
 
     res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version,
@@ -335,23 +336,13 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                ]
         run_docker(cmd)
 
-        # cmd = ['ps']
-        # print run_docker(cmd)
-
         for service in config['services']:
             cmd = ['ps', '-q', service]
 
-            container = run_docker(cmd).strip()  # \n at the end
-            elogger.info(container)
+            container_id = run_docker(cmd).strip()  # \n at the end
+            elogger.info(container_id)
+            logs = logs_for_container(client, container_id)
 
-            cmd = ['docker', 'logs', '--details', '--timestamps', container]
-            try:
-                logs = subprocess.check_output(cmd, cwd=wd)
-            except subprocess.CalledProcessError as e:
-                msg = 'Could not run %s: %s' % (cmd, e)
-                raise Exception(msg)
-
-            # elogger.debug(logs)
             fn = os.path.join(wd, 'log-%s.txt' % service)
             with open(fn, 'w') as f:
                 f.write(logs)
@@ -371,7 +362,6 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
             status = ChallengeResultsStatus.ERROR
             cr = ChallengeResults(status, msg, scores={})
 
-        # cmd = ['rm', '-v', '-f', '-s']
         if delete:
             cmd = ['down']
             run_docker(cmd)
@@ -423,6 +413,14 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                         process_id=process_id,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
+
+
+def logs_for_container(client, container_id):
+    logs = ''
+    container = client.containers.get(container_id)
+    for c in container.logs(stdout=True, stderr=True, stream=True, timestamps=True):
+        logs += c
+    return logs
 
 
 def upload(aws_config, toupload):
