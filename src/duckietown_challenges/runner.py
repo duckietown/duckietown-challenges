@@ -264,6 +264,12 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         cr = ChallengeResults(status, msg, scores={})
         uploaded = []
 
+    msg = 'This is what is being reported.\n\nstatus = %s\n\n%s' % (cr.get_status(), cr.msg)
+    if cr.get_status() != ChallengeResultsStatus.SUCCESS:
+        elogger.error(msg)
+    else:
+        elogger.info(msg)
+
     stats = cr.get_stats()
     # REST call to the duckietown chalenges server
     dtserver_report_job(token,
@@ -373,7 +379,7 @@ def write_logs(wd, project, services):
         cmd = ['ps', '-q', service]
 
         try:
-            o = run_docker(wd, project, cmd)
+            o = run_docker(wd, project, cmd, get_output=True)
             container_id = o.strip()  # \n at the end
         except DockerComposeFail:
             continue
@@ -395,12 +401,15 @@ def write_logs(wd, project, services):
             f.write(html)
 
 
-def run_docker(cwd, project, cmd0):
+def run_docker(cwd, project, cmd0, get_output=False):
     cmd0 = ['docker-compose', '-p', project] + cmd0
     elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
 
     try:
-        return subprocess.check_output(cmd0, cwd=cwd)
+        if get_output:
+            return subprocess.check_output(cmd0, cwd=cwd, stderr=sys.stderr)
+        else:
+            subprocess.call(cmd0, cwd=cwd, stdout=sys.stdout, stderr=sys.stderr)
     except subprocess.CalledProcessError as e:
         msg = 'Could not run %s: %s' % (cmd0, e)
         msg += 'Output: %s' % e.output

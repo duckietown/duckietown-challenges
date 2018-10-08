@@ -12,7 +12,7 @@ from .constants import CHALLENGE_DESCRIPTION_YAML, CHALLENGE_SOLUTION_OUTPUT_YAM
     ENV_CHALLENGE_NAME
 from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
-from .utils import d8n_make_sure_dir_exists
+from .utils import raise_wrapped, d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
 
 ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
@@ -101,10 +101,18 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         self.failure_declared_msg = msg
 
     def set_solution_output_file(self, basename, from_file, description=None):
-        self.solution_output_files.add(basename, from_file, description)
+        try:
+            self.solution_output_files.add(basename, from_file, description)
+        except ValueError as e:
+            msg = 'Invalid set_solution_output_file()'
+            raise_wrapped(InvalidSubmission, e, msg)
 
     def set_solution_output_file_from_data(self, basename, contents, description=None):
-        self.solution_output_files.add_from_data(basename, contents, description)
+        try:
+            self.solution_output_files.add_from_data(basename, contents, description)
+        except ValueError as e:
+            msg = 'Invalid set_solution_output_file()'
+            raise_wrapped(InvalidSubmission, e, msg)
 
     def info(self, s):
         dclogger.info('solution:%s' % s)
@@ -204,7 +212,11 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     # preparation
 
     def set_challenge_file(self, basename, from_file, description=None):
-        self.challenge_files.add(basename, from_file, description)
+        try:
+            self.challenge_files.add(basename, from_file, description)
+        except ValueError as e:
+            msg = 'Invalid set_challenge_file()'
+            raise_wrapped(InvalidEvaluator, e, msg)
 
     def wait_for_solution(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
@@ -238,10 +250,18 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.scores[name] = ReportedScore(name, value, description)
 
     def set_evaluation_file(self, basename, from_file, description=None):
-        self.evaluation_files.add(basename, from_file, description)
+        try:
+            self.evaluation_files.add(basename, from_file, description)
+        except ValueError as e:
+            msg = 'Invalid set_evaluation_file()'
+            raise_wrapped(InvalidEvaluator, e, msg)
 
     def set_evaluation_file_from_data(self, basename, contents, description=None):
-        self.evaluation_files.add_from_data(basename, contents, description)
+        try:
+            self.evaluation_files.add_from_data(basename, contents, description)
+        except ValueError as e:
+            msg = 'Invalid set_evaluation_file_from_data()'
+            raise_wrapped(InvalidEvaluator, e, msg)
 
     def info(self, s):
         dclogger.info('evaluation: %s' % s)

@@ -51,7 +51,6 @@ class ChallengeResults(object):
     #     return ChallengeResults(status, msg, scores)
 
 
-
 def declare_challenge_results(root, cr):
     data = cr.to_yaml()
 
