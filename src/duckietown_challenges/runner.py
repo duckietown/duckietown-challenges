@@ -27,7 +27,7 @@ from . import __version__
 from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME
+    CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME, CHALLENGE_PREVIOUS_STEPS_DIR
 from .utils import safe_yaml_dump, friendly_size
 
 logging.basicConfig()
@@ -69,7 +69,6 @@ def dt_challenges_evaluator():
     parser.add_argument("--reset", dest='reset', action="store_true", default=False,
                         help='Reset submission')
     parser.add_argument("--features", default='{}')
-    # parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
     try:
@@ -275,6 +274,8 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         # the results of the "preparation" step
         challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
         challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        previous_steps_dir = os.path.join(wd, CHALLENGE_PREVIOUS_STEPS_DIR)
+        download_artefacts(aws_config, steps2artefacts, previous_steps_dir)
 
         for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
                   challenge_evaluation_output_dir]:
@@ -284,6 +285,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
             './' + CHALLENGE_RESULTS_DIR + ':' + '/' + CHALLENGE_RESULTS_DIR,
             './' + CHALLENGE_DESCRIPTION_DIR + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
             './' + CHALLENGE_EVALUATION_OUTPUT_DIR + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
+            './' + CHALLENGE_PREVIOUS_STEPS_DIR + ':' + '/' + CHALLENGE_PREVIOUS_STEPS_DIR,
         ]
 
         for service in config['services'].values():
@@ -411,6 +413,69 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                         uploaded=uploaded)
 
 
+def download_artefacts(aws_config, steps2artefacts, wd):
+    for step_name, artefacts in steps2artefacts.items():
+        step_dir = os.path.join(wd, step_name)
+        os.makedirs(step_dir)
+        for rpath, data in artefacts.items():
+            fn = os.path.join(step_dir, rpath)
+            dn = os.path.dirname(fn)
+            if not os.path.exists(dn):
+                os.makedirs(dn)
+            bucket_name = data['bucket_name']
+            object_key = data['object_key']
+            sha256hex = data['sha256hex']
+            size = data['size']
+
+            try:
+                get_file_from_cache(fn, sha256hex)
+                elogger.info('cache   %7s   %s' % (friendly_size(size), rpath))
+            except KeyError:
+                elogger.info('AWS     %7s   %s' % (friendly_size(size), rpath))
+                get_object(aws_config, bucket_name, object_key, fn)
+                copy_to_cache(fn, sha256hex)
+            size_now = os.stat(fn).st_size
+            if size_now != size:
+                msg = 'Corrupt cache or download for %s at %s.' % (data, fn)
+                raise ValueError(msg)
+
+
+cache_dir = '/tmp/duckietown/DT18/evaluator/cache'
+cache_dir_by_value = os.path.join(cache_dir, 'by-value', 'sha256hex')
+
+
+# cache_max_size_gb = 3
+
+def get_file_from_cache(fn, sha256hex):
+    if not os.path.exists(cache_dir_by_value):
+        os.makedirs(cache_dir_by_value)
+    have = os.path.join(cache_dir_by_value, sha256hex)
+    if os.path.exists(have):
+        shutil.copy(have, fn)
+    else:
+        msg = 'Hash not in cache'
+        raise KeyError(msg)
+
+
+def copy_to_cache(fn, sha256hex):
+    if not os.path.exists(cache_dir_by_value):
+        os.makedirs(cache_dir_by_value)
+    have = os.path.join(cache_dir_by_value, sha256hex)
+    if not os.path.exists(have):
+        shutil.copy(fn, have)
+
+
+def get_object(aws_config, bucket_name, object_key,   fn):
+    aws_access_key_id = aws_config['aws_access_key_id']
+    aws_secret_access_key = aws_config['aws_secret_access_key']
+    import boto3
+    s3 = boto3.resource("s3",
+                        aws_access_key_id=aws_access_key_id,
+                        aws_secret_access_key=aws_secret_access_key)
+    aws_object = s3.Object(bucket_name, object_key)
+    aws_object.download_file(fn)
+
+
 def get_files_to_upload(path):
     toupload = OrderedDict()
     for dirpath, dirnames, filenames in os.walk(path):
@@ -418,6 +483,10 @@ def get_files_to_upload(path):
             rpath = os.path.join(os.path.relpath(dirpath, path), f)
             if rpath.startswith('./'):
                 rpath = rpath[2:]
+
+            if CHALLENGE_PREVIOUS_STEPS_DIR in rpath:
+                continue
+
             toupload[rpath] = os.path.join(dirpath, f)
     return toupload
 
@@ -448,6 +517,7 @@ def upload(aws_config, toupload):
     for rpath, realfile in toupload.items():
 
         sha256hex = compute_sha256hex(realfile)
+        copy_to_cache(realfile, sha256hex)
 
         # path_by_value
         object_key = os.path.join(aws_path_by_value, 'sha256', sha256hex)
