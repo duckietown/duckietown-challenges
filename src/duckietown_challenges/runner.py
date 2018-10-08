@@ -283,15 +283,20 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
 
 def run(wd, project, do_pull):
+    import docker
+    client =docker.from_env()
     try:
         if do_pull:
             elogger.info('pulling containers')
             cmd = ['pull']
             run_docker(wd, project, cmd)
 
-        elogger.info('Creating containers')
-        cmd = ['create', '--force-recreate']
-        run_docker(wd, project, cmd)
+        pruned = client.networks.prune()
+        elogger.debug('pruned: %s' % pruned)
+
+        # elogger.info('Creating containers')
+        # cmd = ['create', '--force-recreate']
+        # run_docker(wd, project, cmd)
 
         elogger.info('Running containers')
         cmd = ['up',
