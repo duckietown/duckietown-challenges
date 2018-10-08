@@ -1,5 +1,6 @@
 from .read_challenge_definition import *
 from .test_interaction import *
+from .test_interaction_two_steps import *
 
 
 def jobs_comptests(context):

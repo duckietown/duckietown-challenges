@@ -6,15 +6,16 @@ import time
 import traceback
 from collections import namedtuple
 
-from . import dclogger
+from . import dclogger, ENV_CHALLENGE_STEP_NAME
 from .constants import CHALLENGE_DESCRIPTION_YAML, CHALLENGE_SOLUTION_OUTPUT_YAML, CHALLENGE_SOLUTION_OUTPUT_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, ChallengeResultsStatus
-from .exceptions import InvalidSubmission, InvalidEvaluator
+    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, ChallengeResultsStatus, CHALLENGE_PREVIOUS_STEPS_DIR, \
+    ENV_CHALLENGE_NAME
+from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
 
-ChallengeFile = namedtuple('ChallengeFile', 'basename from_file description')
+ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
 ReportedScore = namedtuple('ReportedScore', 'name value description')
 
 
@@ -25,6 +26,13 @@ def check_valid_basename(s):
 class FS(object):
     def __init__(self):
         self.files = {}
+
+    def add_from_data(self, basename, contents, description):
+        if basename in self.files:
+            msg = 'Already know %r' % basename
+            raise ValueError(msg)
+
+        self.files[basename] = ChallengeFile(basename, None, contents, description)
 
     def add(self, basename, from_file, description):
         if not os.path.exists(from_file):
@@ -37,7 +45,7 @@ class FS(object):
             msg = 'Already know %r' % basename
             raise ValueError(msg)
 
-        self.files[basename] = ChallengeFile(basename, from_file, description)
+        self.files[basename] = ChallengeFile(basename, from_file, None, description)
 
     def write(self, dest):
         rfs = list(self.files.values())
@@ -45,7 +53,12 @@ class FS(object):
         for rf in rfs:
             out = os.path.join(dest, rf.basename)
             d8n_make_sure_dir_exists(out)
-            shutil.copy(rf.from_file, out)
+
+            if rf.from_file:
+                shutil.copy(rf.from_file, out)
+            else:
+                with open(out, 'wb') as f:
+                    f.write(rf.contents)
 
 
 class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
@@ -78,38 +91,78 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         return fn
 
     def set_solution_output_dict(self, data):
+        if not isinstance(data, dict):
+            msg = 'data must be a dict, got %s' % data
+            raise ValueError(msg)
         self.solution_output_dict = data
 
-    def declare_failure(self, data, msg=None):
+    def declare_failure(self, msg=None):
         self.failure_declared = True
         self.failure_declared_msg = msg
 
     def set_solution_output_file(self, basename, from_file, description=None):
         self.solution_output_files.add(basename, from_file, description)
 
+    def set_solution_output_file_from_data(self, basename, contents, description=None):
+        self.solution_output_files.add_from_data(basename, contents, description)
+
     def info(self, s):
-        dclogger.info(s)
+        dclogger.info('solution:%s' % s)
 
     def error(self, s):
-        dclogger.error(s)
+        dclogger.error('solution:%s' % s)
 
     def debug(self, s):
-        dclogger.debug(s)
+        dclogger.debug('solution:%s' % s)
 
-    def after_run(self):
-        if not self.solution_output_dict:
-            msg = 'solution_output_dict not set.'
-            raise InvalidSubmission(msg)  # XXX
-        else:
-            fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
-            write_yaml(self.solution_output_dict, fn)
+    # def after_run(self):
 
+    def _write_files(self):
         d = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_DIR)
         self.solution_output_files.write(d)
 
     def wait_for_preparation(self):
         fn = os.path.join(self.root, CHALLENGE_DESCRIPTION_YAML)
         return wait_for_file(fn, timeout=TIMEOUT_PREPARATION, wait=1)
+
+    def get_challenge_name(self):
+        try:
+            return os.environ[ENV_CHALLENGE_NAME]
+        except KeyError as e:
+            raise InvalidEnvironment(str(e))
+
+    def get_current_step(self):
+        """ Returns the current step. """
+        try:
+            return os.environ[ENV_CHALLENGE_STEP_NAME]
+        except KeyError as e:
+            raise InvalidEnvironment(str(e))
+
+    def get_completed_steps(self):
+        """ Returns the previous steps as a list of string """
+        p = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
+        if not os.path.exists(p):
+            msg = 'Directory not found %s' % p
+            raise InvalidEnvironment(msg)
+        dirnames = os.listdir(p)
+        return list(dirnames)
+
+    def get_completed_step_solution_files(self, step_name):
+        """ Returns a list of names for the files completed in a previous step. """
+        if step_name not in self.get_completed_steps():
+            msg = 'No step %r' % step_name
+            raise KeyError(msg)
+        # XXX
+        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
+        return list(os.listdir(d))
+
+    def get_completed_step_solution_file(self, step_name, basename):
+        """ Returns a filename for one of the files completed in a previous step."""
+        if basename not in self.get_completed_step_solution_files(step_name):
+            msg = 'No file %r' % basename
+            raise KeyError(msg)
+        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
+        return fn
 
 
 TIMEOUT_PREPARATION = 6000
@@ -142,6 +195,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.scores = {}  # str -> ReportedScore
 
     def set_challenge_parameters(self, data):
+        assert isinstance(data, dict)
         self.parameters = data
 
     def get_tmp_dir(self):
@@ -186,18 +240,21 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def set_evaluation_file(self, basename, from_file, description=None):
         self.evaluation_files.add(basename, from_file, description)
 
+    def set_evaluation_file_from_data(self, basename, contents, description=None):
+        self.evaluation_files.add_from_data(basename, contents, description)
+
     def info(self, s):
-        dclogger.info(s)
+        dclogger.info('evaluation: %s' % s)
 
     def error(self, s):
-        dclogger.error(s)
+        dclogger.error('evaluation: %s' % s)
 
     def debug(self, s):
-        dclogger.debug(s)
+        dclogger.debug('evaluation: %s' % s)
 
     def after_prepare(self):
-        if not self.parameters:
-            msg = 'Parameters not set.'
+        if self.parameters is None:
+            msg = 'Parameters not set. Evaluator must use set_challenge_parameters().'
             raise InvalidEvaluator(msg)  # XXX
 
         d = os.path.join(self.root, CHALLENGE_DESCRIPTION_DIR)
@@ -225,57 +282,170 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         declare_challenge_results(self.root, cr)
 
+    def get_challenge_name(self):
+        try:
+            return os.environ[ENV_CHALLENGE_NAME]
+        except KeyError as e:
+            raise InvalidEnvironment(str(e))
+
+    def get_current_step(self):
+        """ Returns the current step. """
+        try:
+            return os.environ[ENV_CHALLENGE_STEP_NAME]
+        except KeyError as e:
+            raise InvalidEnvironment(str(e))
+
+    def get_completed_steps(self):
+        """ Returns the previous steps as a list of string """
+        p = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
+        if not os.path.exists(p):
+            msg = 'Directory not found %s' % p
+            raise InvalidEnvironment(msg)  # XXX invalid runner...
+        dirnames = os.listdir(p)
+        return list(dirnames)
+
+    def get_completed_step_evaluation_files(self, step_name):
+        """ Returns a list of names for the files completed in a previous step. """
+        if step_name not in self.get_completed_steps():
+            msg = 'No step %r' % step_name
+            raise KeyError(msg)
+        # XXX
+        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        return list(os.listdir(d))
+
+    def get_completed_step_evaluation_file(self, step_name, basename):
+        """ Returns a filename for one of the files completed in a previous step."""
+        if basename not in self.get_completed_step_evaluation_files(step_name):
+            msg = 'No file %r' % basename
+            raise KeyError(msg)
+        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+        return fn
+
 
 from .challenge_results import ChallengeResults, declare_challenge_results
 
+# from evaluator
+SPECIAL_ABORT = 'abort'
+# from submission
+SPECIAL_INVALID_ENVIRONMENT = 'invalid-environment'
+SPECIAL_INVALID_EVALUATOR = 'invalid-evaluator'
+SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
+
 
 def wrap_evaluator(evaluator, root='/'):
+    def declare(status, message):
+        if status != ChallengeResultsStatus.SUCCESS:
+            dclogger.error(status)
+        else:
+            dclogger.info('Completed.')
+        cr = ChallengeResults(status, message, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
     try:
-        evaluator.prepare(cie)
-
-        cie.after_prepare()
+        try:
+            evaluator.prepare(cie)
+        except BaseException as e:
+            msg = 'Preparation aborted:\n%s' % traceback.format_exc(e)
+            cie.set_challenge_parameters({SPECIAL_ABORT: msg})
+            raise
+        finally:
+            cie.after_prepare()
 
         cie.wait_for_solution()
 
-        evaluator.score(cie)
+        out = cie.get_solution_output_dict()
 
-        cie.after_score()
+        if SPECIAL_INVALID_ENVIRONMENT in out:
+            raise InvalidEnvironment(out[SPECIAL_INVALID_ENVIRONMENT])
+        elif SPECIAL_INVALID_EVALUATOR in out:
+            raise InvalidEvaluator(out[SPECIAL_INVALID_EVALUATOR])
+        elif SPECIAL_INVALID_SUBMISSION in out:
+            raise InvalidSubmission(out[SPECIAL_INVALID_SUBMISSION])
+        else:
+            evaluator.score(cie)
+            cie.after_score()
 
-    except InvalidEvaluator as e:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
-
-        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
-
+    # failure
     except InvalidSubmission as e:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
+        declare(ChallengeResultsStatus.FAILED, msg)
 
-        cr = ChallengeResults(ChallengeResultsStatus.FAILED, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
+    # error of evaluator
+    except InvalidEvaluator as e:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
 
-    except Exception as e:
+    # error of environment (not distinguished so far)
+
+    except InvalidEnvironment as e:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
+
+    except BaseException as e:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
-        dclogger.error(msg)
-
-        cr = ChallengeResults(ChallengeResultsStatus.ERROR, msg, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
+        declare(ChallengeResultsStatus.ERROR, msg)
 
 
 def wrap_solution(solution, root='/'):
     cis = ChallengeInterfaceSolutionConcrete(root=root)
-
-    cis.wait_for_preparation()
-
     try:
-        solution.run(cis)
-    except Exception as e:
-        dclogger.error(traceback.format_exc(e))
 
-    cis.after_run()
+        try:
+            cis.get_challenge_name()
+            cis.get_current_step()
+        except InvalidEnvironment:
+            raise
+        except BaseException as e:
+            msg = 'Invalid environment: %s' % e
+            raise InvalidEnvironment(msg)
+
+        try:
+            cis.wait_for_preparation()
+        except Timeout as e:
+            msg = 'Timeout while waiting for evaluator: %s' % e
+            raise InvalidEvaluator(msg)
+
+        parameters = cis.get_challenge_parameters()
+        if SPECIAL_ABORT in parameters:
+            msg = 'I will not run solution because evaluator has aborted: \n%s' % parameters[SPECIAL_ABORT]
+            raise InvalidEvaluator(msg)
+
+        try:
+            solution.run(cis)
+        except (InvalidSubmission, InvalidEnvironment, InvalidEvaluator):
+            raise
+        except BaseException as e:
+            msg = "Uncaught exception in solution:\n%s" % traceback.format_exc(e)
+            raise InvalidSubmission(msg)
+
+        if cis.failure_declared:
+            msg = "Submission declares failure:\n%s" % cis.failure_declared_msg
+            raise InvalidSubmission(msg)
+
+        if cis.solution_output_dict is None:
+            msg = 'solution_output_dict not set. Solution must use set_solution_output_dict({}).'
+            raise InvalidSubmission(msg)
+
+    except InvalidEnvironment as e:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        cis.error(msg)
+        cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
+    except InvalidEvaluator as e:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        cis.error(msg)
+        cis.set_solution_output_dict({SPECIAL_INVALID_EVALUATOR: msg})
+    except InvalidSubmission as e:
+        msg = 'Invalid solution:\n%s' % e
+        cis.error(msg)
+        cis.set_solution_output_dict({SPECIAL_INVALID_SUBMISSION: msg})
+    except BaseException as e:
+        msg = 'Uncaught exception: invalid wrap_evaluator:\n%s' % traceback.format_exc(e)
+        cis.error(msg)
+        cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
+    finally:
+        fn = os.path.join(cis.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
+        write_yaml(cis.solution_output_dict, fn)
+        cis._write_files()

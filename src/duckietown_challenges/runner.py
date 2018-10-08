@@ -27,7 +27,7 @@ from . import __version__
 from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR
+    CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME, CHALLENGE_PREVIOUS_STEPS_DIR
 from .utils import safe_yaml_dump, friendly_size
 
 logging.basicConfig()
@@ -69,12 +69,11 @@ def dt_challenges_evaluator():
     parser.add_argument("--reset", dest='reset', action="store_true", default=False,
                         help='Reset submission')
     parser.add_argument("--features", default='{}')
-    # parser.add_argument("extra", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
     try:
         more_features = yaml.load(parsed.features)
-    except Exception as e:
+    except BaseException as e:
         msg = 'Could not evaluate your YAML string %r:\n%s' % (parsed.features, e)
         raise Exception(msg)
 
@@ -108,7 +107,7 @@ def dt_challenges_evaluator():
             except ConnectionError as e:
                 elogger.error(e)
                 multiplier *= 1.5
-            except Exception as e:
+            except BaseException as e:
                 msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
                 elogger.error(msg)
                 multiplier *= 1.5
@@ -214,7 +213,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         os.symlink(wd, LAST)
 
         # you get this from the server
-
+        steps2artefacts = res['steps2artefacts']
         solution_container = res['parameters']['hash']
         challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
         # AWS config
@@ -259,9 +258,10 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         # adding extra environment variables:
         UID = os.getuid()
         USERNAME = getpass.getuser()
-        extra_environment = dict(username=USERNAME, uid=UID,
-                                 challenge_name=res['challenge_name'],
-                                 challenge_step_name=res['step_name'])
+        extra_environment = dict(username=USERNAME, uid=UID)
+        extra_environment[ENV_CHALLENGE_NAME] = res['challenge_name']
+        extra_environment[ENV_CHALLENGE_STEP_NAME] = res['step_name']
+
         for service in config['services'].values():
             service['environment'].update(extra_environment)
 
@@ -274,6 +274,8 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         # the results of the "preparation" step
         challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
         challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        previous_steps_dir = os.path.join(wd, CHALLENGE_PREVIOUS_STEPS_DIR)
+        download_artefacts(aws_config, steps2artefacts, previous_steps_dir)
 
         for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
                   challenge_evaluation_output_dir]:
@@ -283,6 +285,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
             './' + CHALLENGE_RESULTS_DIR + ':' + '/' + CHALLENGE_RESULTS_DIR,
             './' + CHALLENGE_DESCRIPTION_DIR + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
             './' + CHALLENGE_EVALUATION_OUTPUT_DIR + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
+            './' + CHALLENGE_PREVIOUS_STEPS_DIR + ':' + '/' + CHALLENGE_PREVIOUS_STEPS_DIR,
         ]
 
         for service in config['services'].values():
@@ -356,7 +359,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         try:
             cr = read_challenge_results(wd)
-        except Exception as e:
+        except BaseException as e:
             msg = 'Could not read the challenge results:\n%s' % traceback.format_exc(e)
             elogger.error(msg)
             status = ChallengeResultsStatus.ERROR
@@ -368,13 +371,8 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         # create_index_files(wd, job_id=job_id)
 
-        toupload = OrderedDict()
-        for dirpath, dirnames, filenames in os.walk(wd):
-            for f in filenames:
-                rpath = os.path.join(os.path.relpath(dirpath, wd), f)
-                if rpath.startswith('./'):
-                    rpath = rpath[2:]
-                toupload[rpath] = os.path.join(dirpath, f)
+        elogger.info('Results:\n%s' % cr.__repr__())
+        toupload = get_files_to_upload(wd)
 
         if not aws_config:
             msg = 'Not uploading artefacts because AWS config not passed.'
@@ -393,7 +391,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
     except NothingLeft:
         raise
-    except Exception as e:  # XXX
+    except BaseException as e:  # XXX
         msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
         elogger.error(msg)
         status = ChallengeResultsStatus.ERROR
@@ -413,6 +411,84 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                         process_id=process_id,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
+
+
+def download_artefacts(aws_config, steps2artefacts, wd):
+    for step_name, artefacts in steps2artefacts.items():
+        step_dir = os.path.join(wd, step_name)
+        os.makedirs(step_dir)
+        for rpath, data in artefacts.items():
+            fn = os.path.join(step_dir, rpath)
+            dn = os.path.dirname(fn)
+            if not os.path.exists(dn):
+                os.makedirs(dn)
+            bucket_name = data['bucket_name']
+            object_key = data['object_key']
+            sha256hex = data['sha256hex']
+            size = data['size']
+
+            try:
+                get_file_from_cache(fn, sha256hex)
+                elogger.info('cache   %7s   %s' % (friendly_size(size), rpath))
+            except KeyError:
+                elogger.info('AWS     %7s   %s' % (friendly_size(size), rpath))
+                get_object(aws_config, bucket_name, object_key, fn)
+                copy_to_cache(fn, sha256hex)
+            size_now = os.stat(fn).st_size
+            if size_now != size:
+                msg = 'Corrupt cache or download for %s at %s.' % (data, fn)
+                raise ValueError(msg)
+
+
+cache_dir = '/tmp/duckietown/DT18/evaluator/cache'
+cache_dir_by_value = os.path.join(cache_dir, 'by-value', 'sha256hex')
+
+
+# cache_max_size_gb = 3
+
+def get_file_from_cache(fn, sha256hex):
+    if not os.path.exists(cache_dir_by_value):
+        os.makedirs(cache_dir_by_value)
+    have = os.path.join(cache_dir_by_value, sha256hex)
+    if os.path.exists(have):
+        shutil.copy(have, fn)
+    else:
+        msg = 'Hash not in cache'
+        raise KeyError(msg)
+
+
+def copy_to_cache(fn, sha256hex):
+    if not os.path.exists(cache_dir_by_value):
+        os.makedirs(cache_dir_by_value)
+    have = os.path.join(cache_dir_by_value, sha256hex)
+    if not os.path.exists(have):
+        shutil.copy(fn, have)
+
+
+def get_object(aws_config, bucket_name, object_key,   fn):
+    aws_access_key_id = aws_config['aws_access_key_id']
+    aws_secret_access_key = aws_config['aws_secret_access_key']
+    import boto3
+    s3 = boto3.resource("s3",
+                        aws_access_key_id=aws_access_key_id,
+                        aws_secret_access_key=aws_secret_access_key)
+    aws_object = s3.Object(bucket_name, object_key)
+    aws_object.download_file(fn)
+
+
+def get_files_to_upload(path):
+    toupload = OrderedDict()
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            rpath = os.path.join(os.path.relpath(dirpath, path), f)
+            if rpath.startswith('./'):
+                rpath = rpath[2:]
+
+            if CHALLENGE_PREVIOUS_STEPS_DIR in rpath:
+                continue
+
+            toupload[rpath] = os.path.join(dirpath, f)
+    return toupload
 
 
 def logs_for_container(client, container_id):
@@ -441,6 +517,7 @@ def upload(aws_config, toupload):
     for rpath, realfile in toupload.items():
 
         sha256hex = compute_sha256hex(realfile)
+        copy_to_cache(realfile, sha256hex)
 
         # path_by_value
         object_key = os.path.join(aws_path_by_value, 'sha256', sha256hex)

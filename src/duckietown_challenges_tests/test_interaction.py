@@ -1,6 +1,8 @@
 import os
 import tempfile
 
+from comptests import run_module_tests
+
 from duckietown_challenges import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution, read_challenge_results, \
     ChallengeResultsStatus, wrap_solution, wrap_evaluator
 from duckietown_challenges.challenge_evaluator import ChallengeEvaluator
@@ -53,7 +55,7 @@ class S1(ChallengeSolution):
         tmp = cis.get_tmp_dir()
         fn = os.path.join(tmp, FN1)
         write_data_to_file(FN1, fn)
-        cis.set_solution_output_file(FN1, fn, FN1)
+        cis.set_solution_output_file(FN1, fn)
 
         params = cis.get_challenge_parameters()
         assert params[K1] == V1
@@ -85,14 +87,6 @@ def run_interaction(S, E):
     p_s.start()
     p_e.join()
 
-    #
-    # E.prepare(cie)
-    # cie.after_prepare()
-    # cis = ChallengeInterfaceSolutionConcrete(root)
-    # S.run(cis)
-    # cis.after_run()
-    # E.score(cie)
-    # cie.after_score()
     cr = read_challenge_results(root)
     return cr
 
@@ -139,3 +133,7 @@ def test_no_solution_output():
 
     cr = run_interaction(SDummy(), EDummy())
     assert cr.get_status() == ChallengeResultsStatus.FAILED
+
+
+if __name__ == '__main__':
+    run_module_tests()

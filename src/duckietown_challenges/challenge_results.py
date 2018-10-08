@@ -20,6 +20,9 @@ class ChallengeResults(object):
         data['scores'] = self.scores
         return data
 
+    def __repr__(self):
+        return 'ChallengeResults(%r, %r, %r)' % (self.status, self.msg, self.scores)
+
     @staticmethod
     def from_yaml(data):
         status = data['status']
@@ -35,6 +38,18 @@ class ChallengeResults(object):
         stats['scores'] = self.scores
         stats['msg'] = self.msg
         return stats
+
+    # def merge(self, cr2):
+    #     status = cr2.status
+    #     msg = cr2.msg
+    #     scores = dict()
+    #     scores.update(self.scores)
+    #     for k, v in cr2.scores.items():
+    #         if k in scores:
+    #             msg = 'Warning: step overwrites score %s = %s with %s ' % (k, scores[k], v)
+    #             dclogger.warning(msg)
+    #     return ChallengeResults(status, msg, scores)
+
 
 
 def declare_challenge_results(root, cr):
