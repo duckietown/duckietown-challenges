@@ -335,7 +335,8 @@ SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 def wrap_evaluator(evaluator, root='/'):
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
-            dclogger.error(status)
+            msg = 'declare %s:\n%s' % (status, message)
+            dclogger.error(msg)
         else:
             dclogger.info('Completed.')
         cr = ChallengeResults(status, message, {})
