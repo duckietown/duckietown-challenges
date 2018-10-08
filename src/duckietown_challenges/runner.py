@@ -48,6 +48,8 @@ def get_token_from_shell_config():
 
 
 def dt_challenges_evaluator():
+    from .col_logging import  setup_logging
+    setup_logging()
     elogger.info("dt-challenges-evaluator (DTC %s)" % __version__)
     elogger.info('called with:\n%s' % sys.argv)
     check_docker_environment()
@@ -182,13 +184,14 @@ def get_features(more_features):
     return features
 
 
+class DockerComposeFail(Exception):
+    pass
+
+
 def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluator_name, machine_id):
     features = get_features(more_features)
     token = get_token_from_shell_config()
-    # machine_id = socket.gethostname()
     evaluator_version = __version__
-    import docker
-    client = docker.from_env()
     process_id = evaluator_name
 
     res = dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version,
@@ -197,109 +200,37 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
         raise NothingLeft(msg)
-
-    elogger.info(safe_yaml_dump(res))
     job_id = res['job_id']
 
-    elogger.info('Evaluating job %s' % job_id)
+    if res['protocol'] != 'p1':
+        msg = 'invalid protocol %s' % res['protocol']
+        elogger.error(msg)
+        raise Exception(msg)
 
-    artifacts_image = size = None
     try:
-        wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
+        elogger.info(safe_yaml_dump(res))
 
-        LAST = 'last'
-        if os.path.lexists(LAST):
-            os.unlink(LAST)
-        os.symlink(wd, LAST)
+        elogger.info('Evaluating job %s' % job_id)
 
-        # you get this from the server
-        steps2artefacts = res['steps2artefacts']
-        solution_container = res['parameters']['hash']
-        challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
-        # AWS config
         aws_config = res['aws_config']
         if aws_config and do_upload:
-            bucket_name = aws_config['bucket_name']
-            aws_access_key_id = aws_config['aws_access_key_id']
-            aws_secret_access_key = aws_config['aws_secret_access_key']
-            aws_root_path = aws_config['path']
-            import boto3
-            s3 = boto3.resource("s3",
-                                aws_access_key_id=aws_access_key_id,
-                                aws_secret_access_key=aws_secret_access_key)
-
-            s = 'initial data'
-            data = StringIO.StringIO(s)
-            elogger.debug('trying bucket connection')
-            s3_object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
-            s3_object.upload_fileobj(data)
-            elogger.debug('uploaded')
+            try_s3(aws_config)
 
             # evaluation_protocol = challenge_parameters['protocol']
         # assert evaluation_protocol == 'p1'
-        if res['protocol'] != 'p1':
-            msg = 'invalid protocol %s' % res['protocol']
-            elogger.error(msg)
-            raise Exception(msg)
 
-        # the evaluation container
-        config = challenge_parameters_.as_dict()
-        # elogger.info('This is the base config:\n%s' % safe_yaml_dump(config))
+        wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
+        # you get this from the server
+        steps2artefacts = res['steps2artefacts']
+        solution_container = res['parameters']['hash']
 
-        # Adding the submission container
-        for service in config['services'].values():
-            if service['image'] == SUBMISSION_CONTAINER_TAG:
-                service['image'] = solution_container
-                break
-        else:
-            msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
-            raise Exception(msg)
+        challenge_name = res['challenge_name']
+        challenge_step_name = res['step_name']
+        challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
 
-        # adding extra environment variables:
-        UID = os.getuid()
-        USERNAME = getpass.getuser()
-        extra_environment = dict(username=USERNAME, uid=UID)
-        extra_environment[ENV_CHALLENGE_NAME] = res['challenge_name']
-        extra_environment[ENV_CHALLENGE_STEP_NAME] = res['step_name']
+        prepare_dir(wd, aws_config, steps2artefacts)
 
-        for service in config['services'].values():
-            service['environment'].update(extra_environment)
-
-        # add volumes
-
-        # output for the sub
-        challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
-        # the yaml with the scores
-        challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
-        # the results of the "preparation" step
-        challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
-        challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
-        previous_steps_dir = os.path.join(wd, CHALLENGE_PREVIOUS_STEPS_DIR)
-        download_artefacts(aws_config, steps2artefacts, previous_steps_dir)
-
-        for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
-                  challenge_evaluation_output_dir]:
-            os.makedirs(d)
-        volumes = [
-            './' + CHALLENGE_SOLUTION_OUTPUT_DIR + ':' + '/' + CHALLENGE_SOLUTION_OUTPUT_DIR,
-            './' + CHALLENGE_RESULTS_DIR + ':' + '/' + CHALLENGE_RESULTS_DIR,
-            './' + CHALLENGE_DESCRIPTION_DIR + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
-            './' + CHALLENGE_EVALUATION_OUTPUT_DIR + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
-            './' + CHALLENGE_PREVIOUS_STEPS_DIR + ':' + '/' + CHALLENGE_PREVIOUS_STEPS_DIR,
-        ]
-
-        for service in config['services'].values():
-            assert 'volumes' not in service
-            service['volumes'] = copy.deepcopy(volumes)
-
-        elogger.info('Now:\n%s' % safe_yaml_dump(config))
-
-        NETWORK_NAME = 'evaluation'
-        networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
-        for service in config['services'].values():
-            service['networks'] = copy.deepcopy(networks_evaluator)
-        config['networks'] = dict(evaluation=None)
-
+        config = get_config(challenge_parameters_, solution_container, challenge_name, challenge_step_name)
         config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
         elogger.debug('YAML:\n' + config_yaml)
 
@@ -309,88 +240,23 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         with open(dcfn, 'w') as f:
             f.write(config_yaml)
 
-        def run_docker(cmd0):
-
-            cmd0 = ['docker-compose', '-p', project] + cmd0
-            elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % wd)
-
-            try:
-                return subprocess.check_output(cmd0, cwd=wd)
-            except subprocess.CalledProcessError as e:
-                msg = 'Could not run %s: %s' % (cmd0, e)
-                raise Exception(msg)
-
         project = 'job%s-%s' % (job_id, random.randint(1, 10000))
-        if do_pull:
-            elogger.info('pulling containers')
-            cmd = ['pull']
-            run_docker(cmd)
 
-        elogger.info('Creating containers')
-        cmd = ['create', '--force-recreate']
-        run_docker(cmd)
+        cr = run(wd, project, do_pull)
 
-        # Get names of containers
+        write_logs(wd, project, services=config['services'])
 
-        elogger.info('Running containers')
-        cmd = ['up',
-               # '--remove-orphans',
-               '--abort-on-container-exit'
-               ]
-        run_docker(cmd)
-
-        for service in config['services']:
-            cmd = ['ps', '-q', service]
-
-            container_id = run_docker(cmd).strip()  # \n at the end
-            elogger.info(container_id)
-            logs = logs_for_container(client, container_id)
-
-            fn = os.path.join(wd, 'log-%s.txt' % service)
-            with open(fn, 'w') as f:
-                f.write(logs)
-
-            from ansi2html import Ansi2HTMLConverter
-            conv = Ansi2HTMLConverter()
-            html = conv.convert(logs)
-            fn = os.path.join(wd, 'log-%s.html' % service)
-            with open(fn, 'w') as f:
-                f.write(html)
-
-        try:
-            cr = read_challenge_results(wd)
-        except BaseException as e:
-            msg = 'Could not read the challenge results:\n%s' % traceback.format_exc(e)
-            elogger.error(msg)
-            status = ChallengeResultsStatus.ERROR
-            cr = ChallengeResults(status, msg, scores={})
+        if do_upload:
+            # create_index_files(wd, job_id=job_id)
+            uploaded = upload_files(wd, aws_config)
+        else:
+            uploaded = []
 
         if delete:
             cmd = ['down']
-            run_docker(cmd)
+            run_docker(wd, project, cmd)
 
-        # create_index_files(wd, job_id=job_id)
-
-        elogger.info('Results:\n%s' % cr.__repr__())
-        toupload = get_files_to_upload(wd)
-
-        if not aws_config:
-            msg = 'Not uploading artefacts because AWS config not passed.'
-            elogger.info(msg)
-            uploaded = []
-        else:
-            if do_upload:
-                uploaded = upload(aws_config, toupload)
-            else:
-                msg = 'Skipping uploading of %s files' % len(toupload)
-                elogger.info(msg)
-                uploaded = []
-
-        if delete:
             shutil.rmtree(wd)
-
-    except NothingLeft:
-        raise
     except BaseException as e:  # XXX
         msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
         elogger.error(msg)
@@ -399,9 +265,6 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         uploaded = []
 
     stats = cr.get_stats()
-    if artifacts_image:
-        stats['artifacts'] = dict(size=size, image=artifacts_image)
-
     # REST call to the duckietown chalenges server
     dtserver_report_job(token,
                         job_id=job_id,
@@ -411,6 +274,150 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
                         process_id=process_id,
                         evaluator_version=evaluator_version,
                         uploaded=uploaded)
+
+
+def run(wd, project, do_pull):
+    try:
+        if do_pull:
+            elogger.info('pulling containers')
+            cmd = ['pull']
+            run_docker(wd, project, cmd)
+
+        elogger.info('Creating containers')
+        cmd = ['create', '--force-recreate']
+        run_docker(wd, project, cmd)
+
+        elogger.info('Running containers')
+        cmd = ['up',
+               # '--remove-orphans',
+               '--abort-on-container-exit'
+               ]
+        run_docker(wd, project, cmd)
+
+        cr = read_challenge_results(wd)
+
+    except BaseException as e:  # XXX
+        msg = 'Uncaught exception while running Docker Compose:\n%s' % traceback.format_exc(e)
+        elogger.error(msg)
+        status = ChallengeResultsStatus.ERROR
+        cr = ChallengeResults(status, msg, scores={})
+
+    return cr
+
+
+def prepare_dir(wd, aws_config, steps2artefacts):
+    # output for the sub
+    challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    # the yaml with the scores
+    challenge_results_dir = os.path.join(wd, CHALLENGE_RESULTS_DIR)
+    # the results of the "preparation" step
+    challenge_description_dir = os.path.join(wd, CHALLENGE_DESCRIPTION_DIR)
+    challenge_evaluation_output_dir = os.path.join(wd, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    previous_steps_dir = os.path.join(wd, CHALLENGE_PREVIOUS_STEPS_DIR)
+
+    for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
+              challenge_evaluation_output_dir, previous_steps_dir]:
+        os.makedirs(d)
+
+    download_artefacts(aws_config, steps2artefacts, previous_steps_dir)
+
+
+def get_config(challenge_parameters_, solution_container, challenge_name, challenge_step_name):
+    config = challenge_parameters_.as_dict()
+
+    # Adding the submission container
+    for service in config['services'].values():
+        if service['image'] == SUBMISSION_CONTAINER_TAG:
+            service['image'] = solution_container
+            break
+    else:
+        msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
+        raise Exception(msg)
+
+    # adding extra environment variables:
+    UID = os.getuid()
+    USERNAME = getpass.getuser()
+    extra_environment = dict(username=USERNAME, uid=UID)
+    extra_environment[ENV_CHALLENGE_NAME] = challenge_name
+    extra_environment[ENV_CHALLENGE_STEP_NAME] = challenge_step_name
+
+    for service in config['services'].values():
+        service['environment'].update(extra_environment)
+
+    # add volumes
+
+    volumes = [
+        './' + CHALLENGE_SOLUTION_OUTPUT_DIR + ':' + '/' + CHALLENGE_SOLUTION_OUTPUT_DIR,
+        './' + CHALLENGE_RESULTS_DIR + ':' + '/' + CHALLENGE_RESULTS_DIR,
+        './' + CHALLENGE_DESCRIPTION_DIR + ':' + '/' + CHALLENGE_DESCRIPTION_DIR,
+        './' + CHALLENGE_EVALUATION_OUTPUT_DIR + ':' + '/' + CHALLENGE_EVALUATION_OUTPUT_DIR,
+        './' + CHALLENGE_PREVIOUS_STEPS_DIR + ':' + '/' + CHALLENGE_PREVIOUS_STEPS_DIR,
+    ]
+
+    for service in config['services'].values():
+        assert 'volumes' not in service
+        service['volumes'] = copy.deepcopy(volumes)
+
+    elogger.info('Now:\n%s' % safe_yaml_dump(config))
+
+    NETWORK_NAME = 'evaluation'
+    networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
+    for service in config['services'].values():
+        service['networks'] = copy.deepcopy(networks_evaluator)
+    config['networks'] = dict(evaluation=None)
+    return config
+
+
+def write_logs(wd, project, services):
+    for service in services:
+        cmd = ['ps', '-q', service]
+
+        try:
+            o = run_docker(wd, project, cmd)
+            container_id = o.strip()  # \n at the end
+        except DockerComposeFail:
+            continue
+
+        elogger.info(container_id)
+        import docker
+        client = docker.from_env()
+        logs = logs_for_container(client, container_id)
+
+        fn = os.path.join(wd, 'log-%s.txt' % service)
+        with open(fn, 'w') as f:
+            f.write(logs)
+
+        from ansi2html import Ansi2HTMLConverter
+        conv = Ansi2HTMLConverter()
+        html = conv.convert(logs)
+        fn = os.path.join(wd, 'log-%s.html' % service)
+        with open(fn, 'w') as f:
+            f.write(html)
+
+
+def run_docker(cwd, project, cmd0):
+    cmd0 = ['docker-compose', '-p', project] + cmd0
+    elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
+
+    try:
+        return subprocess.check_output(cmd0, cwd=cwd)
+    except subprocess.CalledProcessError as e:
+        msg = 'Could not run %s: %s' % (cmd0, e)
+        msg += 'Output: %s' % e.output
+        raise DockerComposeFail(msg)
+
+
+def upload_files(wd, aws_config):
+    toupload = get_files_to_upload(wd)
+
+    if not aws_config:
+        msg = 'Not uploading artefacts because AWS config not passed.'
+        elogger.info(msg)
+        uploaded = []
+    else:
+        uploaded = upload(aws_config, toupload)
+
+    return uploaded
 
 
 def download_artefacts(aws_config, steps2artefacts, wd):
@@ -444,6 +451,24 @@ cache_dir = '/tmp/duckietown/DT18/evaluator/cache'
 cache_dir_by_value = os.path.join(cache_dir, 'by-value', 'sha256hex')
 
 
+def try_s3(aws_config):
+    bucket_name = aws_config['bucket_name']
+    aws_access_key_id = aws_config['aws_access_key_id']
+    aws_secret_access_key = aws_config['aws_secret_access_key']
+    aws_root_path = aws_config['path']
+    import boto3
+    s3 = boto3.resource("s3",
+                        aws_access_key_id=aws_access_key_id,
+                        aws_secret_access_key=aws_secret_access_key)
+
+    s = 'initial data'
+    data = StringIO.StringIO(s)
+    elogger.debug('trying bucket connection')
+    s3_object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
+    s3_object.upload_fileobj(data)
+    elogger.debug('uploaded')
+
+
 # cache_max_size_gb = 3
 
 def get_file_from_cache(fn, sha256hex):
@@ -465,7 +490,7 @@ def copy_to_cache(fn, sha256hex):
         shutil.copy(fn, have)
 
 
-def get_object(aws_config, bucket_name, object_key,   fn):
+def get_object(aws_config, bucket_name, object_key, fn):
     aws_access_key_id = aws_config['aws_access_key_id']
     aws_secret_access_key = aws_config['aws_secret_access_key']
     import boto3
