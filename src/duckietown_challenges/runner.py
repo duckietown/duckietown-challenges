@@ -301,7 +301,7 @@ def run(wd, project, do_pull):
         elogger.info('Running containers')
         cmd = ['up',
                # '--remove-orphans',
-               # '--abort-on-container-exit'
+               '--abort-on-container-exit'
                ]
         run_docker(wd, project, cmd)
 
