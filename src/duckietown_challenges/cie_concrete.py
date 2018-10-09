@@ -1,3 +1,4 @@
+import math
 import os
 import shutil
 import sys
@@ -243,6 +244,11 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         return fns
 
     def set_score(self, name, value, description=None):
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                msg = 'Invalid value %r for score %r: we do not allow infinity or NaN.' % (value, name)
+                raise ValueError(msg)
+
         if name in self.scores:
             msg = 'Already know score %r' % name
             raise InvalidEvaluator(msg)

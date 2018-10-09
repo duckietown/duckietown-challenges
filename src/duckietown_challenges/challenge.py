@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 
 import yaml
+from duckietown_challenges.utils import indent
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
@@ -127,26 +128,61 @@ class EvaluationParameters(object):
         for service_definition in services.values():
             if service_definition.image == SUBMISSION_CONTAINER_TAG:
                 n += 1
-        if n == 0:
-            msg = 'I expect one of the services to have "image: %s".' % SUBMISSION_CONTAINER_TAG
-            raise ValueError(msg)
-        if n > 1:
-            msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
-            raise ValueError(msg)
+        # if n == 0:
+        #     msg = 'I expect one of the services to have "image: %s".' % SUBMISSION_CONTAINER_TAG
+        #     raise ValueError(msg)
+        # if n > 1:
+        #     msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
+        #     raise ValueError(msg)
 
         return EvaluationParameters(services=services, version=version)
+
+    def __repr__(self):
+        return 'EvaluationParameters(%s)' % self.as_dict()
 
     def as_dict(self):
         services = dict([(k, v.as_dict()) for k, v in self.services.items()])
         return dict(version=self.version, services=services)
 
+    def equivalent(self, other):
+        if set(other.services) != set(self.services):
+            msg = 'Different set of services.'
+            raise NotEquivalent(msg)
+        for s in other.services:
+            try:
+                self.services[s].equivalent(other.services[s])
+            except NotEquivalent as e:
+                msg = 'Service %r differs:\n\n%s' % (s, indent(e, '  '))
+                raise NotEquivalent(msg)
+
+
+class NotEquivalent(Exception):
+    pass
+
 
 class ServiceDefinition(object):
-    def __init__(self, image, environment):
+    def __init__(self, image, environment, image_digest):
         check_isinstance(environment, dict)
         check_isinstance(image, (unicode, str))
         self.image = str(image)
+        self.image_digest = image_digest
         self.environment = environment
+
+    def __repr__(self):
+        return 'ServiceDefinition(%s)' % self.as_dict()
+
+    def equivalent(self, other):
+        if self.image != SUBMISSION_CONTAINER_TAG:
+            if self.image_digest is None or other.image_digest is None:
+                msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (self, other)
+                raise NotEquivalent(msg)
+            if self.image_digest != other.image_digest:
+                msg = 'Different digests:\n\n  %s\n\n  %s' % (self.image_digest, other.image_digest)
+                raise NotEquivalent(msg)
+
+        if self.environment != other.environment:
+            msg = 'Different environments:\n\n %s\n\n  %s' % (self.environment, other.environment)
+            raise NotEquivalent(msg)
 
     def update_image(self):
         self.image = get_latest(self.image)
@@ -169,13 +205,14 @@ class ServiceDefinition(object):
         if environment is None:
             environment = {}
 
+        image_digest = d.pop('image_digest', None)
         if d:
-            msg = 'Extra fields: %s' % d0
+            msg = 'Extra fields: %s' % list(d0)
             raise ValueError(msg)
-        return ServiceDefinition(image, environment)
+        return ServiceDefinition(image, environment, image_digest)
 
     def as_dict(self):
-        return dict(image=self.image, environment=self.environment)
+        return dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
 
 
 def get_latest(image_name):
@@ -281,7 +318,7 @@ class ChallengeTransitions(object):
 
 class ChallengeDescription(object):
     def __init__(self, name, title, description, protocol,
-                 date_open, date_close, steps, roles, transitions):
+                 date_open, date_close, steps, roles, transitions, tags):
         self.name = name
         self.title = title
         self.description = description
@@ -292,6 +329,7 @@ class ChallengeDescription(object):
         self.date_close = date_close
         self.steps = steps
         self.roles = roles
+        self.tags = tags
 
         for k, permissions in self.roles.items():
             if not k.startswith('user:'):
@@ -317,23 +355,29 @@ class ChallengeDescription(object):
     @wrap_config_reader
     def from_yaml(data):
         try:
-            name = data['challenge']
-            title = data['title']
-            description = data['description']
-            protocol = data['protocol']
-            date_open = data['date-open']
-            date_close = data['date-close']
+            name = data.pop('challenge')
+            tags = data.pop('tags', [])
+            title = data.pop('title')
+            description = data.pop('description')
+            protocol = data.pop('protocol')
+            date_open = data.pop('date-open')
+            date_close = data.pop('date-close')
 
-            roles = data['roles']
-            transitions = data['transitions']
-            steps = data['steps']
+            roles = data.pop('roles')
+            transitions = data.pop('transitions')
+            steps = data.pop('steps')
             Steps = {}
             for k, v in steps.items():
                 Steps[k] = ChallengeStep.from_yaml(v, k)
 
+            if data:
+                msg = 'Extra keys in configuration file: %s' % list(data)
+                raise InvalidChallengeDescription(msg)
+
             return ChallengeDescription(name, title, description,
                                         protocol, date_open, date_close, Steps,
-                                        roles=roles, transitions=transitions)
+                                        roles=roles, transitions=transitions,
+                                        tags=tags)
         except KeyError as e:
             msg = 'Missing config %s' % e
             raise_wrapped(InvalidChallengeDescription, e, msg)
@@ -354,6 +398,7 @@ class ChallengeDescription(object):
         data['steps'] = {}
         for k, v in self.steps.items():
             data['steps'][k] = v.as_dict()
+        data['tags'] = self.tags
         return data
 
     def as_yaml(self):

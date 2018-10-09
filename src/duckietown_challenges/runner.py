@@ -301,7 +301,7 @@ def run(wd, project, do_pull):
         elogger.info('Running containers')
         cmd = ['up',
                # '--remove-orphans',
-               '--abort-on-container-exit'
+               # '--abort-on-container-exit'
                ]
         run_docker(wd, project, cmd)
 
@@ -340,10 +340,17 @@ def get_config(challenge_parameters_, solution_container, challenge_name, challe
     for service in config['services'].values():
         if service['image'] == SUBMISSION_CONTAINER_TAG:
             service['image'] = solution_container
-            break
-    else:
-        msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
-        raise Exception(msg)
+
+        image_digest = service.pop('image_digest', None)
+        # This is not needed, because the tag is sufficient as it is generated anew.
+        # We should perhaps check that we have the right image tag
+        #
+        # if image_digest is not None:
+        #     service['image'] += '@' + image_digest
+    # else:
+    #     msg = 'Cannot find the tag %s' % SUBMISSION_CONTAINER_TAG
+    #     elogger.warning(msg)
+    #     # raise Exception(msg)
 
     # adding extra environment variables:
     UID = os.getuid()
