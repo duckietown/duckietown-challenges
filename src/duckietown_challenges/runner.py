@@ -175,7 +175,7 @@ def get_features(more_features):
 
     for k, v in more_features.items():
         if k in features:
-            msg = 'Using %r = %r instead of %r' % (k, features[k], more_features[k])
+            msg = 'Using %r = %r instead of %r' % (k, more_features[k], features[k])
             elogger.info(msg)
         features[k] = v
 

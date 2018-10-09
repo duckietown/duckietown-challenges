@@ -19,6 +19,7 @@ upload:
 branch=$(shell git rev-parse --abbrev-ref HEAD)
 
 name=duckietown/dt-challenges-evaluator:$(branch)
+name_rpi=duckietown/rpi-dt-challenges-evaluator:$(branch)
 
 build:
 	docker build -t $(name) .
@@ -28,6 +29,17 @@ build-no-cache:
 
 push:
 	docker push $(name)
+
+
+
+build-rpi:
+	docker build -t $(name_rpi) -f Dockerfile.rpi .
+
+build-no-cache-rpi:
+	docker build -t $(name_rpi) -f Dockerfile.rpi --no-cache  .
+
+push-rpi:
+	docker push $(name_rpi)
 
 
 
