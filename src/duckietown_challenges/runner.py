@@ -13,7 +13,6 @@ import shutil
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 import traceback
 from collections import OrderedDict
@@ -23,6 +22,7 @@ import yaml
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
+from duckietown_challenges.runner_cache import copy_to_cache, get_file_from_cache
 from . import __version__
 from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
@@ -48,7 +48,7 @@ def get_token_from_shell_config():
 
 
 def dt_challenges_evaluator():
-    from .col_logging import  setup_logging
+    from .col_logging import setup_logging
     setup_logging()
     elogger.info("dt-challenges-evaluator (DTC %s)" % __version__)
     elogger.info('called with:\n%s' % sys.argv)
@@ -73,6 +73,8 @@ def dt_challenges_evaluator():
     parser.add_argument("--features", default='{}')
     parsed = parser.parse_args()
 
+    tmpdir = '/tmp/duckietown/DT18/evaluator/executions'
+
     try:
         more_features = yaml.load(parsed.features)
     except BaseException as e:
@@ -91,7 +93,8 @@ def dt_challenges_evaluator():
     machine_id = parsed.machine_id or socket.gethostname()
 
     args = dict(do_upload=do_upload, do_pull=do_pull, more_features=more_features,
-                delete=delete, evaluator_name=evaluator_name, machine_id=machine_id)
+                delete=delete, evaluator_name=evaluator_name, machine_id=machine_id,
+                tmpdir=tmpdir)
     if parsed.continuous:
 
         timeout = 5.0  # seconds
@@ -188,7 +191,7 @@ class DockerComposeFail(Exception):
     pass
 
 
-def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluator_name, machine_id):
+def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluator_name, machine_id, tmpdir):
     features = get_features(more_features)
     token = get_token_from_shell_config()
     evaluator_version = __version__
@@ -200,15 +203,20 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
     if 'job_id' not in res:
         msg = 'Could not find jobs: %s' % res['msg']
         raise NothingLeft(msg)
-    job_id = res['job_id']
 
-    if res['protocol'] != 'p1':
-        msg = 'invalid protocol %s' % res['protocol']
-        elogger.error(msg)
-        raise Exception(msg)
+    job_id = res['job_id']
 
     try:
         elogger.info(safe_yaml_dump(res))
+
+        if res['protocol'] != 'p1':
+            msg = 'invalid protocol %s' % res['protocol']
+            elogger.error(msg)
+            raise Exception(msg)
+
+        challenge_name = res['challenge_name']
+        challenge_step_name = res['step_name']
+        submission_id = res['submission_id']
 
         elogger.info('Evaluating job %s' % job_id)
 
@@ -219,13 +227,22 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
             # evaluation_protocol = challenge_parameters['protocol']
         # assert evaluation_protocol == 'p1'
 
-        wd = tempfile.mkdtemp(prefix='tmp-duckietown-challenge-evaluator-')
         # you get this from the server
+
+        # from rpath to Artefact.as_dict(
         steps2artefacts = res['steps2artefacts']
+
+        # for k, v in steps2artefacts_.items():
+        #     steps2artefacts[k] = Artefact.from_yaml()
         solution_container = res['parameters']['hash']
 
-        challenge_name = res['challenge_name']
-        challenge_step_name = res['step_name']
+        wd = os.path.join(tmpdir, challenge_name, 'submission%d' % submission_id,
+                          '%s-%s-job%s' % (challenge_step_name, evaluator_name, job_id))
+
+        if os.path.exists(wd):
+            shutil.rmtree(wd)
+        os.makedirs(wd)
+
         challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
 
         prepare_dir(wd, aws_config, steps2artefacts)
@@ -246,11 +263,10 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
         write_logs(wd, project, services=config['services'])
 
-        if do_upload:
+        if not do_upload:
+            aws_config = None
             # create_index_files(wd, job_id=job_id)
-            uploaded = upload_files(wd, aws_config)
-        else:
-            uploaded = []
+        uploaded = upload_files(wd, aws_config)
 
         if delete:
             cmd = ['down']
@@ -272,19 +288,30 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 
     stats = cr.get_stats()
     # REST call to the duckietown chalenges server
-    dtserver_report_job(token,
-                        job_id=job_id,
-                        stats=stats,
-                        result=cr.get_status(),
-                        machine_id=machine_id,
-                        process_id=process_id,
-                        evaluator_version=evaluator_version,
-                        uploaded=uploaded)
+    ntries = 5
+    interval = 10
+    while ntries >= 0:
+        try:
+            dtserver_report_job(token,
+                                job_id=job_id,
+                                stats=stats,
+                                result=cr.get_status(),
+                                machine_id=machine_id,
+                                process_id=process_id,
+                                evaluator_version=evaluator_version,
+                                uploaded=uploaded)
+            break
+        except BaseException as e:
+            msg = 'Could not report: %s' % e
+            elogger.warning(msg)
+            elogger.info('Retrying %s more times after %s seconds' % (ntries, interval))
+            ntries -= 1
+            time.sleep(interval)
 
 
 def run(wd, project, do_pull):
     import docker
-    client =docker.from_env()
+    client = docker.from_env()
     try:
         if do_pull:
             elogger.info('pulling containers')
@@ -434,11 +461,15 @@ def upload_files(wd, aws_config):
     if not aws_config:
         msg = 'Not uploading artefacts because AWS config not passed.'
         elogger.info(msg)
-        uploaded = []
+        uploaded = only_copy_to_cache(toupload)
     else:
         uploaded = upload(aws_config, toupload)
 
     return uploaded
+
+
+class CouldNotDownloadAll(Exception):
+    pass
 
 
 def download_artefacts(aws_config, steps2artefacts, wd):
@@ -446,30 +477,42 @@ def download_artefacts(aws_config, steps2artefacts, wd):
         step_dir = os.path.join(wd, step_name)
         os.makedirs(step_dir)
         for rpath, data in artefacts.items():
+            elogger.debug(data)
             fn = os.path.join(step_dir, rpath)
             dn = os.path.dirname(fn)
             if not os.path.exists(dn):
                 os.makedirs(dn)
-            bucket_name = data['bucket_name']
-            object_key = data['object_key']
+
             sha256hex = data['sha256hex']
             size = data['size']
+            storage = data['storage']
 
             try:
                 get_file_from_cache(fn, sha256hex)
                 elogger.info('cache   %7s   %s' % (friendly_size(size), rpath))
             except KeyError:
-                elogger.info('AWS     %7s   %s' % (friendly_size(size), rpath))
-                get_object(aws_config, bucket_name, object_key, fn)
-                copy_to_cache(fn, sha256hex)
-            size_now = os.stat(fn).st_size
-            if size_now != size:
-                msg = 'Corrupt cache or download for %s at %s.' % (data, fn)
-                raise ValueError(msg)
 
+                # no local
+                if 's3' in storage:
+                    if not aws_config:
+                        msg = 'I cannot download from s3'
+                        raise CouldNotDownloadAll(msg)
+                    else:
+                        s3ob = storage['s3']
+                        bucket_name = s3ob['bucket_name']
+                        object_key = s3ob['object_key']
 
-cache_dir = '/tmp/duckietown/DT18/evaluator/cache'
-cache_dir_by_value = os.path.join(cache_dir, 'by-value', 'sha256hex')
+                        elogger.info('AWS     %7s   %s' % (friendly_size(size), rpath))
+                        get_object(aws_config, bucket_name, object_key, fn)
+                        copy_to_cache(fn, sha256hex)
+
+                    size_now = os.stat(fn).st_size
+                    if size_now != size:
+                        msg = 'Corrupt cache or download for %s at %s.' % (data, fn)
+                        raise ValueError(msg)
+                else:
+                    msg = 'Not in cache and no way to download'
+                    raise CouldNotDownloadAll(msg)
 
 
 def try_s3(aws_config):
@@ -488,27 +531,6 @@ def try_s3(aws_config):
     s3_object = s3.Object(bucket_name, os.path.join(aws_root_path, 'initial.txt'))
     s3_object.upload_fileobj(data)
     elogger.debug('uploaded')
-
-
-# cache_max_size_gb = 3
-
-def get_file_from_cache(fn, sha256hex):
-    if not os.path.exists(cache_dir_by_value):
-        os.makedirs(cache_dir_by_value)
-    have = os.path.join(cache_dir_by_value, sha256hex)
-    if os.path.exists(have):
-        shutil.copy(have, fn)
-    else:
-        msg = 'Hash not in cache'
-        raise KeyError(msg)
-
-
-def copy_to_cache(fn, sha256hex):
-    if not os.path.exists(cache_dir_by_value):
-        os.makedirs(cache_dir_by_value)
-    have = os.path.join(cache_dir_by_value, sha256hex)
-    if not os.path.exists(have):
-        shutil.copy(fn, have)
 
 
 def get_object(aws_config, bucket_name, object_key, fn):
@@ -545,6 +567,30 @@ def logs_for_container(client, container_id):
     return logs
 
 
+def only_copy_to_cache(toupload):
+    uploaded = []
+    for rpath, realfile in toupload.items():
+        sha256hex = compute_sha256hex(realfile)
+        copy_to_cache(realfile, sha256hex)
+        size = os.stat(realfile).st_size
+        mime_type = guess_mime_type(realfile)
+        storage = {}
+        uploaded.append(dict(size=size,
+                             mime_type=mime_type, rpath=rpath, sha256hex=sha256hex, storage=storage))
+    return uploaded
+
+
+def guess_mime_type(filename):
+    mime_type, _encoding = mimetypes.guess_type(filename)
+
+    if mime_type is None:
+        if filename.endswith('.yaml'):
+            mime_type = 'text/yaml'
+        else:
+            mime_type = 'binary/octet-stream'
+    return mime_type
+
+
 def upload(aws_config, toupload):
     import boto3
     from botocore.exceptions import ClientError
@@ -569,16 +615,9 @@ def upload(aws_config, toupload):
         object_key = os.path.join(aws_path_by_value, 'sha256', sha256hex)
 
         # object_key = os.path.join(aws_root_path, rpath)
-        statinfo = os.stat(realfile)
-        size = statinfo.st_size
 
-        mime_type, _encoding = mimetypes.guess_type(realfile)
-
-        if mime_type is None:
-            if realfile.endswith('.yaml'):
-                mime_type = 'text/yaml'
-            else:
-                mime_type = 'binary/octet-stream'
+        size = os.stat(realfile).st_size
+        mime_type = guess_mime_type(realfile)
 
         aws_object = s3.Object(bucket_name, object_key)
         try:
@@ -596,9 +635,9 @@ def upload(aws_config, toupload):
 
             else:
                 raise
-
-        uploaded.append(dict(object_key=object_key, bucket_name=bucket_name, size=size,
-                             mime_type=mime_type, rpath=rpath, sha256hex=sha256hex))
+        url = 'http://%s.s3.amazonaws.com/%s' % (bucket_name, object_key)
+        storage = dict(s3=dict(object_key=object_key, bucket_name=bucket_name, url=url))
+        uploaded.append(dict(size=size, mime_type=mime_type, rpath=rpath, sha256hex=sha256hex, storage=storage))
 
     return uploaded
 

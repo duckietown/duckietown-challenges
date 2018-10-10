@@ -1,10 +1,23 @@
 import os
 
+# In the end, the evaluator must create this file
+CHALLENGE_RESULTS_DIR = 'challenge-results'
+CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')
+
+# Example content of the file:
+#
+# !!omap
+# - status: success
+# - msg: null
+# - scores:
+#     lf: 91.09225459488937
+
+
 # Folder for the output of the solution
 CHALLENGE_SOLUTION_OUTPUT_DIR = 'challenge-solution-output'
 CHALLENGE_EVALUATION_OUTPUT_DIR = 'challenge-evaluation-output'
 CHALLENGE_DESCRIPTION_DIR = 'challenge-description'
-CHALLENGE_RESULTS_DIR = 'challenge-results'
+
 CHALLENGE_PREVIOUS_STEPS_DIR = 'previous-steps'
 
 # File to be created by the solution, which also signals
@@ -18,6 +31,7 @@ CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, 'descriptio
 ENV_CHALLENGE_NAME = 'challenge_name'
 ENV_CHALLENGE_STEP_NAME = 'challenge_step_name'
 
+
 class ChallengeResultsStatus(object):
     SUCCESS = 'success'
     FAILED = 'failed'  # the solution failed
@@ -27,4 +41,4 @@ class ChallengeResultsStatus(object):
     # XXX: to merge
 
 
-CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')
+

@@ -7,28 +7,38 @@ from .yaml_utils import write_yaml, read_yaml_file
 
 class ChallengeResults(object):
 
-    def __init__(self, status, msg, scores):
+    def __init__(self, status, msg, scores, stats=None):
         assert status in ChallengeResultsStatus.ALL, (status, ChallengeResultsStatus.ALL)
         self.status = status
         self.msg = msg
         self.scores = scores
+        if stats is None:
+            stats = {}
+        self.stats = stats
 
     def to_yaml(self):
         data = OrderedDict()
         data['status'] = self.status
         data['msg'] = self.msg
         data['scores'] = self.scores
+        data['stats'] = self.stats
         return data
 
     def __repr__(self):
-        return 'ChallengeResults(%r, %r, %r)' % (self.status, self.msg, self.scores)
+        return 'ChallengeResults(%s)' % self.to_yaml()
 
     @staticmethod
     def from_yaml(data):
-        status = data['status']
-        msg = data['msg']
-        scores = data['scores']
-        return ChallengeResults(status, msg, scores)
+        d0 = dict(**data)
+        status = d0.pop('status')
+        msg = d0.pop('msg')
+        scores = d0.pop('scores')
+        stats = d0.pop('stats', {})
+        if d0:
+            msg = 'Extra fields: %s' % list(d0)
+            raise ValueError(msg)
+
+        return ChallengeResults(status, msg, scores, stats)
 
     def get_status(self):
         return self.status
@@ -39,21 +49,11 @@ class ChallengeResults(object):
         stats['msg'] = self.msg
         return stats
 
-    # def merge(self, cr2):
-    #     status = cr2.status
-    #     msg = cr2.msg
-    #     scores = dict()
-    #     scores.update(self.scores)
-    #     for k, v in cr2.scores.items():
-    #         if k in scores:
-    #             msg = 'Warning: step overwrites score %s = %s with %s ' % (k, scores[k], v)
-    #             dclogger.warning(msg)
-    #     return ChallengeResults(status, msg, scores)
-
 
 def declare_challenge_results(root, cr):
+    if root is None:
+        root = '/'
     data = cr.to_yaml()
-
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)
 
