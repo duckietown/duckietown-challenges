@@ -3,7 +3,7 @@ from datetime import datetime
 
 import yaml
 
-from duckietown_challenges.utils import indent
+from duckietown_challenges.utils import indent, safe_yaml_dump
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .utils import raise_wrapped, check_isinstance, wrap_config_reader
@@ -139,7 +139,7 @@ class EvaluationParameters(object):
         return EvaluationParameters(services=services, version=version)
 
     def __repr__(self):
-        return 'EvaluationParameters(%s)' % self.as_dict()
+        return nice_repr(self)
 
     def as_dict(self):
         services = dict([(k, v.as_dict()) for k, v in self.services.items()])
@@ -161,6 +161,10 @@ class NotEquivalent(Exception):
     pass
 
 
+def nice_repr(x):
+    K = type(x).__name__
+    return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
+
 class ServiceDefinition(object):
     def __init__(self, image, environment, image_digest, build):
         check_isinstance(environment, dict)
@@ -171,7 +175,7 @@ class ServiceDefinition(object):
         self.build = build
 
     def __repr__(self):
-        return 'ServiceDefinition(%s)' % self.as_dict()
+        return nice_repr(self)
 
     def equivalent(self, other):
         if self.image != SUBMISSION_CONTAINER_TAG:
@@ -219,6 +223,10 @@ class ServiceDefinition(object):
             raise ValueError(msg)
         return ServiceDefinition(image, environment, image_digest, build)
 
+
+    def __repr__(self):
+        return nice_repr(self)
+
     def as_dict(self):
 
         res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
@@ -236,6 +244,10 @@ class Build(object):
         self.context = context
         self.dockerfile = dockerfile
         self.args = args
+
+
+    def __repr__(self):
+        return nice_repr(self)
 
     def as_dict(self):
         return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)

@@ -384,14 +384,22 @@ def prepare_dir(wd, aws_config, steps2artefacts):
 
 
 def get_config(challenge_parameters_, solution_container, challenge_name, challenge_step_name):
+    for service_def in challenge_parameters_.services.values():
+        service_def.build = None
+
+        if service_def.image == SUBMISSION_CONTAINER_TAG:
+            service_def.image = solution_container
+
     config = challenge_parameters_.as_dict()
 
     # Adding the submission container
     for service in config['services'].values():
-        if service['image'] == SUBMISSION_CONTAINER_TAG:
-            service['image'] = solution_container
-
         image_digest = service.pop('image_digest', None)
+        service.pop('build', None)
+
+        # if service['image'] == SUBMISSION_CONTAINER_TAG:
+        #     service['image'] = solution_container
+
         # This is not needed, because the tag is sufficient as it is generated anew.
         # We should perhaps check that we have the right image tag
         #
@@ -446,10 +454,14 @@ def write_logs(wd, project, services):
         except DockerComposeFail:
             continue
 
-        elogger.info(container_id)
-        import docker
-        client = docker.from_env()
-        logs = logs_for_container(client, container_id)
+        if not container_id:
+            logs = 'Service "%s" was not started.' % service
+            elogger.warning(logs)
+        else:
+            elogger.info('Found container ID = %r' % container_id)
+            import docker
+            client = docker.from_env()
+            logs = logs_for_container(client, container_id)
 
         fn = os.path.join(wd, 'log-%s.txt' % service)
         with open(fn, 'w') as f:
