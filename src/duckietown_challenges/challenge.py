@@ -2,8 +2,8 @@ from collections import namedtuple
 from datetime import datetime
 
 import yaml
-from duckietown_challenges.utils import indent
 
+from duckietown_challenges.utils import indent
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .utils import raise_wrapped, check_isinstance, wrap_config_reader
@@ -13,6 +13,7 @@ class InvalidChallengeDescription(Exception):
     pass
 
 
+# these are job statuses
 STATE_START = 'START'
 STATE_ERROR = 'ERROR'
 STATE_SUCCESS = 'SUCCESS'
@@ -161,12 +162,13 @@ class NotEquivalent(Exception):
 
 
 class ServiceDefinition(object):
-    def __init__(self, image, environment, image_digest):
+    def __init__(self, image, environment, image_digest, build):
         check_isinstance(environment, dict)
         check_isinstance(image, (unicode, str))
         self.image = str(image)
         self.image_digest = image_digest
         self.environment = environment
+        self.build = build
 
     def __repr__(self):
         return 'ServiceDefinition(%s)' % self.as_dict()
@@ -205,14 +207,52 @@ class ServiceDefinition(object):
         if environment is None:
             environment = {}
 
+        if 'build' in d:
+            build = d.pop('build')
+            if build is not None:
+                build = Build.from_yaml(build)
+        else:
+            build = None
         image_digest = d.pop('image_digest', None)
         if d:
             msg = 'Extra fields: %s' % list(d0)
             raise ValueError(msg)
-        return ServiceDefinition(image, environment, image_digest)
+        return ServiceDefinition(image, environment, image_digest, build)
 
     def as_dict(self):
-        return dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
+
+        if self.build:
+            build = self.build.as_dict()
+        else:
+            build = None
+        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest, build=build)
+        return res
+
+
+class Build(object):
+    def __init__(self, context, dockerfile, args):
+        self.context = context
+        self.dockerfile = dockerfile
+        self.args = args
+
+    def as_dict(self):
+        return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
+
+    @staticmethod
+    def from_yaml(d0):
+        if not isinstance(d0, dict):
+            msg = 'Expected dict, got %s' % d0.__repr__()
+            raise ValueError(msg)
+        d = dict(**d0)
+
+        context = d.pop('context', '.')
+        dockerfile = d.pop('dockerfile', 'Dockerfile')
+        args = d.pop('args', {})
+
+        if d:
+            msg = 'Extra fields: %s' % list(d0)
+            raise ValueError(msg)
+        return Build(context, dockerfile, args)
 
 
 def get_latest(image_name):

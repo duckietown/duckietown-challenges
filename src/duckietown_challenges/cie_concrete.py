@@ -185,9 +185,11 @@ class Timeout(Exception):
 def wait_for_file(fn, timeout, wait):
     t0 = time.time()
     while not os.path.exists(fn):
-        dclogger.debug('Output %s not ready yet' % fn)
-        if time.time() - t0 > timeout:
-            msg = 'Timeout while waiting for %s.' % fn
+        passed = int(time.time() - t0)
+        to_wait = wait - timeout
+        dclogger.debug('Output %s not ready yet (%s s passed, will wait %s more)' % (fn, passed, to_wait))
+        if time.time() > t0 + timeout:
+            msg = 'Timeout of %s while waiting for %s.' % (timeout, fn)
             raise Timeout(msg)
         time.sleep(wait)
 
