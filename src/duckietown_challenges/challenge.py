@@ -221,11 +221,13 @@ class ServiceDefinition(object):
 
     def as_dict(self):
 
+        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
+        
         if self.build:
-            build = self.build.as_dict()
+            res['build'] = self.build.as_dict()
         else:
-            build = None
-        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest, build=build)
+            pass
+
         return res
 
 

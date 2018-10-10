@@ -37,6 +37,9 @@ class ChallengeResultsStatus(object):
     FAILED = 'failed'  # the solution failed
     ERROR = 'error'  # there was a problem with the evaluation (but not the solution)
 
+    ERROR_CODE = ERROR
+    ERROR_TMP_EVALUATOR = ERROR
+
     ALL = [SUCCESS, FAILED, ERROR]
     # XXX: to merge
 

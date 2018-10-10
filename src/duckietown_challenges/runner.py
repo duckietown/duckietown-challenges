@@ -28,7 +28,7 @@ from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME, CHALLENGE_PREVIOUS_STEPS_DIR
-from .utils import safe_yaml_dump, friendly_size
+from .utils import safe_yaml_dump, friendly_size, indent
 
 logging.basicConfig()
 elogger = logging.getLogger('evaluator')
@@ -60,7 +60,12 @@ def dt_challenges_evaluator():
         msg += '\n\nSee: https://docs.docker.com/compose/install/#install-compose'
         raise InvalidEnvironment(msg)
 
-    parser = argparse.ArgumentParser()
+    usage = """
+    
+Usage:
+    
+"""
+    parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument("--continuous", action="store_true", default=False)
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
@@ -257,21 +262,38 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         with open(dcfn, 'w') as f:
             f.write(config_yaml)
 
+        # validate the configuration
+
         project = 'job%s-%s' % (job_id, random.randint(1, 10000))
 
-        cr = run(wd, project, do_pull)
+        try:
+            run_docker(wd, project, ['config'])
+            valid_config = True
+            valid_config_error = None
+        except DockerComposeFail as e:
+            valid_config_error = 'Could not validate Docker Compose configuration:\n%s' % traceback.format_exc(e)
+            elogger.error(valid_config_error)
+            valid_config = False
 
-        write_logs(wd, project, services=config['services'])
+        if valid_config:
+            cr = run(wd, project, do_pull)
+
+            write_logs(wd, project, services=config['services'])
+        else:
+            status = ChallengeResultsStatus.ERROR
+
+            cr = ChallengeResults(status, valid_config_error, scores={})
 
         if not do_upload:
             aws_config = None
-            # create_index_files(wd, job_id=job_id)
+
         uploaded = upload_files(wd, aws_config)
 
         if delete:
             cmd = ['down']
             run_docker(wd, project, cmd)
 
+        if delete:
             shutil.rmtree(wd)
     except BaseException as e:  # XXX
         msg = 'Uncaught exception:\n%s' % traceback.format_exc(e)
@@ -312,6 +334,7 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
 def run(wd, project, do_pull):
     import docker
     client = docker.from_env()
+
     try:
         if do_pull:
             elogger.info('pulling containers')
@@ -448,10 +471,11 @@ def run_docker(cwd, project, cmd0, get_output=False):
         if get_output:
             return subprocess.check_output(cmd0, cwd=cwd, stderr=sys.stderr)
         else:
-            subprocess.call(cmd0, cwd=cwd, stdout=sys.stdout, stderr=sys.stderr)
+            subprocess.check_call(cmd0, cwd=cwd, stdout=sys.stdout, stderr=sys.stderr)
     except subprocess.CalledProcessError as e:
-        msg = 'Could not run %s: %s' % (cmd0, e)
-        msg += 'Output: %s' % e.output
+        msg = 'Could not run %s:\n\n %s' % (cmd0, indent(e, '  >  '))
+        msg += '\n\n%s' % indent(e.output, ' docker-compose stdout  | ')
+        # msg += '\n\n%s' % indent(e., ' docker-compose stderr  | ')
         raise DockerComposeFail(msg)
 
 
