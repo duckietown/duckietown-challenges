@@ -186,8 +186,8 @@ def wait_for_file(fn, timeout, wait):
     t0 = time.time()
     while not os.path.exists(fn):
         passed = int(time.time() - t0)
-        to_wait = wait - timeout
-        dclogger.debug('Output %s not ready yet (%s s passed, will wait %s more)' % (fn, passed, to_wait))
+        to_wait = timeout - passed
+        dclogger.debug('Output %s not ready yet (%s secs passed, will wait %s secs more)' % (fn, passed, to_wait))
         if time.time() > t0 + timeout:
             msg = 'Timeout of %s while waiting for %s.' % (timeout, fn)
             raise Timeout(msg)
@@ -396,6 +396,45 @@ def wrap_evaluator(evaluator, root='/'):
         else:
             evaluator.score(cie)
             cie.after_score()
+
+    # failure
+    except InvalidSubmission as e:
+        msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.FAILED, msg)
+
+    # error of evaluator
+    except InvalidEvaluator as e:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
+
+    # error of environment (not distinguished so far)
+
+    except InvalidEnvironment as e:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
+
+    except BaseException as e:
+        msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
+        declare(ChallengeResultsStatus.ERROR, msg)
+
+
+def wrap_scorer(evaluator, root='/'):
+    def declare(status, message):
+        if status != ChallengeResultsStatus.SUCCESS:
+            msg = 'declare %s:\n%s' % (status, message)
+            dclogger.error(msg)
+        else:
+            dclogger.info('Completed.')
+        cr = ChallengeResults(status, message, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
+    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
+
+    try:
+
+        evaluator.score(cie)
+        cie.after_score()
 
     # failure
     except InvalidSubmission as e:

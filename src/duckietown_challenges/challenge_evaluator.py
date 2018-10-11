@@ -11,3 +11,11 @@ class ChallengeEvaluator(object):
     @abstractmethod
     def score(self, cie):
         pass
+
+
+class ChallengeScorer(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def score(self, cie):
+        pass

@@ -163,14 +163,15 @@ services:
 """
     assert_raises_s(InvalidConfiguration, 'Expected dict', test_reading_evaluation_parameters, data)
 
+
 @comptest
-def empty_services():
+def empty_services2():
     data = """
 version: '3'
 services: {}
 
 """
-    assert_raises_s(InvalidConfiguration, 'expected dict', test_reading_evaluation_parameters, data)
+    assert_raises_s(InvalidConfiguration, 'No services described', test_reading_evaluation_parameters, data)
 
 
 @comptest
@@ -222,11 +223,11 @@ def test_reading_service(s):
     return c0
 
 
-
 def test_reading_evaluation_parameters(s):
     d = yaml.load(s)
     c0 = EvaluationParameters.from_yaml(d)
     return c0
+
 
 if __name__ == '__main__':
     run_module_tests()

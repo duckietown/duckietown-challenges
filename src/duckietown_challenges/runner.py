@@ -491,8 +491,8 @@ def run_docker(cwd, project, cmd0, get_output=False):
         raise DockerComposeFail(msg)
 
 
-def upload_files(wd, aws_config):
-    toupload = get_files_to_upload(wd)
+def upload_files(wd, aws_config, ignore_patterns=('.DS_Store',)):
+    toupload = get_files_to_upload(wd, ignore_patterns=ignore_patterns)
 
     if not aws_config:
         msg = 'Not uploading artefacts because AWS config not passed.'
@@ -580,10 +580,19 @@ def get_object(aws_config, bucket_name, object_key, fn):
     aws_object.download_file(fn)
 
 
-def get_files_to_upload(path):
+def get_files_to_upload(path, ignore_patterns=()):
+
+    def to_ignore(x):
+        for p in ignore_patterns:
+            if os.path.basename(x) == p:
+                return True
+        return False
+
     toupload = OrderedDict()
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
+            if to_ignore(f):
+                continue
             rpath = os.path.join(os.path.relpath(dirpath, path), f)
             if rpath.startswith('./'):
                 rpath = rpath[2:]
