@@ -9,6 +9,8 @@ data = """
 
 challenge: "challenge-short"
 title: "The title"
+
+tags: [tag1]
 description: |
 
   Description in Markdown.
@@ -28,6 +30,11 @@ roles:
   #   moderate: true
   #   snoop: true
 
+scoring:
+    scores:
+        - name: score1
+          description: description
+          
 steps:
 
   step1:

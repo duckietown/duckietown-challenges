@@ -225,6 +225,15 @@ class ChallengeInterfaceEvaluator(object):
     def set_evaluation_file(self, basename, from_file, description=None):
         pass
 
+    def set_evaluation_dir(self, basename, realdir):
+        import os
+        for bn in os.listdir(realdir):
+            fn = os.path.join(realdir, bn)
+            if os.path.isdir(fn):
+                self.set_evaluation_dir(os.path.join(basename, bn), fn)
+            else:
+                self.set_evaluation_file(os.path.join(basename, bn), fn)
+
     @abstractmethod
     def set_evaluation_file_from_data(self, basename, contents, description=None):
         pass

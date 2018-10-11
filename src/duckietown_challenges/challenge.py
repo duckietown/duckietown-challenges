@@ -165,6 +165,7 @@ def nice_repr(x):
     K = type(x).__name__
     return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
 
+
 class ServiceDefinition(object):
     def __init__(self, image, environment, image_digest, build):
         check_isinstance(environment, dict)
@@ -223,14 +224,13 @@ class ServiceDefinition(object):
             raise ValueError(msg)
         return ServiceDefinition(image, environment, image_digest, build)
 
-
     def __repr__(self):
         return nice_repr(self)
 
     def as_dict(self):
 
         res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
-        
+
         if self.build:
             res['build'] = self.build.as_dict()
         else:
@@ -244,7 +244,6 @@ class Build(object):
         self.context = context
         self.dockerfile = dockerfile
         self.args = args
-
 
     def __repr__(self):
         return nice_repr(self)
@@ -370,11 +369,83 @@ class ChallengeTransitions(object):
         return False, None, to_activate
 
 
+class Scoring(object):
+    def __init__(self, scores):
+        self.scores = scores
+
+    def as_dict(self):
+        scores = [_.as_dict() for _ in self.scores]
+        return dict(scores=scores)
+
+
+    def __repr__(self):
+        return nice_repr(self)
+    @staticmethod
+    def from_yaml(data0):
+        try:
+            if not isinstance(data0, dict):
+                msg = 'Expected dict, got %s' % type(data0).__name__
+                raise InvalidChallengeDescription(msg)
+
+            data = dict(**data0)
+            scores = data.pop('scores')
+            if not isinstance(scores, list):
+                msg = 'Expected list, got %s' % type(scores).__name__
+                raise InvalidChallengeDescription(msg)
+
+            scores = [Score.from_yaml(_) for _ in scores]
+            if data:
+                msg = 'Extra keys in configuration file: %s' % list(data)
+                raise InvalidChallengeDescription(msg)
+
+            return Scoring(scores)
+
+        except KeyError as e:
+            msg = 'Missing config %s' % e
+            raise_wrapped(InvalidChallengeDescription, e, msg)
+
+
+class Score(object):
+    def __init__(self, name, description, order):
+        assert order in ['ascending', 'descending']
+        self.name = name
+        self.description = description
+        self.order = order
+
+
+    def __repr__(self):
+        return nice_repr(self)
+    def as_dict(self):
+        return dict(description=self.description, name=self.name, order=self.order)
+
+    @staticmethod
+    def from_yaml(data0):
+        try:
+            if not isinstance(data0, dict):
+                msg = 'Expected dict, got %s' % type(data0).__name__
+                raise InvalidChallengeDescription(msg)
+
+            data = dict(**data0)
+            name = data.pop('name')
+            description = data.pop('description', None)
+            order = data.pop('order', 'ascending')
+
+            if data:
+                msg = 'Extra keys in configuration file: %s' % list(data)
+                raise InvalidChallengeDescription(msg)
+
+            return Score(name, description, order)
+        except KeyError as e:
+            msg = 'Missing config %s' % e
+            raise_wrapped(InvalidChallengeDescription, e, msg)
+
+
 class ChallengeDescription(object):
     def __init__(self, name, title, description, protocol,
-                 date_open, date_close, steps, roles, transitions, tags):
+                 date_open, date_close, steps, roles, transitions, tags, scoring):
         self.name = name
         self.title = title
+        self.scoring = scoring
         self.description = description
         self.protocol = protocol
         self.date_open = date_open
@@ -424,6 +495,7 @@ class ChallengeDescription(object):
             for k, v in steps.items():
                 Steps[k] = ChallengeStep.from_yaml(v, k)
 
+            scoring = Scoring.from_yaml(data.pop('scoring'))
             if data:
                 msg = 'Extra keys in configuration file: %s' % list(data)
                 raise InvalidChallengeDescription(msg)
@@ -431,7 +503,7 @@ class ChallengeDescription(object):
             return ChallengeDescription(name, title, description,
                                         protocol, date_open, date_close, Steps,
                                         roles=roles, transitions=transitions,
-                                        tags=tags)
+                                        tags=tags, scoring=scoring)
         except KeyError as e:
             msg = 'Missing config %s' % e
             raise_wrapped(InvalidChallengeDescription, e, msg)
@@ -453,6 +525,7 @@ class ChallengeDescription(object):
         for k, v in self.steps.items():
             data['steps'][k] = v.as_dict()
         data['tags'] = self.tags
+        data['scoring'] = self.scoring.as_dict()
         return data
 
     def as_yaml(self):
