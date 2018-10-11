@@ -217,6 +217,10 @@ class ChallengeInterfaceEvaluator(object):
     def set_score(self, name, value, description=None):
         pass
 
+    def set_scores(self, d):
+        for k, v in d.items():
+            self.set_score(k, v)
+
     @abstractmethod
     def set_evaluation_file(self, basename, from_file, description=None):
         pass
