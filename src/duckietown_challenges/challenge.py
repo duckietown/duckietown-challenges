@@ -2,8 +2,8 @@ from collections import namedtuple
 from datetime import datetime
 
 import yaml
-
 from duckietown_challenges.utils import indent, safe_yaml_dump
+
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .utils import raise_wrapped, check_isinstance, wrap_config_reader
@@ -377,9 +377,9 @@ class Scoring(object):
         scores = [_.as_dict() for _ in self.scores]
         return dict(scores=scores)
 
-
     def __repr__(self):
         return nice_repr(self)
+
     @staticmethod
     def from_yaml(data0):
         try:
@@ -412,9 +412,9 @@ class Score(object):
         self.description = description
         self.order = order
 
-
     def __repr__(self):
         return nice_repr(self)
+
     def as_dict(self):
         return dict(description=self.description, name=self.name, order=self.order)
 
@@ -530,3 +530,50 @@ class ChallengeDescription(object):
 
     def as_yaml(self):
         return yaml.dump(self.as_dict())
+
+
+class SubmissionDescription(object):
+    def __init__(self, challenge_name, protocol, user_label, user_metadata, description):
+        self.challenge_name = challenge_name
+        self.protocol = protocol
+        self.user_label = user_label
+        self.user_metadata = user_metadata
+        self.description = description
+
+    def __repr__(self):
+        return nice_repr(self)
+
+    def as_dict(self):
+        return dict(protocol=self.protocol,
+                    challenge_name=self.challenge_name,
+                    user_label=self.user_label,
+                    user_metadata=self.user_metadata,
+                    description=self.description)
+
+    @staticmethod
+    def from_yaml(data0):
+        try:
+            if not isinstance(data0, dict):
+                msg = 'Expected dict, got %s' % type(data0).__name__
+                raise InvalidChallengeDescription(msg)
+
+            data = dict(**data0)
+
+            challenge_name = data.pop('challenge')
+            protocol = data.pop('protocol')
+            description = data.pop('description', None)
+            user_label = data.pop('user-label', None)
+            user_metadata = data.pop('user-payload', None)
+
+            if data:
+                msg = 'Extra keys in configuration file: %s' % list(data)
+                raise InvalidChallengeDescription(msg)
+
+            return SubmissionDescription(challenge_name=challenge_name,
+                                         protocol=protocol,
+                                         description=description,
+                                         user_label=user_label,
+                                         user_metadata=user_metadata)
+        except KeyError as e:
+            msg = 'Missing config %s' % e
+            raise_wrapped(InvalidChallengeDescription, e, msg)
