@@ -214,10 +214,10 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
     try:
         elogger.info(safe_yaml_dump(res))
 
-        if res['protocol'] != 'p1':
-            msg = 'invalid protocol %s' % res['protocol']
-            elogger.error(msg)
-            raise Exception(msg)
+        # if res['protocol'] != 'p1':
+        #     msg = 'invalid protocol %s' % res['protocol']
+        #     elogger.error(msg)
+        #     raise Exception(msg)
 
         challenge_name = res['challenge_name']
         challenge_step_name = res['step_name']

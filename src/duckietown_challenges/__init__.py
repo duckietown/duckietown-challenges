@@ -19,3 +19,5 @@ from .cie_concrete import *
 from .runner import dt_challenges_evaluator
 
 dclogger.info('duckietown-challenges %s' % __version__)
+
+from .make_readmes import make_readmes_main as make_readme
