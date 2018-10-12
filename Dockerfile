@@ -13,7 +13,7 @@ RUN curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-co
 
 WORKDIR /project
 
-ADD . .
+COPY . .
 
 ARG REFRESHED_REQS=5
 
