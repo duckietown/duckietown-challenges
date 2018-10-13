@@ -65,7 +65,12 @@ def dt_challenges_evaluator():
 Usage:
     
 """
-    parser = argparse.ArgumentParser(usage=usage)
+    args = sys.argv[1:]
+    if args[0].startswith('dt-'):
+        elogger.debug('removing first arg from %s' % args)
+        args = args[1:]
+    prog = 'dt-challenges-evaluator'
+    parser = argparse.ArgumentParser(prog=prog,usage=usage)
     parser.add_argument("--continuous", action="store_true", default=False)
     parser.add_argument("--no-pull", dest='no_pull', action="store_true", default=False)
     parser.add_argument("--no-upload", dest='no_upload', action="store_true", default=False)
@@ -76,7 +81,7 @@ Usage:
     parser.add_argument("--reset", dest='reset', action="store_true", default=False,
                         help='Reset submission')
     parser.add_argument("--features", default='{}')
-    parsed = parser.parse_args()
+    parsed = parser.parse_args(args=args)
 
     tmpdir = '/tmp/duckietown/DT18/evaluator/executions'
 
