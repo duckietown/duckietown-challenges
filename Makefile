@@ -32,13 +32,13 @@ push:
 
 
 
-build-rpi:
-	docker build -t $(name_rpi) -f Dockerfile.rpi .
+build-arm:
+	docker build -t $(name_rpi) -f Dockerfile.arm .
 
-build-no-cache-rpi:
-	docker build -t $(name_rpi) -f Dockerfile.rpi --no-cache  .
+build-arm-no-cache:
+	docker build -t $(name_rpi) -f Dockerfile.arm --no-cache  .
 
-push-rpi:
+push-arm:
 	docker push $(name_rpi)
 
 

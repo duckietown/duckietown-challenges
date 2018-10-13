@@ -10,22 +10,26 @@ RUN apt-get update \
 	python-psutil \
 	build-essential \
     && curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose \
-    && chmod +x /usr/local/bin/docker-compose \
-    && apt-get remove -y curl \
-    && rm -rf /var/lib/apt/lists/*
+    && chmod +x /usr/local/bin/docker-compose
+    #\
+#    && apt-get remove -y curl \
+#    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /project
 
-COPY requirements.txt .
+COPY requirements-rpi.txt .
 
 ARG REFRESHED_REQS=5
 
-RUN pip install -r /project/requirements.txt 
+RUN rm -rf /usr/lib/python2.7/dist-packages/psutil
+RUN pip install -r /project/requirements-rpi.txt
 
 COPY . .
 
-RUN python setup.py install
+RUN python setup.py develop --no-deps
+
+
 
 RUN [ "cross-build-end" ]
 
-ENTRYPOINT [ "/usr/local/bin/dt-challenges-evaluator" ]
+CMD [ "/usr/local/bin/dt-challenges-evaluator" ]

@@ -48,6 +48,7 @@ setup(name='duckietown-challenges',
       entry_points={
           'console_scripts': [
               'dt-challenges-evaluator = duckietown_challenges:dt_challenges_evaluator',
+              'dt-challenges-evaluate-local = duckietown_challenges:runner_local_main',
               'dt-challenges-make-readme-definitions  = duckietown_challenges:make_readme_main',
               'dt-challenges-make-readme-templates  = duckietown_challenges:make_readmes_templates_main',
           ]

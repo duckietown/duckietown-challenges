@@ -2,7 +2,6 @@ import math
 import os
 
 import decorator
-import yaml
 
 from . import dclogger, InvalidConfiguration
 
@@ -88,24 +87,47 @@ def d8n_mkdirs_thread_safe(dst):
 
 
 @decorator.decorator
-def wrap_config_reader(f, x, *args, **kwargs):
-    """ Decorator for a function that takes a dict """
-
+def wrap_config_reader2(f, cls, data, *args, **kwargs):
+    """ Decorator for a function that takes a (clsname, dict) """
     # def f2(x, *args, **kwargs):
+    if not isinstance(data, dict):
+        msg = 'Expected dict, got %s' % data.__repr__()
+        raise ValueError(msg)
+
+    def write(d):
+        try:
+            return safe_yaml_dump(d)
+        except:
+            return str(d)
+
+    data2 = dict(**data)
+
     try:
-        return f(x, *args, **kwargs)
+        res = f(cls, data2, *args, **kwargs)
+    except KeyError as e:
+        msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
+        msg += '\nMissing configuration "%s". Specified: %s' % (e.args, list(data))
+        msg += '\n\n' + indent(write(data), '  ')
+        raise InvalidConfiguration(msg)
     except InvalidConfiguration as e:
-        msg = 'Could not interpret the configuration data using %s()' % f.__name__
-        msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
+        msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
+        msg += '\n\n' + indent(write(data), '  ')
         raise_wrapped(InvalidConfiguration, e, msg, compact=True)
     except BaseException as e:
-        msg = 'Could not interpret the configuration data using %s()' % f.__name__
-        msg += '\n\n' + indent(safe_yaml_dump(x), '  ')
+        msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
+        msg += '\n\n' + indent(write(data), '  ')
         raise_wrapped(InvalidConfiguration, e, msg, compact=False)
-    # return f2
+
+    if data2:
+        msg = 'Unused fields %s ' % list(data2)
+        msg += '\n\n' + indent(write(data), '  ')
+        raise InvalidConfiguration(msg)
+
+    return res
 
 
 def safe_yaml_dump(x):
+    import yaml
     s = yaml.safe_dump(x, encoding='utf-8', indent=4, allow_unicode=True)
     return s
 

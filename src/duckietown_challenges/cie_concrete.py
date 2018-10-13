@@ -159,9 +159,25 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
     def get_completed_step_solution_files(self, step_name):
         """ Returns a list of names for the files completed in a previous step. """
         if step_name not in self.get_completed_steps():
-            msg = 'No step %r' % step_name
+            msg = 'No step "%s".' % step_name
             raise KeyError(msg)
         # XXX
+        d0 = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
+        if not os.path.exists(d0):
+            msg = 'Could not find %s' % d0
+            raise InvalidEnvironment(msg)
+
+        d1 = os.path.join(self.root, step_name)
+        if not os.path.lexists(d1):
+            msg = 'No step "%s".' % step_name
+            raise KeyError(msg)
+
+        if not os.path.exists(d1):
+            assert os.path.islink(d1), d1
+            dest = os.readlink(d1)
+            msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+            raise InvalidEnvironment(msg)
+
         d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
         return list(os.listdir(d))
 

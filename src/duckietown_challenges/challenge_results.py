@@ -17,7 +17,7 @@ class ChallengeResults(object):
         self.stats = stats
 
     def to_yaml(self):
-        data = OrderedDict()
+        data = {}
         data['status'] = self.status
         data['msg'] = self.msg
         data['scores'] = self.scores

@@ -1,4 +1,4 @@
-.dockerignore
-Dockerfile
-.circle
-.gitignore
+**
+!src
+!setup.py
+!requirements*.txt
