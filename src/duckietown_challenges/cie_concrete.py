@@ -438,6 +438,9 @@ SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
 def wrap_evaluator(evaluator, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+    
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
@@ -496,6 +499,9 @@ def wrap_evaluator(evaluator, root='/'):
 
 
 def wrap_scorer(evaluator, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
@@ -535,6 +541,8 @@ def wrap_scorer(evaluator, root='/'):
 
 
 def wrap_solution(solution, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
     cis = ChallengeInterfaceSolutionConcrete(root=root)
     try:
 

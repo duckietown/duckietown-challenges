@@ -313,7 +313,9 @@ def run_single(wd, aws_config, steps2artefacts, challenge_parameters, solution_c
     # validate the configuration
 
     try:
-        run_docker(wd, project, ['config'])
+        config_validated = run_docker(wd, project, ['config'], get_output=True)
+        with open(dcfn + '.validated', 'w') as f:
+            f.write(config_validated)
         valid_config = True
         valid_config_error = None
     except DockerComposeFail as e:
@@ -481,7 +483,8 @@ def write_logs(wd, project, services):
 
 def run_docker(cwd, project, cmd0, get_output=False):
     cmd0 = ['docker-compose', '-p', project] + cmd0
-    elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
+    # elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
+    elogger.debug('Running: %s' % " ".join(cmd0))
 
     try:
         if get_output:

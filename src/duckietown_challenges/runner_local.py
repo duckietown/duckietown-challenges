@@ -23,6 +23,8 @@ usage = """
 
 
 def runner_local_main():
+    from .col_logging import setup_logging_color
+    setup_logging_color()
     prog = 'dts challenges evaluate'
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
 
