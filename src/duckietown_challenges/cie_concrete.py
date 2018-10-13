@@ -179,18 +179,18 @@ def get_completed_step_solution_files(root, step_name):
         msg = 'Could not find %s' % d0
         raise InvalidEnvironment(msg)
 
-    d1 = os.path.join(d0, step_name)
-    if not os.path.lexists(d1):
+    dir_step = os.path.join(d0, step_name)
+    if not os.path.exists(dir_step):
         msg = 'No step "%s".' % step_name
         raise KeyError(msg)
+    #
+    # if not os.path.exists(d1):
+    #     assert os.path.islink(d1), d1
+    #     dest = os.readlink(d1)
+    #     msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+    #     raise InvalidEnvironment(msg)
 
-    if not os.path.exists(d1):
-        assert os.path.islink(d1), d1
-        dest = os.readlink(d1)
-        msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
-        raise InvalidEnvironment(msg)
-
-    d = os.path.join(d1, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    d = os.path.join(dir_step, CHALLENGE_SOLUTION_OUTPUT_DIR)
     if not os.path.exists(d):
         msg = 'Could not find %s' % d
         raise InvalidEnvironment(msg)
@@ -394,18 +394,18 @@ def get_completed_step_evaluation_files(root, step_name):
         msg = 'Could not find %s' % d0
         raise InvalidEnvironment(msg)
 
-    d1 = os.path.join(d0, step_name)
-    if not os.path.lexists(d1):
-        msg = 'No step "%s".' % step_name
+    d_step = os.path.join(d0, step_name)
+    if not os.path.exists(d_step):
+        msg = 'No step "%s": dir %s does not exist.' % (step_name, d_step)
         raise KeyError(msg)
+    #
+    # if not os.path.exists(d1):
+    #     assert os.path.islink(d1), d1
+    #     dest = os.readlink(d1)
+    #     msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+    #     raise InvalidEnvironment(msg)
 
-    if not os.path.exists(d1):
-        assert os.path.islink(d1), d1
-        dest = os.readlink(d1)
-        msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
-        raise InvalidEnvironment(msg)
-
-    d = os.path.join(d1, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    d = os.path.join(d_step, CHALLENGE_EVALUATION_OUTPUT_DIR)
     if not os.path.exists(d):
         msg = 'Could not find dir %s' % d
         raise InvalidEnvironment(msg)
@@ -440,7 +440,7 @@ SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 def wrap_evaluator(evaluator, root='/'):
     from .col_logging import setup_logging_color
     setup_logging_color()
-    
+
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
