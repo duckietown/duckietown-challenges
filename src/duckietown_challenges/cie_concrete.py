@@ -161,37 +161,51 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         if step_name not in self.get_completed_steps():
             msg = 'No step "%s".' % step_name
             raise KeyError(msg)
-        # XXX
-        d0 = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
-        if not os.path.exists(d0):
-            msg = 'Could not find %s' % d0
-            raise InvalidEnvironment(msg)
 
-        d1 = os.path.join(self.root, step_name)
-        if not os.path.lexists(d1):
-            msg = 'No step "%s".' % step_name
-            raise KeyError(msg)
-
-        if not os.path.exists(d1):
-            assert os.path.islink(d1), d1
-            dest = os.readlink(d1)
-            msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
-            raise InvalidEnvironment(msg)
-
-        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
-        return list(os.listdir(d))
+        return get_completed_step_solution_files(self.root, step_name)
 
     def get_completed_step_solution_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
-        if basename not in self.get_completed_step_solution_files(step_name):
-            msg = 'No file %r' % basename
-            raise KeyError(msg)
-        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
-        return fn
+        return get_completed_step_solution_file(self.root, step_name, basename)
 
 
 TIMEOUT_PREPARATION = 6000
 TIMEOUT_SOLUTION = 6000
+
+
+def get_completed_step_solution_files(root, step_name):
+    d0 = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR)
+    if not os.path.exists(d0):
+        msg = 'Could not find %s' % d0
+        raise InvalidEnvironment(msg)
+
+    d1 = os.path.join(root, step_name)
+    if not os.path.lexists(d1):
+        msg = 'No step "%s".' % step_name
+        raise KeyError(msg)
+
+    if not os.path.exists(d1):
+        assert os.path.islink(d1), d1
+        dest = os.readlink(d1)
+        msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+        raise InvalidEnvironment(msg)
+
+    d = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    return list(os.listdir(d))
+
+
+def get_completed_step_solution_file(root, step_name, basename):
+    available = get_completed_step_solution_files(root, step_name)
+
+    # if basename not in available:
+    #     msg = 'No file %r' % basename
+    #     raise KeyError(msg)
+
+    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
+    if not os.path.exists(fn):
+        msg = 'Cannot find %s; know %s' % (fn, available)
+        raise KeyError(msg)
+    return fn
 
 
 class Timeout(Exception):
