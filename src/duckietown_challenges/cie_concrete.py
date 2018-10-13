@@ -179,7 +179,7 @@ def get_completed_step_solution_files(root, step_name):
         msg = 'Could not find %s' % d0
         raise InvalidEnvironment(msg)
 
-    d1 = os.path.join(root, step_name)
+    d1 = os.path.join(d0, step_name)
     if not os.path.lexists(d1):
         msg = 'No step "%s".' % step_name
         raise KeyError(msg)
@@ -394,7 +394,7 @@ def get_completed_step_evaluation_files(root, step_name):
         msg = 'Could not find %s' % d0
         raise InvalidEnvironment(msg)
 
-    d1 = os.path.join(root, step_name)
+    d1 = os.path.join(d0, step_name)
     if not os.path.lexists(d1):
         msg = 'No step "%s".' % step_name
         raise KeyError(msg)
@@ -408,7 +408,7 @@ def get_completed_step_evaluation_files(root, step_name):
     d = os.path.join(d1, CHALLENGE_EVALUATION_OUTPUT_DIR)
     if not os.path.exists(d):
         msg = 'Could not find dir %s' % d
-        raise InvalidEnvironment(d)
+        raise InvalidEnvironment(msg)
 
     return list(os.listdir(d))
 

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 
 import docker
+import termcolor
 import yaml
 from dt_shell.remote import make_server_request
 from duckietown_challenges import CHALLENGE_PREVIOUS_STEPS_DIR
@@ -35,7 +36,6 @@ def runner_local_main():
     group.add_argument('--output', default='output-local-evaluation')
 
     group.add_argument('-C', dest='change', default=None)
-
 
     parsed = parser.parse_args()
 
@@ -112,11 +112,15 @@ def runner_local_main():
         s += '\nStatus: %s' % cr.status
         s += '\nScores: %s' % cr.scores
         s += '\n\n%s' % cr.msg
-        print(indent(res, 'step %s : ' % s))
+        print(indent(s, dark('step %s : ' % challenge_step_name)))
 
         os.rename(wd, wd_final)
 
     print('find your output here: %s' % parsed.output)
+
+
+def dark(x):
+    return termcolor.colored(x, attrs=['dark'])
 
 
 def get_challenge_description(token, challenge_name):
