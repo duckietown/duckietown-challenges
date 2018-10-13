@@ -302,7 +302,7 @@ def run_single(wd, aws_config, steps2artefacts, challenge_parameters, solution_c
     prepare_dir(wd, aws_config, steps2artefacts)
     config = get_config(challenge_parameters, solution_container, challenge_name, challenge_step_name)
     config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
-    elogger.debug('YAML:\n' + config_yaml)
+    # elogger.debug('YAML:\n' + config_yaml)
 
     dcfn = os.path.join(wd, 'docker-compose.yaml')
 
@@ -440,7 +440,7 @@ def get_config(challenge_parameters_, solution_container, challenge_name, challe
         assert 'volumes' not in service
         service['volumes'] = copy.deepcopy(volumes)
 
-    elogger.info('Now:\n%s' % safe_yaml_dump(config))
+    # elogger.info('Now:\n%s' % safe_yaml_dump(config))
 
     NETWORK_NAME = 'evaluation'
     networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
@@ -520,7 +520,7 @@ def download_artefacts(aws_config, steps2artefacts, wd):
         step_dir = os.path.join(wd, step_name)
         os.makedirs(step_dir)
         for rpath, data in artefacts.items():
-            elogger.debug(data)
+            # elogger.debug(data)
             fn = os.path.join(step_dir, rpath)
             dn = os.path.dirname(fn)
             if not os.path.exists(dn):
