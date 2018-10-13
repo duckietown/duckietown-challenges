@@ -175,7 +175,7 @@ import traceback
 
 def indent(s, prefix, first=None):
     s = str(s)
-    assert isinstance(prefix, str)
+    assert isinstance(prefix, (unicode, str))
     lines = s.split('\n')
     if not lines:
         return ''
