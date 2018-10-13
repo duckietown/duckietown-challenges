@@ -188,7 +188,7 @@ version: '3'
 
 
 """
-    assert_raises_s(InvalidConfiguration, "KeyError: 'services'", test_reading_evaluation_parameters, data)
+    assert_raises_s(InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data)
 
 
 @comptest
@@ -202,7 +202,7 @@ services:
         image: SUBMISSION_CONTAINER
 another:
 """
-    assert_raises_s(InvalidConfiguration, "Invalid fields ['another']", test_reading_evaluation_parameters, data)
+    assert_raises_s(InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data)
 
 
 def assert_raises_s(E, contained, f, *args):

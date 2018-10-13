@@ -6,7 +6,7 @@ from duckietown_challenges.utils import indent, safe_yaml_dump
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
-from .utils import raise_wrapped, check_isinstance, wrap_config_reader
+from .utils import raise_wrapped, check_isinstance, wrap_config_reader2
 
 
 class InvalidChallengeDescription(Exception):
@@ -45,25 +45,14 @@ class ChallengeStep(object):
         data['timeout'] = self.timeout
         return data
 
-    @staticmethod
-    @wrap_config_reader
-    def from_yaml(data0, name):
-        if not isinstance(data0, dict):
-            msg = 'Need dict, got %s' % data0
-            raise ValueError(msg)
-
-        data = data0.copy()
-
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, data, name):
         title = data.pop('title')
         description = data.pop('description')
         evaluation_parameters = EvaluationParameters.from_yaml(data.pop('evaluation_parameters'))
         features_required = data.pop('features_required')
-
         timeout = data.pop('timeout')
-
-        if data:
-            msg = 'Extra fields: %s' % list(data)
-            raise ValueError(msg)
 
         return ChallengeStep(name, title, description, evaluation_parameters,
                              features_required, timeout=timeout)
@@ -97,13 +86,10 @@ class EvaluationParameters(object):
         self.version = version
         self.services = services
 
-    @staticmethod
-    @wrap_config_reader
-    def from_yaml(d0):
-        if not isinstance(d0, dict):
-            msg = 'Expected dict, got %s' % d0.__repr__()
-            raise ValueError(msg)
-        d = dict(**d0)
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, d):
+
         services_ = d.pop('services')
         if not isinstance(services_, dict):
             msg = 'Expected dict got %s' % services_.__repr__()
@@ -118,10 +104,6 @@ class EvaluationParameters(object):
         services = {}
         for k, v in services_.items():
             services[k] = ServiceDefinition.from_yaml(v)
-
-        if d:
-            msg = 'Invalid fields %s' % list(d)
-            raise ValueError(msg)
 
         # check that there is at least a service with the image called
         # SUBMISSION_CONTAINER
@@ -194,38 +176,23 @@ class ServiceDefinition(object):
     def update_image(self):
         self.image = get_latest(self.image)
 
-    @staticmethod
-    @wrap_config_reader
-    def from_yaml(d0):
-        if not isinstance(d0, dict):
-            msg = 'Expected dict, got %s' % d0.__repr__()
-            raise ValueError(msg)
-        d = dict(**d0)
-        if 'image' in d:
-            image = d.pop('image')
-        elif 'container' in d:
-            image = d.pop('container')
-        else:
-            msg = 'Need parameter "image": %s' % d0
-            raise ValueError(msg)
-        environment = d.pop('environment', {})
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, d0):
+        image = d0.pop('image')
+        environment = d0.pop('environment', {})
         if environment is None:
             environment = {}
 
-        if 'build' in d:
-            build = d.pop('build')
+        if 'build' in d0:
+            build = d0.pop('build')
             if build is not None:
                 build = Build.from_yaml(build)
         else:
             build = None
-        image_digest = d.pop('image_digest', None)
-        if d:
-            msg = 'Extra fields: %s' % list(d0)
-            raise ValueError(msg)
-        return ServiceDefinition(image, environment, image_digest, build)
+        image_digest = d0.pop('image_digest', None)
 
-    def __repr__(self):
-        return nice_repr(self)
+        return ServiceDefinition(image, environment, image_digest, build)
 
     def as_dict(self):
 
@@ -251,8 +218,8 @@ class Build(object):
     def as_dict(self):
         return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
 
-    @staticmethod
-    def from_yaml(d0):
+    @classmethod
+    def from_yaml(cls, d0):
         if not isinstance(d0, dict):
             msg = 'Expected dict, got %s' % d0.__repr__()
             raise ValueError(msg)
@@ -303,6 +270,12 @@ class ChallengeTransitions(object):
             assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in self.steps, second
             assert condition in ALLOWED_CONDITION_TRIGGERS, condition
             self.transitions.append(Transition(first, condition, second))
+
+    def as_list(self):
+        res = []
+        for transition in self.transitions:
+            res.append([transition.first, transition.condition, transition.second])
+        return res
 
     def __repr__(self):
         return u"\n".join(self.steps_explanation())
@@ -380,8 +353,8 @@ class Scoring(object):
     def __repr__(self):
         return nice_repr(self)
 
-    @staticmethod
-    def from_yaml(data0):
+    @classmethod
+    def from_yaml(cls, data0):
         try:
             if not isinstance(data0, dict):
                 msg = 'Expected dict, got %s' % type(data0).__name__
@@ -418,8 +391,8 @@ class Score(object):
     def as_dict(self):
         return dict(description=self.description, name=self.name, order=self.order)
 
-    @staticmethod
-    def from_yaml(data0):
+    @classmethod
+    def from_yaml(cls, data0):
         try:
             if not isinstance(data0, dict):
                 msg = 'Expected dict, got %s' % type(data0).__name__
@@ -476,37 +449,30 @@ class ChallengeDescription(object):
     def get_next_steps(self, status):
         return self.ct.get_next_steps(status)
 
-    @staticmethod
-    @wrap_config_reader
-    def from_yaml(data):
-        try:
-            name = data.pop('challenge')
-            tags = data.pop('tags', [])
-            title = data.pop('title')
-            description = data.pop('description')
-            protocol = data.pop('protocol')
-            date_open = data.pop('date-open')
-            date_close = data.pop('date-close')
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, data):
+        name = data.pop('challenge')
+        tags = data.pop('tags', [])
+        title = data.pop('title')
+        description = data.pop('description')
+        protocol = data.pop('protocol')
+        date_open = interpret_date(data.pop('date-open'))
+        date_close = interpret_date(data.pop('date-close'))
 
-            roles = data.pop('roles')
-            transitions = data.pop('transitions')
-            steps = data.pop('steps')
-            Steps = {}
-            for k, v in steps.items():
-                Steps[k] = ChallengeStep.from_yaml(v, k)
+        roles = data.pop('roles')
+        transitions = data.pop('transitions')
+        steps = data.pop('steps')
+        Steps = {}
+        for k, v in steps.items():
+            Steps[k] = ChallengeStep.from_yaml(v, k)
 
-            scoring = Scoring.from_yaml(data.pop('scoring'))
-            if data:
-                msg = 'Extra keys in configuration file: %s' % list(data)
-                raise InvalidChallengeDescription(msg)
+        scoring = Scoring.from_yaml(data.pop('scoring'))
 
-            return ChallengeDescription(name, title, description,
-                                        protocol, date_open, date_close, Steps,
-                                        roles=roles, transitions=transitions,
-                                        tags=tags, scoring=scoring)
-        except KeyError as e:
-            msg = 'Missing config %s' % e
-            raise_wrapped(InvalidChallengeDescription, e, msg)
+        return ChallengeDescription(name, title, description,
+                                    protocol, date_open, date_close, Steps,
+                                    roles=roles, transitions=transitions,
+                                    tags=tags, scoring=scoring)
 
     def as_dict(self):
         data = {}
@@ -514,8 +480,8 @@ class ChallengeDescription(object):
         data['title'] = self.title
         data['description'] = self.description
         data['protocol'] = self.protocol
-        data['date-open'] = self.date_open
-        data['date-close'] = self.date_close
+        data['date-open'] = self.date_open.isoformat() if self.date_open else None
+        data['date-close'] = self.date_close.isoformat() if self.date_close else None
         data['roles'] = self.roles
         data['transitions'] = []
         for t in self.ct.transitions:
@@ -530,6 +496,20 @@ class ChallengeDescription(object):
 
     def as_yaml(self):
         return yaml.dump(self.as_dict())
+
+    def __repr__(self):
+        return nice_repr(self)
+
+
+def interpret_date(d):
+    if d is None:
+        return d
+    if isinstance(d, datetime):
+        return d
+    if isinstance(d, (str, unicode)):
+        from dateutil import parser
+        return parser.parse(d)
+    raise ValueError(d.__repr__())
 
 
 class SubmissionDescription(object):
@@ -550,30 +530,17 @@ class SubmissionDescription(object):
                     user_metadata=self.user_metadata,
                     description=self.description)
 
-    @staticmethod
-    def from_yaml(data0):
-        try:
-            if not isinstance(data0, dict):
-                msg = 'Expected dict, got %s' % type(data0).__name__
-                raise InvalidChallengeDescription(msg)
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, data):
+        challenge_name = data.pop('challenge')
+        protocol = data.pop('protocol')
+        description = data.pop('description', None)
+        user_label = data.pop('user-label', None)
+        user_metadata = data.pop('user-payload', None)
 
-            data = dict(**data0)
-
-            challenge_name = data.pop('challenge')
-            protocol = data.pop('protocol')
-            description = data.pop('description', None)
-            user_label = data.pop('user-label', None)
-            user_metadata = data.pop('user-payload', None)
-
-            if data:
-                msg = 'Extra keys in configuration file: %s' % list(data)
-                raise InvalidChallengeDescription(msg)
-
-            return SubmissionDescription(challenge_name=challenge_name,
-                                         protocol=protocol,
-                                         description=description,
-                                         user_label=user_label,
-                                         user_metadata=user_metadata)
-        except KeyError as e:
-            msg = 'Missing config %s' % e
-            raise_wrapped(InvalidChallengeDescription, e, msg)
+        return SubmissionDescription(challenge_name=challenge_name,
+                                     protocol=protocol,
+                                     description=description,
+                                     user_label=user_label,
+                                     user_metadata=user_metadata)

@@ -24,4 +24,4 @@ COPY . .
 
 RUN python setup.py install
 
-ENTRYPOINT ["/usr/local/bin/dt-challenges-evaluator"]
+CMD ["dt-challenges-evaluator"]

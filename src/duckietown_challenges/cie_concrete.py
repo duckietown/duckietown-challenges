@@ -159,23 +159,57 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
     def get_completed_step_solution_files(self, step_name):
         """ Returns a list of names for the files completed in a previous step. """
         if step_name not in self.get_completed_steps():
-            msg = 'No step %r' % step_name
+            msg = 'No step "%s".' % step_name
             raise KeyError(msg)
-        # XXX
-        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
-        return list(os.listdir(d))
+
+        return get_completed_step_solution_files(self.root, step_name)
 
     def get_completed_step_solution_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
-        if basename not in self.get_completed_step_solution_files(step_name):
-            msg = 'No file %r' % basename
-            raise KeyError(msg)
-        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
-        return fn
+        return get_completed_step_solution_file(self.root, step_name, basename)
 
 
 TIMEOUT_PREPARATION = 6000
 TIMEOUT_SOLUTION = 6000
+
+
+def get_completed_step_solution_files(root, step_name):
+    d0 = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR)
+    if not os.path.exists(d0):
+        msg = 'Could not find %s' % d0
+        raise InvalidEnvironment(msg)
+
+    dir_step = os.path.join(d0, step_name)
+    if not os.path.exists(dir_step):
+        msg = 'No step "%s".' % step_name
+        raise KeyError(msg)
+    #
+    # if not os.path.exists(d1):
+    #     assert os.path.islink(d1), d1
+    #     dest = os.readlink(d1)
+    #     msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+    #     raise InvalidEnvironment(msg)
+
+    d = os.path.join(dir_step, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    if not os.path.exists(d):
+        msg = 'Could not find %s' % d
+        raise InvalidEnvironment(msg)
+
+    return list(os.listdir(d))
+
+
+def get_completed_step_solution_file(root, step_name, basename):
+    available = get_completed_step_solution_files(root, step_name)
+
+    # if basename not in available:
+    #     msg = 'No file %r' % basename
+    #     raise KeyError(msg)
+
+    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
+    if not os.path.exists(fn):
+        msg = 'Cannot find %s; know %s' % (fn, available)
+        raise KeyError(msg)
+    return fn
 
 
 class Timeout(Exception):
@@ -337,17 +371,60 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         if step_name not in self.get_completed_steps():
             msg = 'No step %r' % step_name
             raise KeyError(msg)
-        # XXX
-        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
-        return list(os.listdir(d))
+
+        return get_completed_step_evaluation_files(self.root, step_name)
+        # # XXX
+        # d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        # return list(os.listdir(d))
 
     def get_completed_step_evaluation_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
-        if basename not in self.get_completed_step_evaluation_files(step_name):
-            msg = 'No file %r' % basename
-            raise KeyError(msg)
-        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
-        return fn
+        # if basename not in self.get_completed_step_evaluation_files(step_name):
+        #     msg = 'No file %r' % basename
+        #     raise KeyError(msg)
+        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+        # return fn
+
+        return get_completed_step_evaluation_file(self.root, step_name, basename)
+
+
+def get_completed_step_evaluation_files(root, step_name):
+    d0 = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR)
+    if not os.path.exists(d0):
+        msg = 'Could not find %s' % d0
+        raise InvalidEnvironment(msg)
+
+    d_step = os.path.join(d0, step_name)
+    if not os.path.exists(d_step):
+        msg = 'No step "%s": dir %s does not exist.' % (step_name, d_step)
+        raise KeyError(msg)
+    #
+    # if not os.path.exists(d1):
+    #     assert os.path.islink(d1), d1
+    #     dest = os.readlink(d1)
+    #     msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
+    #     raise InvalidEnvironment(msg)
+
+    d = os.path.join(d_step, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    if not os.path.exists(d):
+        msg = 'Could not find dir %s' % d
+        raise InvalidEnvironment(msg)
+
+    return list(os.listdir(d))
+
+
+def get_completed_step_evaluation_file(root, step_name, basename):
+    available = get_completed_step_evaluation_files(root, step_name)
+
+    # if basename not in available:
+    #     msg = 'No file %r' % basename
+    #     raise KeyError(msg)
+
+    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+    if not os.path.exists(fn):
+        msg = 'Cannot find %s; know %s' % (fn, available)
+        raise KeyError(msg)
+    return fn
 
 
 from .challenge_results import ChallengeResults, declare_challenge_results
@@ -361,6 +438,9 @@ SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
 def wrap_evaluator(evaluator, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
@@ -419,6 +499,9 @@ def wrap_evaluator(evaluator, root='/'):
 
 
 def wrap_scorer(evaluator, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
@@ -458,6 +541,8 @@ def wrap_scorer(evaluator, root='/'):
 
 
 def wrap_solution(solution, root='/'):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
     cis = ChallengeInterfaceSolutionConcrete(root=root)
     try:
 

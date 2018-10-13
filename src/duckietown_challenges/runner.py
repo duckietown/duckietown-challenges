@@ -18,16 +18,16 @@ import traceback
 from collections import OrderedDict
 
 import yaml
-
 from dt_shell.constants import DTShellConstants
 from dt_shell.env_checks import check_executable_exists, InvalidEnvironment, check_docker_environment
 from dt_shell.remote import ConnectionError, make_server_request, DEFAULT_DTSERVER
-from duckietown_challenges.runner_cache import copy_to_cache, get_file_from_cache
+
 from . import __version__
 from .challenge import EvaluationParameters, SUBMISSION_CONTAINER_TAG
 from .challenge_results import read_challenge_results, ChallengeResults, ChallengeResultsStatus
 from .constants import CHALLENGE_SOLUTION_OUTPUT_DIR, CHALLENGE_RESULTS_DIR, CHALLENGE_DESCRIPTION_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR, ENV_CHALLENGE_NAME, ENV_CHALLENGE_STEP_NAME, CHALLENGE_PREVIOUS_STEPS_DIR
+from .runner_cache import copy_to_cache, get_file_from_cache
 from .utils import safe_yaml_dump, friendly_size, indent
 
 logging.basicConfig()
@@ -245,52 +245,16 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
         # for k, v in steps2artefacts_.items():
         #     steps2artefacts[k] = Artefact.from_yaml()
         solution_container = res['parameters']['hash']
+        challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
 
         wd = os.path.join(tmpdir, challenge_name, 'submission%d' % submission_id,
                           '%s-%s-job%s' % (challenge_step_name, evaluator_name, job_id))
-
-        if os.path.exists(wd):
-            shutil.rmtree(wd)
-        os.makedirs(wd)
-
-        challenge_parameters_ = EvaluationParameters.from_yaml(res['challenge_parameters'])
-
-        prepare_dir(wd, aws_config, steps2artefacts)
-
-        config = get_config(challenge_parameters_, solution_container, challenge_name, challenge_step_name)
-        config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
-        elogger.debug('YAML:\n' + config_yaml)
-
-        dcfn = os.path.join(wd, 'docker-compose.yaml')
-
-        # elogger.info('Compose file: \n%s ' % compose)
-        with open(dcfn, 'w') as f:
-            f.write(config_yaml)
-
-        # validate the configuration
-
         project = 'job%s-%s' % (job_id, random.randint(1, 10000))
-
-        try:
-            run_docker(wd, project, ['config'])
-            valid_config = True
-            valid_config_error = None
-        except DockerComposeFail as e:
-            valid_config_error = 'Could not validate Docker Compose configuration:\n%s' % traceback.format_exc(e)
-            elogger.error(valid_config_error)
-            valid_config = False
-
-        if valid_config:
-            cr = run(wd, project, do_pull)
-
-            write_logs(wd, project, services=config['services'])
-        else:
-            status = ChallengeResultsStatus.ERROR
-
-            cr = ChallengeResults(status, valid_config_error, scores={})
-
         if not do_upload:
             aws_config = None
+
+        cr = run_single(wd, aws_config, steps2artefacts, challenge_parameters_, solution_container, challenge_name,
+                        challenge_step_name, project, do_pull)
 
         uploaded = upload_files(wd, aws_config)
 
@@ -336,6 +300,45 @@ def go_(submission_id, do_pull, more_features, do_upload, delete, reset, evaluat
             time.sleep(interval)
 
 
+def run_single(wd, aws_config, steps2artefacts, challenge_parameters, solution_container, challenge_name,
+               challenge_step_name, project, do_pull):
+
+
+    prepare_dir(wd, aws_config, steps2artefacts)
+    config = get_config(challenge_parameters, solution_container, challenge_name, challenge_step_name)
+    config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
+    # elogger.debug('YAML:\n' + config_yaml)
+
+    dcfn = os.path.join(wd, 'docker-compose.yaml')
+
+    # elogger.info('Compose file: \n%s ' % compose)
+    with open(dcfn, 'w') as f:
+        f.write(config_yaml)
+
+    # validate the configuration
+
+    try:
+        config_validated = run_docker(wd, project, ['config'], get_output=True)
+        with open(dcfn + '.validated', 'w') as f:
+            f.write(config_validated)
+        valid_config = True
+        valid_config_error = None
+    except DockerComposeFail as e:
+        valid_config_error = 'Could not validate Docker Compose configuration:\n%s' % traceback.format_exc(e)
+        elogger.error(valid_config_error)
+        valid_config = False
+
+    if valid_config:
+        cr = run(wd, project, do_pull)
+
+        write_logs(wd, project, services=config['services'])
+    else:
+        status = ChallengeResultsStatus.ERROR
+
+        cr = ChallengeResults(status, valid_config_error, scores={})
+    return cr
+
+
 def run(wd, project, do_pull):
     import docker
     client = docker.from_env()
@@ -372,6 +375,8 @@ def run(wd, project, do_pull):
 
 
 def prepare_dir(wd, aws_config, steps2artefacts):
+    if not os.path.exists(wd):
+        os.makedirs(wd)
     # output for the sub
     challenge_solution_output_dir = os.path.join(wd, CHALLENGE_SOLUTION_OUTPUT_DIR)
     # the yaml with the scores
@@ -383,7 +388,8 @@ def prepare_dir(wd, aws_config, steps2artefacts):
 
     for d in [challenge_solution_output_dir, challenge_results_dir, challenge_description_dir,
               challenge_evaluation_output_dir, previous_steps_dir]:
-        os.makedirs(d)
+        if not os.path.exists(d):
+            os.makedirs(d)
 
     download_artefacts(aws_config, steps2artefacts, previous_steps_dir)
 
@@ -439,7 +445,7 @@ def get_config(challenge_parameters_, solution_container, challenge_name, challe
         assert 'volumes' not in service
         service['volumes'] = copy.deepcopy(volumes)
 
-    elogger.info('Now:\n%s' % safe_yaml_dump(config))
+    # elogger.info('Now:\n%s' % safe_yaml_dump(config))
 
     NETWORK_NAME = 'evaluation'
     networks_evaluator = dict(evaluation=dict(aliases=[NETWORK_NAME]))
@@ -482,7 +488,8 @@ def write_logs(wd, project, services):
 
 def run_docker(cwd, project, cmd0, get_output=False):
     cmd0 = ['docker-compose', '-p', project] + cmd0
-    elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
+    # elogger.info('Running:\n\t%s' % " ".join(cmd0) + '\n\n in %s' % cwd)
+    elogger.debug('Running: %s' % " ".join(cmd0))
 
     try:
         if get_output:
@@ -518,7 +525,7 @@ def download_artefacts(aws_config, steps2artefacts, wd):
         step_dir = os.path.join(wd, step_name)
         os.makedirs(step_dir)
         for rpath, data in artefacts.items():
-            elogger.debug(data)
+            # elogger.debug(data)
             fn = os.path.join(step_dir, rpath)
             dn = os.path.dirname(fn)
             if not os.path.exists(dn):
@@ -586,7 +593,6 @@ def get_object(aws_config, bucket_name, object_key, fn):
 
 
 def get_files_to_upload(path, ignore_patterns=()):
-
     def to_ignore(x):
         for p in ignore_patterns:
             if os.path.basename(x) == p:
