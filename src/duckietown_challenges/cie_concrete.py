@@ -190,7 +190,11 @@ def get_completed_step_solution_files(root, step_name):
         msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
         raise InvalidEnvironment(msg)
 
-    d = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    d = os.path.join(d1, CHALLENGE_SOLUTION_OUTPUT_DIR)
+    if not os.path.exists(d):
+        msg = 'Could not find %s' % d
+        raise InvalidEnvironment(msg)
+
     return list(os.listdir(d))
 
 
@@ -367,17 +371,21 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         if step_name not in self.get_completed_steps():
             msg = 'No step %r' % step_name
             raise KeyError(msg)
-        # XXX
-        d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
-        return list(os.listdir(d))
+
+        return get_completed_step_evaluation_files(self.root, step_name)
+        # # XXX
+        # d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        # return list(os.listdir(d))
 
     def get_completed_step_evaluation_file(self, step_name, basename):
         """ Returns a filename for one of the files completed in a previous step."""
-        if basename not in self.get_completed_step_evaluation_files(step_name):
-            msg = 'No file %r' % basename
-            raise KeyError(msg)
-        fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
-        return fn
+        # if basename not in self.get_completed_step_evaluation_files(step_name):
+        #     msg = 'No file %r' % basename
+        #     raise KeyError(msg)
+        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+        # return fn
+
+        return get_completed_step_evaluation_file(self.root, step_name, basename)
 
 
 def get_completed_step_evaluation_files(root, step_name):
@@ -397,7 +405,11 @@ def get_completed_step_evaluation_files(root, step_name):
         msg = 'The path %s is a symlink to %s but it does not exist.' % (d1, dest)
         raise InvalidEnvironment(msg)
 
-    d = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    d = os.path.join(d1, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    if not os.path.exists(d):
+        msg = 'Could not find dir %s' % d
+        raise InvalidEnvironment(d)
+
     return list(os.listdir(d))
 
 
@@ -413,6 +425,7 @@ def get_completed_step_evaluation_file(root, step_name, basename):
         msg = 'Cannot find %s; know %s' % (fn, available)
         raise KeyError(msg)
     return fn
+
 
 from .challenge_results import ChallengeResults, declare_challenge_results
 

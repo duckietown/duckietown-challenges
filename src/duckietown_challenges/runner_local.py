@@ -9,7 +9,7 @@ import yaml
 from dt_shell.remote import make_server_request
 from duckietown_challenges import CHALLENGE_PREVIOUS_STEPS_DIR
 from duckietown_challenges.challenge import ChallengeDescription
-from duckietown_challenges.runner import run_single
+from duckietown_challenges.runner import run_single, get_token_from_shell_config
 from duckietown_challenges.submission_build import read_submission_info, build_image
 from duckietown_challenges.utils import indent
 
@@ -42,6 +42,7 @@ def runner_local_main():
     if parsed.change:
         os.chdir(parsed.change)
 
+    token = get_token_from_shell_config()
     path = os.getcwd()
     subinfo = read_submission_info(path)
 
@@ -56,7 +57,7 @@ def runner_local_main():
     no_build = parsed.no_build
     do_pull = False
 
-    result = get_challenge_description(subinfo.challenge_name)
+    result = get_challenge_description(token, subinfo.challenge_name)
     cd = ChallengeDescription.from_yaml(result['challenge'])
 
     image = build_image(client, path, dockerfile, no_cache=no_cache, no_build=no_build)
@@ -69,8 +70,8 @@ def runner_local_main():
 
         wd_final = os.path.join(parsed.output, challenge_step_name)
         if os.path.exists(wd_final):
-            print('Not redoing step %r' % step)
-            print('Erase %s if you want to redo it.' % wd_final)
+            print('Not redoing step "%s" because it is already completed.' % challenge_step_name)
+            print('If you want to re-do it, erase the directory %s.' % wd_final)
             continue
 
         wd = wd_final + '.tmp'
@@ -85,8 +86,9 @@ def runner_local_main():
                 os.makedirs(pd)
 
             d = os.path.join(pd, previous_step)
-            # p = os.path.realpath(os.path.join(parsed.output, previous_step))
-            os.symlink('../../%s' % previous_step, d)
+            # os.symlink('../../%s' % previous_step, d)
+            p = os.path.join(parsed.output, previous_step)
+            shutil.copytree(p, d)
 
             mk = os.path.join(d, 'docker-compose.yaml')
             if not os.path.exists(mk):
@@ -105,18 +107,23 @@ def runner_local_main():
         with open(fn, 'w') as f:
             res = yaml.dump(cr.to_yaml())
             f.write(res)
-        print(indent(res, 'step %s : ' % challenge_step_name))
+
+        s = ""
+        s += '\nStatus: %s' % cr.status
+        s += '\nScores: %s' % cr.scores
+        s += '\n\n%s' % cr.msg
+        print(indent(res, 'step %s : ' % s))
 
         os.rename(wd, wd_final)
 
     print('find your output here: %s' % parsed.output)
 
 
-def get_challenge_description(challenge_name):
+def get_challenge_description(token, challenge_name):
     endpoint = '/challenges/%s/description' % challenge_name
     method = 'GET'
     data = {}
-    return make_server_request(None, endpoint, data=data, method=method)
+    return make_server_request(token, endpoint, data=data, method=method)
 
 
 if __name__ == '__main__':
