@@ -11,6 +11,7 @@ from duckietown_challenges import CHALLENGE_PREVIOUS_STEPS_DIR
 from duckietown_challenges.challenge import ChallengeDescription
 from duckietown_challenges.runner import run_single
 from duckietown_challenges.submission_build import read_submission_info, build_image
+from duckietown_challenges.utils import indent
 
 usage = """
 
@@ -102,7 +103,9 @@ def runner_local_main():
                         do_pull=do_pull)
         fn = os.path.join(wd, 'results.yaml')
         with open(fn, 'w') as f:
-            f.write(yaml.dump(cr.to_yaml()))
+            res = yaml.dump(cr.to_yaml())
+            f.write(res)
+        print(indent(res, 'step %s : ' % challenge_step_name))
 
         os.rename(wd, wd_final)
 
