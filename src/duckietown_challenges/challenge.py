@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 
 import yaml
+from duckietown_challenges import InvalidConfiguration
 from duckietown_challenges.utils import indent, safe_yaml_dump
 
 from . import dclogger
@@ -192,6 +193,21 @@ class ServiceDefinition(object):
             build = None
         image_digest = d0.pop('image_digest', None)
 
+        for k, v in list(environment.items()):
+            if '-' in k:
+                msg = 'Invalid environment variable "%s" should not contain a space.' % k
+                raise InvalidConfiguration(msg)
+
+            if isinstance(v, (int, str, unicode)):
+                pass
+            elif isinstance(v, dict):
+                # interpret as tring
+                s = yaml.safe_dump(v)
+                environment[k] = s
+            else:
+                msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k)
+                raise InvalidConfiguration(msg)
+
         return ServiceDefinition(image, environment, image_digest, build)
 
     def as_dict(self):
@@ -379,8 +395,21 @@ class Scoring(object):
 
 
 class Score(object):
+    HIGHER_IS_BETTER = 'higher-is-better'
+    LOWER_IS_BETTER = 'lower-is-better'
+    ALLOWED = [HIGHER_IS_BETTER, LOWER_IS_BETTER]
+
     def __init__(self, name, description, order):
-        assert order in ['ascending', 'descending']
+        if description == 'descending':
+            order = Score.HIGHER_IS_BETTER
+
+        if description == 'ascending':
+            order = Score.LOWER_IS_BETTER
+
+        if not order in Score.ALLOWED:
+            msg = 'Invalid value %s' % order
+            raise ValueError(msg)
+
         self.name = name
         self.description = description
         self.order = order
@@ -401,7 +430,15 @@ class Score(object):
             data = dict(**data0)
             name = data.pop('name')
             description = data.pop('description', None)
-            order = data.pop('order', 'ascending')
+            order = data.pop('order', Score.HIGHER_IS_BETTER)
+            # TODO: remove
+            if order == 'ascending':
+                order = Score.HIGHER_IS_BETTER
+            if order == 'descending':
+                order = Score.LOWER_IS_BETTER
+            if not order in Score.ALLOWED:
+                msg = 'Invalid value "%s" not in %s.' % (order, Score.ALLOWED)
+                raise InvalidChallengeDescription(msg)
 
             if data:
                 msg = 'Extra keys in configuration file: %s' % list(data)

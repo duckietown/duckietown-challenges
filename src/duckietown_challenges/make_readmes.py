@@ -50,7 +50,7 @@ For submitting, please follow [the instructions available in the book][book].
 
 ## Leaderboard 
 
-<img style="width: 24em" src="{DTSERVER}/humans/challenges/{challenge.name}/leaderboard/image.png"/>
+<img style="width: 24em" src="{DTSERVER}/humans/challenges/{challenge.name}/leaderboard/image.png?"/>
 
 For more details, see [the online leaderboard][leaderboard].
 

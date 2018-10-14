@@ -309,9 +309,12 @@ def run_single(wd, aws_config, steps2artefacts, challenge_parameters, solution_c
     config_yaml = yaml.safe_dump(config, encoding='utf-8', indent=4, allow_unicode=True)
     # elogger.debug('YAML:\n' + config_yaml)
 
+    dcfn_original = os.path.join(wd, 'docker-compose.original.yaml')
     dcfn = os.path.join(wd, 'docker-compose.yaml')
 
     # elogger.info('Compose file: \n%s ' % compose)
+    with open(dcfn_original, 'w') as f:
+        f.write(config_yaml)
     with open(dcfn, 'w') as f:
         f.write(config_yaml)
 
@@ -319,8 +322,9 @@ def run_single(wd, aws_config, steps2artefacts, challenge_parameters, solution_c
 
     try:
         config_validated = run_docker(wd, project, ['config'], get_output=True)
-        with open(dcfn + '.validated', 'w') as f:
+        with open(dcfn, 'w') as f:
             f.write(config_validated)
+        elogger.info('config:\n%s' % config_validated)
         valid_config = True
         valid_config_error = None
     except DockerComposeFail as e:

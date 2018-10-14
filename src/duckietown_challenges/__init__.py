@@ -20,6 +20,6 @@ from .runner import dt_challenges_evaluator
 
 dclogger.info('duckietown-challenges %s' % __version__)
 
-from .make_readmes import make_readmes_main as make_readme
+from .make_readmes import make_readmes_main as make_readmes_main
 from .make_readme_templates import make_readmes_templates_main
 from .runner_local import runner_local_main
