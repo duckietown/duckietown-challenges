@@ -3,13 +3,15 @@ import os
 import random
 import shutil
 import subprocess
+import sys
+import traceback
 
 import docker
 import termcolor
 import yaml
+
 from dt_shell.remote import make_server_request
 from duckietown_challenges import CHALLENGE_PREVIOUS_STEPS_DIR, ChallengeResults
-
 from .challenge import ChallengeDescription
 from .runner import run_single, get_token_from_shell_config
 from .submission_build import read_submission_info, build_image
@@ -28,6 +30,14 @@ logger.setLevel(logging.DEBUG)
 
 
 def runner_local_main():
+    try:
+        runner_local_main_()
+    except BaseException as e:
+        logger.error(traceback.format_exc(e))
+        sys.exit(2)
+
+
+def runner_local_main_():
     from .col_logging import setup_logging_color
     setup_logging_color()
     prog = 'dts challenges evaluate'
@@ -57,7 +67,7 @@ def runner_local_main():
         msg = 'The current path does not exist: %s' % path
         msg += '\nWow, this is a bug.'
         raise Exception(msg)
-    
+
     subinfo = read_submission_info(path)
 
     dockerfile = os.path.join(path, 'Dockerfile')
@@ -87,7 +97,7 @@ def runner_local_main():
         logger.info('Now considering step "%s"' % challenge_step_name)
         step = cd.steps[challenge_step_name]
         evaluation_parameters_str = yaml.safe_dump(
-            step.evaluation_parameters.as_dict()) + '\ns: %s' % solution_container
+                step.evaluation_parameters.as_dict()) + '\ns: %s' % solution_container
 
         wd_final = os.path.join(parsed.output, challenge_step_name)
         params = os.path.join(wd_final, 'parameters.json')
