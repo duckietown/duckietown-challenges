@@ -36,6 +36,16 @@ elogger.setLevel(logging.DEBUG)
 
 
 def get_token_from_shell_config():
+    k = DTShellConstants.DT1_TOKEN_CONFIG_KEY
+
+    if k in os.environ:
+        msg = 'Using token passed in environment variable %s' % k
+        elogger.debug(msg)
+        return os.environ[k]
+    else:
+        msg = 'Could not find the env variable %s; reading shell config.'
+        elogger.debug(msg)
+        
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
     if not os.path.exists(path):
         msg = 'Could not find the shell config at %s' % path
@@ -43,7 +53,7 @@ def get_token_from_shell_config():
 
     data = open(path).read()
     config = json.loads(data)
-    k = DTShellConstants.DT1_TOKEN_CONFIG_KEY
+
     if k not in config:
         msg = 'Please set a Duckietown Token using the command `dts tok set`.'
         raise Exception(msg)
