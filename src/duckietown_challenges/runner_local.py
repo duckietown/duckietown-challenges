@@ -58,12 +58,16 @@ def runner_local_main_():
 
     parsed = parser.parse_args()
 
+    logger.debug('Running in directory %s' % os.getcwd())
+
     if parsed.change:
         os.chdir(parsed.change)
+        logger.debug('Changing to directory %s' % os.getcwd())
 
     token = get_token_from_shell_config()
     path = '.'
-    # path = os.getcwd()
+    path = os.getcwd()
+
     # if not os.path.exists(path):
     #     msg = 'The current path does not exist: %s' % path
     #     msg += '\nWow, this is a bug.'
