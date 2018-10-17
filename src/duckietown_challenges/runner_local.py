@@ -53,6 +53,11 @@ def runner_local_main():
 
     token = get_token_from_shell_config()
     path = os.getcwd()
+    if not os.path.exists(path):
+        msg = 'The current path does not exist: %s' % path
+        msg += '\nWow, this is a bug.'
+        raise Exception(msg)
+    
     subinfo = read_submission_info(path)
 
     dockerfile = os.path.join(path, 'Dockerfile')

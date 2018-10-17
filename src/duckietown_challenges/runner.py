@@ -45,7 +45,7 @@ def get_token_from_shell_config():
     else:
         msg = 'Could not find the env variable %s; reading shell config.'
         elogger.debug(msg)
-        
+
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
     if not os.path.exists(path):
         msg = 'Could not find the shell config at %s' % path
