@@ -39,7 +39,7 @@ def read_submission_info(dirname):
     if not os.path.exists(fn):
         msg = 'I expected to find the file %s' % fn
 
-        msg += '\n\nThese are the contents of the directory:'
+        msg += '\n\nThese are the contents of the directory %s:' % dirname
         for x in os.listdir(dirname):
             msg += '\n- %s' % x
 
