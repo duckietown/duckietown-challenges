@@ -37,6 +37,10 @@ elogger.setLevel(logging.DEBUG)
 
 def get_token_from_shell_config():
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
+    if not os.path.exists(path):
+        msg = 'Could not find the shell config at %s' % path
+        raise Exception(msg)
+
     data = open(path).read()
     config = json.loads(data)
     k = DTShellConstants.DT1_TOKEN_CONFIG_KEY
@@ -48,6 +52,14 @@ def get_token_from_shell_config():
 
 
 def dt_challenges_evaluator():
+    try:
+        dt_challenges_evaluator_()
+    except BaseException as e:
+        msg = traceback.format_exc(e)
+        elogger.error(msg)
+        sys.exit(2)
+
+def dt_challenges_evaluator_():
     from .col_logging import setup_logging
     setup_logging()
     elogger.info("dt-challenges-evaluator (DTC %s)" % __version__)
@@ -460,6 +472,10 @@ def get_config(challenge_parameters_, solution_container, challenge_name, challe
 
 
 def write_logs(wd, project, services):
+    logdir = os.path.join(wd, 'logs')
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
     for service in services:
         cmd = ['ps', '-q', service]
 
@@ -478,14 +494,18 @@ def write_logs(wd, project, services):
             client = docker.from_env()
             logs = logs_for_container(client, container_id)
 
-        fn = os.path.join(wd, 'log-%s.txt' % service)
-        with open(fn, 'w') as f:
-            f.write(logs)
-
         from ansi2html import Ansi2HTMLConverter
         conv = Ansi2HTMLConverter()
         html = conv.convert(logs)
-        fn = os.path.join(wd, 'log-%s.html' % service)
+
+        logdir_service = os.path.join(logdir, service)
+        if not os.path.exists(logdir_service):
+            os.makedirs(logdir_service)
+        fn = os.path.join(logdir_service, 'log.txt')
+        with open(fn, 'w') as f:
+            f.write(logs)
+
+        fn = os.path.join(logdir_service, 'log.html')
         with open(fn, 'w') as f:
             f.write(html)
 

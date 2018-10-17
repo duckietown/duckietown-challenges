@@ -285,6 +285,11 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
                 msg = 'Invalid value %r for score %r: we do not allow infinity or NaN.' % (value, name)
                 raise ValueError(msg)
 
+        import numpy as np
+        if type(value) is np.ndarray:
+            msg = 'Please use regular floats and not numpy array. Invalid value for %s: %s' % (name, value)
+            raise Exception(msg)
+
         if name in self.scores:
             msg = 'Already know score %r' % name
             raise InvalidEvaluator(msg)
