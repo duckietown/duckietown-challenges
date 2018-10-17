@@ -66,7 +66,7 @@ def runner_local_main_():
 
     token = get_token_from_shell_config()
     path = '.'
-    path = os.getcwd()
+    # path = os.getcwd()
 
     # if not os.path.exists(path):
     #     msg = 'The current path does not exist: %s' % path
