@@ -5,6 +5,7 @@ import logging
 logging.basicConfig()
 dclogger = logging.getLogger('duckietown-challenges')
 dclogger.setLevel(logging.DEBUG)
+dclogger.info('duckietown-challenges %s' % __version__)
 
 from .challenges_constants import ChallengesConstants
 from .solution_interface import *
@@ -17,8 +18,6 @@ from .challenge_results import *
 from .cie_concrete import *
 
 from .runner import dt_challenges_evaluator
-
-dclogger.info('duckietown-challenges %s' % __version__)
 
 from .make_readmes import make_readmes_main as make_readmes_main
 from .make_readme_templates import make_readmes_templates_main
