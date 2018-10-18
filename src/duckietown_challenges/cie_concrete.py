@@ -596,7 +596,7 @@ def wrap_solution(solution, root='/'):
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_EVALUATOR: msg})
     except InvalidSubmission as e:
-        msg = 'Invalid solution:\n%s' % e
+        msg = 'Invalid solution:\n%s' % traceback.format_exc(e)
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_SUBMISSION: msg})
     except BaseException as e:
