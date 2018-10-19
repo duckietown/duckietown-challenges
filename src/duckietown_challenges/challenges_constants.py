@@ -1,4 +1,4 @@
-
+# coding=utf-8
 class ChallengesConstants(object):
     # status for submission
     STATUS_SUBMITTED = 'submitted'

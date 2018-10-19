@@ -1,4 +1,9 @@
+<<<<<<< HEAD
+# coding=utf-8
+__version__ = '3.1.0'
+=======
 __version__ = '3.0.41'
+>>>>>>> v3
 
 import logging
 
@@ -17,8 +22,5 @@ from .challenge_solution import *
 from .challenge_results import *
 from .cie_concrete import *
 
-from .runner import dt_challenges_evaluator
-
 from .make_readmes import make_readmes_main as make_readmes_main
 from .make_readme_templates import make_readmes_templates_main
-from .runner_local import runner_local_main

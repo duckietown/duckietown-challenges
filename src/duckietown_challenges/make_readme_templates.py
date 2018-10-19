@@ -1,10 +1,10 @@
+# coding=utf-8
 import argparse
 import os
 import sys
 
 import yaml
-from dt_shell.remote import DEFAULT_DTSERVER
-from duckietown_challenges.challenge import SubmissionDescription
+from .challenge import SubmissionDescription
 
 from . import dclogger
 

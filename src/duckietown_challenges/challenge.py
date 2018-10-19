@@ -1,9 +1,10 @@
+# coding=utf-8
 from collections import namedtuple
 from datetime import datetime
 
 import yaml
-from duckietown_challenges import InvalidConfiguration
-from duckietown_challenges.utils import indent, safe_yaml_dump
+from .exceptions import InvalidConfiguration
+from .utils import indent, safe_yaml_dump
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
@@ -57,9 +58,9 @@ class ChallengeStep(object):
 
         return ChallengeStep(name, title, description, evaluation_parameters,
                              features_required, timeout=timeout)
-
-    def update_image(self):
-        self.evaluation_parameters.update_image()
+    #
+    # def update_image(self):
+    #     self.evaluation_parameters.update_image()
 
 
 SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
@@ -174,8 +175,8 @@ class ServiceDefinition(object):
             msg = 'Different environments:\n\n %s\n\n  %s' % (self.environment, other.environment)
             raise NotEquivalent(msg)
 
-    def update_image(self):
-        self.image = get_latest(self.image)
+    # def update_image(self):
+    #     self.image = get_latest(self.image)
 
     @classmethod
     @wrap_config_reader2
@@ -249,26 +250,26 @@ class Build(object):
             msg = 'Extra fields: %s' % list(d0)
             raise ValueError(msg)
         return Build(context, dockerfile, args)
-
-
-def get_latest(image_name):
-    if '@' in image_name:
-        msg = 'The image %r already has a qualified hash. Not updating.' % image_name
-        dclogger.warning(msg)
-        return
-    import docker
-    client = docker.from_env()
-    dclogger.info('Finding latest version of %s' % image_name)
-    image = client.images.get(image_name)
-    if ':' in image_name:
-        # remove tag
-        image_name_no_tag = image_name[:image_name.index(':')]
-        image_name = image_name_no_tag
-
-    fq = image_name + '@' + image.id
-    dclogger.info('updated %s -> %r' % (image_name, fq))
-    return fq
-
+#
+#
+# def get_latest(image_name):
+#     if '@' in image_name:
+#         msg = 'The image %r already has a qualified hash. Not updating.' % image_name
+#         dclogger.warning(msg)
+#         return
+#     import docker
+#     client = docker.from_env()
+#     dclogger.info('Finding latest version of %s' % image_name)
+#     image = client.images.get(image_name)
+#     if ':' in image_name:
+#         # remove tag
+#         image_name_no_tag = image_name[:image_name.index(':')]
+#         image_name = image_name_no_tag
+#
+#     fq = image_name + '@' + image.id
+#     dclogger.info('updated %s -> %r' % (image_name, fq))
+#     return fq
+#
 
 Transition = namedtuple('Transition', 'first condition second')
 

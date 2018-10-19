@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 
 # In the end, the evaluator must create this file
@@ -44,4 +45,24 @@ class ChallengeResultsStatus(object):
     # XXX: to merge
 
 
+DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v3'
 
+
+class Storage(object):
+    done = False
+
+
+def get_duckietown_server_url():
+    V = 'DTSERVER'
+
+    if V in os.environ:
+        use = os.environ[V]
+        if not Storage.done:
+            if use != DEFAULT_DTSERVER:
+                msg = 'Using server %s instead of default %s' % (use, DEFAULT_DTSERVER)
+                from . import dclogger
+                dclogger.info(msg)
+            Storage.done = True
+        return use
+    else:
+        return DEFAULT_DTSERVER
