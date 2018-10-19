@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import StringIO
+from six import StringIO
 import argparse
 import copy
 import getpass
