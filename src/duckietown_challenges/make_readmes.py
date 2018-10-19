@@ -1,9 +1,10 @@
+# coding=utf-8
 import argparse
 import os
 import sys
 
 import yaml
-from duckietown_challenges.challenge import ChallengeDescription
+from .challenge import ChallengeDescription
 
 from . import dclogger
 
@@ -27,7 +28,7 @@ def make_readmes_main():
 
     out = ""
 
-    from dt_shell.remote import get_duckietown_server_url
+    from .constants import get_duckietown_server_url
     base_url = get_duckietown_server_url()
 
     # language=markdown

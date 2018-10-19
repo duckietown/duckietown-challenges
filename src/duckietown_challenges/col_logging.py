@@ -1,6 +1,7 @@
+# coding=utf-8
 import logging
 
-__all__ = []
+__all__ = ['setup_logging_color', 'setup_logging_format', 'setup_logging']
 
 
 def setup_logging_format():

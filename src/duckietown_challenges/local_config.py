@@ -1,6 +1,7 @@
+# coding=utf-8
 import os
 
-from duckietown_challenges import read_yaml_file
+from .yaml_utils import read_yaml_file
 
 
 class ChallengeInfoLocal():

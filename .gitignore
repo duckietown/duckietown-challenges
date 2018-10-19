@@ -4,3 +4,4 @@ output-evaluation
 src/duckietown_challenges.egg-info/
 dist
 *pyc
+out-comptests

@@ -1,3 +1,4 @@
+# coding=utf-8
 import math
 import os
 import shutil
@@ -218,14 +219,18 @@ class Timeout(Exception):
 
 def wait_for_file(fn, timeout, wait):
     t0 = time.time()
+    interval_notice = 10
+    i = 0
     while not os.path.exists(fn):
         passed = int(time.time() - t0)
         to_wait = timeout - passed
-        dclogger.debug('Output %s not ready yet (%s secs passed, will wait %s secs more)' % (fn, passed, to_wait))
+        if i % interval_notice == 0:
+            dclogger.debug('Output %s not ready yet (%s secs passed, will wait %s secs more)' % (fn, passed, to_wait))
         if time.time() > t0 + timeout:
             msg = 'Timeout of %s while waiting for %s.' % (timeout, fn)
             raise Timeout(msg)
         time.sleep(wait)
+        i += 1
 
 
 class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
