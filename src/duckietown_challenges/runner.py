@@ -736,7 +736,7 @@ def object_exists(s3, bucket, key):
     from botocore.exceptions import ClientError
     try:
         h = s3.head_object(Bucket=bucket, Key=key)
-        print h
+        print(h)
     except ClientError as e:
         return int(e.response['Error']['Code']) != 404
     return True

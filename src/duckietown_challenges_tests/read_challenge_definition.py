@@ -99,7 +99,7 @@ def read_challenge_1():
 
     y = c0.as_yaml()
     d2 = yaml.load(y)
-    print y
+    print(y)
     c = ChallengeDescription.from_yaml(d2)
 
     assert c.title
