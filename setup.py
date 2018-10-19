@@ -25,7 +25,7 @@ setup(name='duckietown-challenges',
       packages=find_packages('src'),
       install_requires=[
           'decorator',
-          # 'duckietown-shell',
+          'duckietown-shell',
           'PyYAML',
           # 'ruamel.ordereddict',
           'ruamel.yaml',
@@ -33,6 +33,7 @@ setup(name='duckietown-challenges',
           'psutil',
           'boto3',
           'ansi2html',
+
       ],
 
       tests_require=[

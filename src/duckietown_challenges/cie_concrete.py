@@ -442,6 +442,9 @@ SPECIAL_INVALID_EVALUATOR = 'invalid-evaluator'
 SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
+def formate(e):
+    return traceback.format_exc()
+
 def wrap_evaluator(evaluator, root='/'):
     from .col_logging import setup_logging_color
     setup_logging_color()
@@ -462,7 +465,7 @@ def wrap_evaluator(evaluator, root='/'):
         try:
             evaluator.prepare(cie)
         except BaseException as e:
-            msg = 'Preparation aborted:\n%s' % traceback.format_exc(e)
+            msg = 'Preparation aborted:\n%s' % formate(e)
             cie.set_challenge_parameters({SPECIAL_ABORT: msg})
             raise
         finally:
@@ -484,22 +487,22 @@ def wrap_evaluator(evaluator, root='/'):
 
     # failure
     except InvalidSubmission as e:
-        msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidSubmission:\n%s' % formate(e)
         declare(ChallengeResultsStatus.FAILED, msg)
 
     # error of evaluator
     except InvalidEvaluator as e:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEvaluator:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
     # error of environment (not distinguished so far)
 
     except InvalidEnvironment as e:
-        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEnvironment:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
     except BaseException as e:
-        msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
+        msg = 'Unexpected exception:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
 
@@ -526,22 +529,22 @@ def wrap_scorer(evaluator, root='/'):
 
     # failure
     except InvalidSubmission as e:
-        msg = 'InvalidSubmission:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidSubmission:\n%s' % formate(e)
         declare(ChallengeResultsStatus.FAILED, msg)
 
     # error of evaluator
     except InvalidEvaluator as e:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEvaluator:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
     # error of environment (not distinguished so far)
 
     except InvalidEnvironment as e:
-        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEnvironment:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
     except BaseException as e:
-        msg = 'Unexpected exception:\n%s' % traceback.format_exc(e)
+        msg = 'Unexpected exception:\n%s' % formate(e)
         declare(ChallengeResultsStatus.ERROR, msg)
 
 
@@ -557,7 +560,7 @@ def wrap_solution(solution, root='/'):
         except InvalidEnvironment:
             raise
         except BaseException as e:
-            msg = 'Invalid environment: %s' % traceback.format_exc(e)
+            msg = 'Invalid environment: %s' % formate(e)
             raise InvalidEnvironment(msg)
 
         try:
@@ -576,7 +579,7 @@ def wrap_solution(solution, root='/'):
         except (InvalidSubmission, InvalidEnvironment, InvalidEvaluator):
             raise
         except BaseException as e:
-            msg = "Uncaught exception in solution:\n%s" % traceback.format_exc(e)
+            msg = "Uncaught exception in solution:\n%s" % formate(e)
             raise InvalidSubmission(msg)
 
         if cis.failure_declared:
@@ -588,19 +591,19 @@ def wrap_solution(solution, root='/'):
             raise InvalidSubmission(msg)
 
     except InvalidEnvironment as e:
-        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEnvironment:\n%s' % formate(e)
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
     except InvalidEvaluator as e:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc(e)
+        msg = 'InvalidEvaluator:\n%s' % formate(e)
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_EVALUATOR: msg})
     except InvalidSubmission as e:
-        msg = 'Invalid solution:\n%s' % traceback.format_exc(e)
+        msg = 'Invalid solution:\n%s' % formate(e)
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_SUBMISSION: msg})
     except BaseException as e:
-        msg = 'Uncaught exception: invalid wrap_evaluator:\n%s' % traceback.format_exc(e)
+        msg = 'Uncaught exception: invalid wrap_evaluator:\n%s' % formate(e)
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
     finally:
