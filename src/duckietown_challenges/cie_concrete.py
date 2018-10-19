@@ -557,7 +557,7 @@ def wrap_solution(solution, root='/'):
         except InvalidEnvironment:
             raise
         except BaseException as e:
-            msg = 'Invalid environment: %s' % e
+            msg = 'Invalid environment: %s' % traceback.format_exc(e)
             raise InvalidEnvironment(msg)
 
         try:

@@ -43,7 +43,7 @@ def get_token_from_shell_config():
         elogger.debug(msg)
         return os.environ[k]
     else:
-        msg = 'Could not find the env variable %s; reading shell config.'
+        msg = 'Could not find the env variable %s; reading shell config.' % k
         elogger.debug(msg)
 
     path = os.path.join(os.path.expanduser(DTShellConstants.ROOT), 'config')
@@ -375,8 +375,11 @@ def run(wd, project, do_pull):
             cmd = ['pull']
             run_docker(wd, project, cmd)
 
-        pruned = client.networks.prune()
-        elogger.debug('pruned: %s' % pruned)
+        try:
+            pruned = client.networks.prune()
+            elogger.debug('pruned: %s' % pruned)
+        except BaseException as e: # XXX not critical
+            pass
 
         # elogger.info('Creating containers')
         # cmd = ['create', '--force-recreate']
@@ -763,7 +766,10 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             'evaluator_version': evaluator_version,
             'uploaded': uploaded
             }
-    return make_server_request(token, endpoint, data=data, method=method)
+    try:
+        return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
+    except:
+        return make_server_request(token, endpoint, data=data, method=method)
 
 
 def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset):
@@ -775,7 +781,10 @@ def dtserver_work_submission(token, submission_id, machine_id, process_id, evalu
             'evaluator_version': evaluator_version,
             'features': features,
             'reset': reset}
-    return make_server_request(token, endpoint, data=data, method=method)
+    try:
+        return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
+    except:
+        return make_server_request(token, endpoint, data=data, method=method)
 
 
 def create_index_files(wd, job_id):
