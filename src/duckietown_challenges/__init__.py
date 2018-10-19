@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 # coding=utf-8
 __version__ = '3.1.0'
-=======
-__version__ = '3.0.41'
->>>>>>> v3
-
 import logging
 
 logging.basicConfig()
