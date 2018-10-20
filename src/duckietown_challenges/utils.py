@@ -27,14 +27,14 @@ def write_data_to_file(data, filename):
         current = open(filename).read()
         if current == data:
             if not 'assets/' in filename:
-                dclogger.debug('already up to date %s' % (filename))
+                dclogger.debug('already up to date %s' % filename)
             return
 
     tmp = filename + '.tmp'
     with open(tmp, 'w') as f:
         f.write(data)
     os.rename(tmp, filename)
-    dclogger.debug('Written to: %s' % (filename))
+    dclogger.debug('Written to: %s' % filename)
 
 
 def expand_all(filename):

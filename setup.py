@@ -27,6 +27,7 @@ setup(name='duckietown-challenges',
           'decorator',
           'PyYAML',
           'python-dateutil',
+          'oyaml',
       ],
 
       tests_require=[

@@ -4,7 +4,7 @@ import os
 from .yaml_utils import read_yaml_file
 
 
-class ChallengeInfoLocal():
+class ChallengeInfoLocal:
     def __init__(self, challenge_name):
         self.challenge_name = challenge_name
 

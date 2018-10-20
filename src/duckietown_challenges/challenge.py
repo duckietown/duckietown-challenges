@@ -47,6 +47,7 @@ class ChallengeStep(object):
         data['timeout'] = self.timeout
         return data
 
+    # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, data, name):
@@ -568,6 +569,7 @@ class SubmissionDescription(object):
                     user_metadata=self.user_metadata,
                     description=self.description)
 
+    # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, data):

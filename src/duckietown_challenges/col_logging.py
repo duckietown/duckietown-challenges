@@ -25,15 +25,15 @@ def add_coloring_to_emit_ansi(fn):
     # add methods we need to the class
     def new(*args):
         levelno = args[1].levelno
-        if (levelno >= 50):
+        if levelno >= 50:
             color = '\x1b[31m'  # red
-        elif (levelno >= 40):
+        elif levelno >= 40:
             color = '\x1b[31m'  # red
-        elif (levelno >= 30):
+        elif levelno >= 30:
             color = '\x1b[33m'  # yellow
-        elif (levelno >= 20):
+        elif levelno >= 20:
             color = '\x1b[32m'  # green
-        elif (levelno >= 10):
+        elif levelno >= 10:
             color = '\x1b[35m'  # pink
         else:
             color = '\x1b[0m'  # normal
