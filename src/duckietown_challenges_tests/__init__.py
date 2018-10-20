@@ -1,7 +1,7 @@
 from .read_challenge_definition import *
 from .test_interaction import *
 from .test_interaction_two_steps import *
-
+from .yaml_tests import *
 
 def jobs_comptests(context):
     # instantiation

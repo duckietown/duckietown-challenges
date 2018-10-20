@@ -11,8 +11,17 @@ def read_yaml_file(fn):
         msg = 'File does not exist: %s' % fn
         raise ValueError(msg)
     with open(fn) as f:
-        data = f.read()
-        return yaml.load(data, Loader=yaml.Loader)
+        contents = f.read()
+    return interpret_yaml_string(contents)
+
+
+def interpret_yaml_string(s):
+    # if s.startswith('!!omap'):
+    #     s = s.replace('!!omap', '')
+    res = yaml.load(s, Loader=yaml.Loader)
+    if s.strip().startswith('!!omap'):
+        res = dict(res)
+    return res
 
 
 def write_yaml(data, fn):
