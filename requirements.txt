@@ -3,3 +3,6 @@ PyYAML
 python-dateutil
 oyaml
 numpy
+
+# for testing
+comptests==1.4.26
