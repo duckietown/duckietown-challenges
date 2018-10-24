@@ -1,21 +1,5 @@
-# Duckietown Challenges evaluator
+[![CircleCI](https://circleci.com/gh/duckietown/duckietown-challenges.svg?style=shield)](https://circleci.com/gh/duckietown/duckietown-challenges)
 
-## Installation
+# Duckietown Challenges Library
 
-Install with:
-
-    $ pip install -U --user duckietown-challenges
-  
-## Evaluate everybody's submissions
-
-Help evaluate the Duckietown challenges by running:
-
-    $ dt-challenges-evaluator --continuous
-  
-## Evaluate a specific submission
-
-You can also specify a specific submission:
-
-    $ dt-challenges-evaluator 42
-  
-where 42 is the submission id, which is given in the output of `dts challenges submit`.
+The runner is now in [the `duckietown-challenges-runner` repo](https://github.com/duckietown/duckietown-challenges-runner).
