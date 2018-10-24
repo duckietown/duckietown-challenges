@@ -1,0 +1,60 @@
+version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-3.7
+      - test-3.6
+      - test-3.5
+      - test-2.7
+jobs:
+  test-3.6: &test-template
+    docker:
+      - image: python:3.6
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: Install deps
+          command: |
+
+
+            pip install -q --user --upgrade -r requirements.txt
+            python setup.py develop --prefix ~/.local --no-deps
+            pip freeze
+            echo PATH=$PATH
+
+            mkdir artifacts
+
+      - run:
+          name: Run tests
+          command: |
+            PATH=~/.local/bin:$PATH  comptests --nonose duckietown_challenges_tests
+
+      - run:
+          name: Statistics
+          when: always
+          command: |
+            mkdir junit
+            PATH=~/.local/bin:$PATH comptests-to-junit out-comptests/compmake > junit/junit.xml
+
+      - test-results-store:
+          path: junit
+
+      - store_artifacts:
+          path: artifacts
+          destination: artifacts
+
+  test-3.5:
+    <<: *test-template
+    docker:
+      - image: python:3.5
+  test-2.7:
+    <<: *test-template
+    docker:
+    - image: python:2.7
+  test-3.7:
+    <<: *test-template
+    docker:
+    - image: python:3.7
+

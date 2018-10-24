@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from multiprocessing import Process
 
 from comptests import comptest, run_module_tests
@@ -46,7 +47,8 @@ def run_interaction_two_steps(step1_name, S1, E1, step2_name, S2, E2):
 
     os.makedirs(os.path.join(root2, CHALLENGE_PREVIOUS_STEPS_DIR))
     l = os.path.join(root2, CHALLENGE_PREVIOUS_STEPS_DIR, step1_name)
-    os.link(root1, l)
+    # os.link(root1, l)
+    shutil.copytree(root1, l)
 
     def step2_evaluator():
         set_step(step2_name)

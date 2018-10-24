@@ -29,6 +29,8 @@ setup(name='duckietown-challenges',
           'python-dateutil',
           'oyaml',
           'numpy',
+          'six',
+          'future',
       ],
 
       tests_require=[

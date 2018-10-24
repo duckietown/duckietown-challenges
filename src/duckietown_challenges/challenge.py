@@ -150,11 +150,12 @@ def nice_repr(x):
     K = type(x).__name__
     return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
 
+import six
 
 class ServiceDefinition(object):
     def __init__(self, image, environment, image_digest, build):
         check_isinstance(environment, dict)
-        check_isinstance(image, (unicode, str))
+        check_isinstance(image, six.string_types)
         self.image = str(image)
         self.image_digest = image_digest
         self.environment = environment
@@ -200,7 +201,9 @@ class ServiceDefinition(object):
                 msg = 'Invalid environment variable "%s" should not contain a space.' % k
                 raise InvalidConfiguration(msg)
 
-            if isinstance(v, (int, str, unicode)):
+            if isinstance(v, int):
+                pass
+            if isinstance(v, six.string_types):
                 pass
             elif isinstance(v, dict):
                 # interpret as tring
@@ -545,7 +548,7 @@ def interpret_date(d):
         return d
     if isinstance(d, datetime):
         return d
-    if isinstance(d, (str, unicode)):
+    if isinstance(d, six.string_types):
         from dateutil import parser
         return parser.parse(d)
     raise ValueError(d.__repr__())

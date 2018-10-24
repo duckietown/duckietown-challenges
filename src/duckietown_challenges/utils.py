@@ -2,6 +2,8 @@
 import math
 import os
 
+import traceback
+import six
 import decorator
 
 from . import dclogger, InvalidConfiguration
@@ -171,12 +173,10 @@ def friendly_size2(b):
     return '%.2f GB' % gbs
 
 
-import traceback
-
 
 def indent(s, prefix, first=None):
     s = str(s)
-    assert isinstance(prefix, (unicode, str))
+    assert isinstance(prefix, six.string_types)
     lines = s.split('\n')
     if not lines:
         return ''
