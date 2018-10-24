@@ -1,6 +1,6 @@
 # coding=utf-8
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, date
 
 import yaml
 from .exceptions import InvalidConfiguration
@@ -201,9 +201,9 @@ class ServiceDefinition(object):
                 msg = 'Invalid environment variable "%s" should not contain a space.' % k
                 raise InvalidConfiguration(msg)
 
-            if isinstance(v, int):
-                pass
-            if isinstance(v, six.string_types):
+            if isinstance(v, (int, float)):
+                environment[k] = str(v)
+            elif isinstance(v, six.string_types):
                 pass
             elif isinstance(v, dict):
                 # interpret as tring
@@ -346,20 +346,21 @@ class ChallengeTransitions(object):
         to_activate = []
         for t in self.transitions:
             if t.first in status and status[t.first] == t.condition:
-                dclogger.debug('Transition %s is activated' % str(t))
+                # dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
                 if t.second in status and status[t.second] not in like_it_does_not_exist:
-                    dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
+                    # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
+                    pass
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                        dclogger.debug('Finishing here')
+                        # dclogger.debug('Finishing here')
                         return True, t.second.lower(), []
                     else:
 
                         to_activate.append(t.second)
 
-        dclogger.debug('Incomplete; need to do: %s' % to_activate)
+        # dclogger.debug('Incomplete; need to do: %s' % to_activate)
         return False, None, to_activate
 
 
@@ -548,6 +549,9 @@ def interpret_date(d):
         return d
     if isinstance(d, datetime):
         return d
+    if isinstance(d, date):
+        return datetime.combine(d, datetime.min.time())
+
     if isinstance(d, six.string_types):
         from dateutil import parser
         return parser.parse(d)
