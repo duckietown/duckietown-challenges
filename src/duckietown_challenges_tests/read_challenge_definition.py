@@ -169,6 +169,16 @@ def read_challenge_1():
     assert result is None
     assert steps == ['step1'], steps
 
+    status = {
+        'START': 'success',
+        'step1': 'evaluating',
+        'step2': 'success',
+    }
+    complete, result, steps = c.get_next_steps(status)
+    assert not complete
+    assert result is None
+    assert steps == [], steps
+
 
 @comptest
 def empty_services():

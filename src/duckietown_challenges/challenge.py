@@ -364,21 +364,30 @@ class ChallengeTransitions(object):
                 status.pop(k)
 
         # make sure that the steps in which they depend are ok
-        for k in self.top_ordered():
-            precs = self.get_precs(k)
-            if status.get(k, '?') != 'evaluating':
-                for k2 in precs:
-                    k2_status = status.get(k2, 'missing')
-                    if k2_status not in ['success', 'evaluating']:
-                        msg = 'Marking step %s as not done because  %s = "%s"' % (k, k2, k2_status)
-                        dclogger.error(msg)
-                        status.pop(k, None)
+
+        def predecessors_success(_):
+            precs = self.get_precs(_)
+            for k2 in precs:
+                if not k2 in status or status[k2] != 'success':
+                    return False
+            return True
+        #
+        #
+        # for k in self.top_ordered():
+        #
+        #     if status.get(k, '?') != 'evaluating':
+        #         for k2 in precs:
+        #             k2_status = status.get(k2, 'missing')
+        #             if k2_status not in ['success', 'evaluating']:
+        #                 msg = 'Marking step %s as not done because  %s = "%s"' % (k, k2, k2_status)
+        #                 dclogger.error(msg)
+        #                 status.pop(k, None)
 
         # dclogger.info('Updated status = %s' % status)
 
         to_activate = []
         for t in self.transitions:
-            if t.first in status and status[t.first] == t.condition:
+            if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
                 dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
