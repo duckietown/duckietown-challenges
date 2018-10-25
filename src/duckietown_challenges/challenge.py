@@ -360,10 +360,11 @@ class ChallengeTransitions(object):
             If the list is empty, then we are done
 
         """
-        dclogger.info('Received status = %s' % status)
+        CS = ChallengesConstants
+        # dclogger.info('Received status = %s' % status)
         assert isinstance(status, dict)
         assert STATE_START in status
-        assert status[STATE_START] == 'success'
+        assert status[STATE_START] == CS.STATUS_JOB_SUCCESS
         status = dict(**status)
         for k, ks in list(status.items()):
             if k != STATE_START and k not in self.steps:
@@ -375,8 +376,10 @@ class ChallengeTransitions(object):
                 dclogger.error(msg)
                 status.pop(k)
 
-            # timeout = like it never happened
-            if ks == 'timeout':
+            # timeout or aborted = like it never happened
+            if ks == CS.STATUS_JOB_TIMEOUT:
+                status.pop(k)
+            if ks == CS.STATUS_JOB_ABORTED:
                 status.pop(k)
 
         # make sure that the steps in which they depend are ok
@@ -384,7 +387,7 @@ class ChallengeTransitions(object):
         def predecessors_success(_):
             precs = self.get_precs(_)
             for k2 in precs:
-                if k2 not in status or status[k2] != 'success':
+                if k2 not in status or status[k2] != CS.STATUS_JOB_SUCCESS:
                     return False
             return True
 
