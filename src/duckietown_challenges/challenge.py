@@ -375,6 +375,10 @@ class ChallengeTransitions(object):
                 dclogger.error(msg)
                 status.pop(k)
 
+            # timeout = like it never happened
+            if ks == 'timeout':
+                status.pop(k)
+
         # make sure that the steps in which they depend are ok
 
         def predecessors_success(_):
