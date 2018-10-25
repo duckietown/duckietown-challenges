@@ -332,7 +332,7 @@ class ChallengeTransitions(object):
     def get_precs(self, x):
         G = self.get_graph()
         res = list(ancestors(G, x))
-        print('precs of %s: %s' % (x, res))
+        # print('precs of %s: %s' % (x, res))
         return res
 
     def get_next_steps(self, status):
@@ -348,7 +348,7 @@ class ChallengeTransitions(object):
             If the list is empty, then we are done
 
         """
-        dclogger.info('Received status = %s' % status)
+        # dclogger.info('Received status = %s' % status)
         assert isinstance(status, dict)
         assert STATE_START in status
         assert status[STATE_START] == 'success'
@@ -369,10 +369,10 @@ class ChallengeTransitions(object):
             for k2 in precs:
                 if 'success' != status.get(k2, 'missing'):
                     msg = 'Marking step %s as not done because missing %s' % (k, k2)
-                    dclogger.error(msg)
+                    # dclogger.error(msg)
                     status.pop(k, None)
 
-        dclogger.info('Updated status = %s' % status)
+        # dclogger.info('Updated status = %s' % status)
 
         to_activate = []
         for t in self.transitions:
