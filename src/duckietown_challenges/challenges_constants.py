@@ -2,7 +2,7 @@
 class ChallengesConstants(object):
     # status for submission
     STATUS_SUBMITTED = 'submitted'
-    STATUS_RETIRED = 'retired'
+    # STATUS_RETIRED = 'retired'
     STATUS_EVALUATION = 'evaluating'
     STATUS_ABORTED = 'aborted'
     STATUS_SUCCESS = 'success'
@@ -11,7 +11,7 @@ class ChallengesConstants(object):
 
     ALLOWED_SUB_STATUS = [
         STATUS_SUBMITTED,
-        STATUS_RETIRED,
+        # STATUS_RETIRED,
         STATUS_EVALUATION,
         STATUS_ABORTED,
         STATUS_SUCCESS,

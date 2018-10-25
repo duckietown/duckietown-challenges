@@ -3,12 +3,12 @@ from collections import namedtuple
 from datetime import datetime, date
 
 import yaml
-from .exceptions import InvalidConfiguration
-from .utils import indent, safe_yaml_dump
+from networkx import DiGraph, ancestors
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
-from .utils import raise_wrapped, check_isinstance, wrap_config_reader2
+from .exceptions import InvalidConfiguration
+from .utils import indent, safe_yaml_dump, raise_wrapped, check_isinstance, wrap_config_reader2
 
 
 class InvalidChallengeDescription(Exception):
@@ -150,7 +150,9 @@ def nice_repr(x):
     K = type(x).__name__
     return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
 
+
 import six
+
 
 class ServiceDefinition(object):
     def __init__(self, image, environment, image_digest, build):
@@ -254,6 +256,8 @@ class Build(object):
             msg = 'Extra fields: %s' % list(d0)
             raise ValueError(msg)
         return Build(context, dockerfile, args)
+
+
 #
 #
 # def get_latest(image_name):
@@ -315,6 +319,22 @@ class ChallengeTransitions(object):
                               (first, condition, second))
         return ts
 
+    def top_ordered(self):
+        G = self.get_graph()
+        return list(self.steps)
+
+    def get_graph(self):
+        G = DiGraph()
+        for first, condition, second in self.transitions:
+            G.add_edge(first, second)
+        return G
+
+    def get_precs(self, x):
+        G = self.get_graph()
+        res = list(ancestors(G, x))
+        print('precs of %s: %s' % (x, res))
+        return res
+
     def get_next_steps(self, status):
         """ status is a dictionary from step ID to
             status.
@@ -342,6 +362,17 @@ class ChallengeTransitions(object):
                 msg = 'Ignoring invalid step %s -> %s' % (k, ks)
                 dclogger.error(msg)
                 status.pop(k)
+
+        # make sure that the steps in which they depend are ok
+        for k in self.top_ordered():
+            precs = self.get_precs(k)
+            for k2 in precs:
+                if 'success' != status.get(k2, 'missing'):
+                    msg = 'Marking step %s as not done because missing %s' % (k, k2)
+                    dclogger.error(msg)
+                    status.pop(k, None)
+
+        dclogger.info('Updated status = %s' % status)
 
         to_activate = []
         for t in self.transitions:
