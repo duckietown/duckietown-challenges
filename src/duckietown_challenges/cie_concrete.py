@@ -2,6 +2,7 @@
 import math
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -170,8 +171,8 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         return get_completed_step_solution_file(self.root, step_name, basename)
 
 
-TIMEOUT_PREPARATION = 6000
-TIMEOUT_SOLUTION = 6000
+TIMEOUT_PREPARATION = 600
+TIMEOUT_SOLUTION = 600
 
 
 def get_completed_step_solution_files(root, step_name):
@@ -447,7 +448,6 @@ SPECIAL_INVALID_EVALUATOR = 'invalid-evaluator'
 SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
-
 def wrap_evaluator(evaluator, root='/'):
     from .col_logging import setup_logging_color
     setup_logging_color()
@@ -562,7 +562,7 @@ def wrap_solution(solution, root='/'):
             cis.get_current_step()
         except InvalidEnvironment:
             raise
-        except BaseException as e:
+        except BaseException:
             msg = 'Invalid environment: %s' % traceback.format_exc()
             raise InvalidEnvironment(msg)
 
@@ -581,7 +581,7 @@ def wrap_solution(solution, root='/'):
             solution.run(cis)
         except (InvalidSubmission, InvalidEnvironment, InvalidEvaluator):
             raise
-        except BaseException as e:
+        except BaseException:
             msg = "Uncaught exception in solution:\n%s" % traceback.format_exc()
             raise InvalidSubmission(msg)
 
@@ -593,19 +593,19 @@ def wrap_solution(solution, root='/'):
             msg = 'solution_output_dict not set. Solution must use set_solution_output_dict({}).'
             raise InvalidSubmission(msg)
 
-    except InvalidEnvironment as e:
+    except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
-    except InvalidEvaluator as e:
+    except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_EVALUATOR: msg})
-    except InvalidSubmission as e:
+    except InvalidSubmission:
         msg = 'Invalid solution:\n%s' % traceback.format_exc()
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_SUBMISSION: msg})
-    except BaseException as e:
+    except BaseException:
         msg = 'Uncaught exception: invalid wrap_evaluator:\n%s' % traceback.format_exc()
         cis.error(msg)
         cis.set_solution_output_dict({SPECIAL_INVALID_ENVIRONMENT: msg})
@@ -613,3 +613,7 @@ def wrap_solution(solution, root='/'):
         fn = os.path.join(cis.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
         write_yaml(cis.solution_output_dict, fn)
         cis._write_files()
+
+    cmd = 'sync'
+    subprocess.check_call(cmd)
+    cis.info('Graceful termination of wrap_solution().')
