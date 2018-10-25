@@ -401,21 +401,21 @@ class ChallengeTransitions(object):
         to_activate = []
         for t in self.transitions:
             if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
-                dclogger.debug('Transition %s is activated' % str(t))
+                # dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
                 if t.second in status and status[t.second] not in like_it_does_not_exist:
-                    dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
+                    # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
                     pass
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                        dclogger.debug('Finishing here')
+                        # dclogger.debug('Finishing here')
                         return True, t.second.lower(), []
                     else:
 
                         to_activate.append(t.second)
 
-        dclogger.debug('Incomplete; need to do: %s' % to_activate)
+        # dclogger.debug('Incomplete; need to do: %s' % to_activate)
         return False, None, to_activate
 
 
