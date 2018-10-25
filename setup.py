@@ -31,6 +31,7 @@ setup(name='duckietown-challenges',
           'numpy',
           'six',
           'future',
+          'networkx>=2.2',
       ],
 
       tests_require=[
