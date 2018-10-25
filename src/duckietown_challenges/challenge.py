@@ -366,32 +366,34 @@ class ChallengeTransitions(object):
         # make sure that the steps in which they depend are ok
         for k in self.top_ordered():
             precs = self.get_precs(k)
-            for k2 in precs:
-                if 'success' != status.get(k2, 'missing'):
-                    msg = 'Marking step %s as not done because missing %s' % (k, k2)
-                    # dclogger.error(msg)
-                    status.pop(k, None)
+            if status.get(k, '?') != 'evaluating':
+                for k2 in precs:
+                    k2_status = status.get(k2, 'missing')
+                    if k2_status not in ['success', 'evaluating']:
+                        msg = 'Marking step %s as not done because  %s = "%s"' % (k, k2, k2_status)
+                        dclogger.error(msg)
+                        status.pop(k, None)
 
         # dclogger.info('Updated status = %s' % status)
 
         to_activate = []
         for t in self.transitions:
             if t.first in status and status[t.first] == t.condition:
-                # dclogger.debug('Transition %s is activated' % str(t))
+                dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
                 if t.second in status and status[t.second] not in like_it_does_not_exist:
-                    # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
+                    dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
                     pass
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                        # dclogger.debug('Finishing here')
+                        dclogger.debug('Finishing here')
                         return True, t.second.lower(), []
                     else:
 
                         to_activate.append(t.second)
 
-        # dclogger.debug('Incomplete; need to do: %s' % to_activate)
+        dclogger.debug('Incomplete; need to do: %s' % to_activate)
         return False, None, to_activate
 
 
