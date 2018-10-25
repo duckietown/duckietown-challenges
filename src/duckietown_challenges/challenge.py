@@ -287,6 +287,18 @@ class InvalidSteps(Exception):
 
 
 class ChallengeTransitions(object):
+
+    @staticmethod
+    def steps_from_transitions(transitions):
+        steps = set()
+        for first, condition, second in transitions:
+            if first not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+                steps.add(first)
+            if second not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+                steps.add(second)
+
+        return steps
+
     def __init__(self, transitions, steps):
         self.transitions = []
         self.steps = steps
@@ -348,7 +360,7 @@ class ChallengeTransitions(object):
             If the list is empty, then we are done
 
         """
-        # dclogger.info('Received status = %s' % status)
+        dclogger.info('Received status = %s' % status)
         assert isinstance(status, dict)
         assert STATE_START in status
         assert status[STATE_START] == 'success'
@@ -368,9 +380,10 @@ class ChallengeTransitions(object):
         def predecessors_success(_):
             precs = self.get_precs(_)
             for k2 in precs:
-                if not k2 in status or status[k2] != 'success':
+                if k2 not in status or status[k2] != 'success':
                     return False
             return True
+
         #
         #
         # for k in self.top_ordered():
