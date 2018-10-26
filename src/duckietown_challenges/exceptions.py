@@ -22,3 +22,6 @@ class InvalidEvaluator(Exception):
 class InvalidEnvironment(Exception):
     pass
 
+class AbortedByUser(Exception):
+    pass
+

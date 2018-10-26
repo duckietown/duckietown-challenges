@@ -467,7 +467,7 @@ def wrap_evaluator(evaluator, root='/'):
     try:
         try:
             evaluator.prepare(cie)
-        except BaseException as e:
+        except (BaseException, KeyboardInterrupt):
             msg = 'Preparation aborted:\n%s' % traceback.format_exc()
             cie.set_challenge_parameters({SPECIAL_ABORT: msg})
             raise
@@ -488,23 +488,27 @@ def wrap_evaluator(evaluator, root='/'):
             evaluator.score(cie)
             cie.after_score()
 
+    except KeyboardInterrupt:
+        msg = 'Interrupted by user:\n%s' % traceback.format_exc()
+        declare(ChallengeResultsStatus.ERROR, msg) # TODO: aborted
+
     # failure
-    except InvalidSubmission as e:
+    except InvalidSubmission:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.FAILED, msg)
 
     # error of evaluator
-    except InvalidEvaluator as e:
+    except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
     # error of environment (not distinguished so far)
 
-    except InvalidEnvironment as e:
+    except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
-    except BaseException as e:
+    except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
@@ -531,22 +535,22 @@ def wrap_scorer(evaluator, root='/'):
         cie.after_score()
 
     # failure
-    except InvalidSubmission as e:
+    except InvalidSubmission:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.FAILED, msg)
 
     # error of evaluator
-    except InvalidEvaluator as e:
+    except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
     # error of environment (not distinguished so far)
 
-    except InvalidEnvironment as e:
+    except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
-    except BaseException as e:
+    except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
         declare(ChallengeResultsStatus.ERROR, msg)
 
