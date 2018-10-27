@@ -35,3 +35,5 @@ class ChallengesConstants(object):
         STATUS_JOB_ERROR,
         STATUS_JOB_ABORTED
     ]
+
+    JOB_TIMEOUT_MINUTES= 30

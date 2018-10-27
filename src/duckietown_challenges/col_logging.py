@@ -1,24 +1,27 @@
 # coding=utf-8
 import logging
 
+import termcolor
+
 __all__ = ['setup_logging_color', 'setup_logging_format', 'setup_logging']
 
 
 def setup_logging_format():
     from logging import Logger, StreamHandler, Formatter
     import logging
-
-    FORMAT = "%(name)15s|%(filename)15s:%(lineno)-4s - %(funcName)-15s| %(message)s"
-
-    logging.basicConfig(format=FORMAT)
+    pre = '%(asctime)s|%(name)s|%(filename)s:%(lineno)s|%(funcName)s(): '
+    pre = termcolor.colored(pre, attrs=['dark'])
+    FORMAT = pre + "%(message)s"
+    datefmt = "%H:%M:%S"
+    logging.basicConfig(format=FORMAT, datefmt=datefmt)
 
     if Logger.root.handlers:  # @UndefinedVariable
         for handler in Logger.root.handlers:  # @UndefinedVariable
             if isinstance(handler, StreamHandler):
-                formatter = Formatter(FORMAT)
+                formatter = Formatter(FORMAT, datefmt=datefmt)
                 handler.setFormatter(formatter)
     else:
-        logging.basicConfig(format=FORMAT)
+        logging.basicConfig(format=FORMAT, datefmt=datefmt)
 
 
 def add_coloring_to_emit_ansi(fn):
@@ -53,9 +56,7 @@ def add_coloring_to_emit_ansi(fn):
     return new
 
 
-
 def setup_logging_color():
-
     import platform
 
     if platform.system() != 'Windows':
