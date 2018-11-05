@@ -56,11 +56,14 @@ def declare_challenge_results(root, cr):
     write_yaml(data, fn)
 
 
+class NoResultsFound(Exception):
+    pass
+
 def read_challenge_results(root):
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     if not os.path.exists(fn):
         msg = 'File %r does not exist.' % fn
-        raise Exception(msg)
+        raise NoResultsFound(msg)
     #
     # with open(fn) as f:
     #     contents = f.read()

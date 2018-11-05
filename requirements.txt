@@ -5,7 +5,7 @@ oyaml
 numpy
 termcolor
 # for testing
-comptests==1.4.26
+comptests==1.4.27
 six
 future
 networkx>=2.2

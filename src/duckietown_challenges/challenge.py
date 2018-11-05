@@ -347,7 +347,7 @@ class ChallengeTransitions(object):
         # print('precs of %s: %s' % (x, res))
         return res
 
-    def get_next_steps(self, status):
+    def get_next_steps(self, status, step2age=None):
         """ status is a dictionary from step ID to
             status.
 
@@ -386,7 +386,13 @@ class ChallengeTransitions(object):
 
         def predecessors_success(_):
             precs = self.get_precs(_)
+            its_age = step2age.get(_, -1) if step2age else 0
             for k2 in precs:
+                pred_age = step2age.get(k2, -1) if step2age else 0
+                # dclogger.debug('%s %s %s %s' % (_, its_age, k2, pred_age))
+                if pred_age > its_age:
+                    # dclogger.debug('Its depedency is younger')
+                    return False
                 if k2 not in status or status[k2] != CS.STATUS_JOB_SUCCESS:
                     return False
             return True
@@ -411,7 +417,8 @@ class ChallengeTransitions(object):
                 # dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
-                if t.second in status and status[t.second] not in like_it_does_not_exist:
+                if t.second in status and status[t.second] not in like_it_does_not_exist and \
+                        predecessors_success(t.second):
                     # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
                     pass
                 else:
@@ -467,26 +474,33 @@ class Score(object):
     LOWER_IS_BETTER = 'lower-is-better'
     ALLOWED = [HIGHER_IS_BETTER, LOWER_IS_BETTER]
 
-    def __init__(self, name, description, order):
+    def __init__(self, name, description, order, discretization):
         if description == 'descending':
             order = Score.HIGHER_IS_BETTER
 
         if description == 'ascending':
             order = Score.LOWER_IS_BETTER
 
-        if not order in Score.ALLOWED:
+        if order not in Score.ALLOWED:
             msg = 'Invalid value %s' % order
             raise ValueError(msg)
 
+        if discretization is not None:
+            discretization = float(discretization)
+            if discretization <= 0:
+                msg = 'Need a strictly positive discretization: %s' % discretization
+                raise ValueError(msg)
         self.name = name
         self.description = description
         self.order = order
+        self.discretization = discretization
 
     def __repr__(self):
         return nice_repr(self)
 
     def as_dict(self):
-        return dict(description=self.description, name=self.name, order=self.order)
+        return dict(description=self.description, name=self.name, order=self.order,
+                    discretization=self.discretization)
 
     @classmethod
     def from_yaml(cls, data0):
@@ -504,15 +518,17 @@ class Score(object):
                 order = Score.HIGHER_IS_BETTER
             if order == 'descending':
                 order = Score.LOWER_IS_BETTER
-            if not order in Score.ALLOWED:
+            if order not in Score.ALLOWED:
                 msg = 'Invalid value "%s" not in %s.' % (order, Score.ALLOWED)
                 raise InvalidChallengeDescription(msg)
+
+            discretization = data.pop('discretization', None)
 
             if data:
                 msg = 'Extra keys in configuration file: %s' % list(data)
                 raise InvalidChallengeDescription(msg)
 
-            return Score(name, description, order)
+            return Score(name, description, order, discretization=discretization)
         except KeyError as e:
             msg = 'Missing config %s' % e
             raise_wrapped(InvalidChallengeDescription, e, msg)
