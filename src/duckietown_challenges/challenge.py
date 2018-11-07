@@ -474,7 +474,7 @@ class Score(object):
     LOWER_IS_BETTER = 'lower-is-better'
     ALLOWED = [HIGHER_IS_BETTER, LOWER_IS_BETTER]
 
-    def __init__(self, name, description, order, discretization):
+    def __init__(self, name, description, order, discretization, short):
         if description == 'descending':
             order = Score.HIGHER_IS_BETTER
 
@@ -494,13 +494,14 @@ class Score(object):
         self.description = description
         self.order = order
         self.discretization = discretization
+        self.short = short
 
     def __repr__(self):
         return nice_repr(self)
 
     def as_dict(self):
         return dict(description=self.description, name=self.name, order=self.order,
-                    discretization=self.discretization)
+                    discretization=self.discretization, short=self.short)
 
     @classmethod
     def from_yaml(cls, data0):
@@ -510,6 +511,7 @@ class Score(object):
                 raise InvalidChallengeDescription(msg)
 
             data = dict(**data0)
+            short = data.pop('short', None)
             name = data.pop('name')
             description = data.pop('description', None)
             order = data.pop('order', Score.HIGHER_IS_BETTER)
@@ -528,7 +530,7 @@ class Score(object):
                 msg = 'Extra keys in configuration file: %s' % list(data)
                 raise InvalidChallengeDescription(msg)
 
-            return Score(name, description, order, discretization=discretization)
+            return Score(name, description, order, discretization=discretization, short=short)
         except KeyError as e:
             msg = 'Missing config %s' % e
             raise_wrapped(InvalidChallengeDescription, e, msg)
