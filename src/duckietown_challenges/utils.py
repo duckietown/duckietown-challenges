@@ -115,11 +115,11 @@ def wrap_config_reader2(f, cls, data, *args, **kwargs):
     except InvalidConfiguration as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\n\n' + indent(write(data), '  ')
-        raise_wrapped(InvalidConfiguration, e, msg, compact=True)
+        raise_wrapped(InvalidConfiguration, e, msg, compact=True); raise
     except BaseException as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\n\n' + indent(write(data), '  ')
-        raise_wrapped(InvalidConfiguration, e, msg, compact=False)
+        raise_wrapped(InvalidConfiguration, e, msg, compact=False); raise
 
     if data2:
         msg = 'Unused fields %s ' % list(data2)
