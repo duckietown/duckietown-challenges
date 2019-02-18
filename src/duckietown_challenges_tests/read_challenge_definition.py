@@ -2,9 +2,10 @@ import yaml
 from comptests import comptest, run_module_tests
 
 from duckietown_challenges.challenge import ChallengeDescription, ServiceDefinition, EvaluationParameters
-# language=yaml
+
 from duckietown_challenges.utils import InvalidConfiguration
 
+# language=yaml
 data = """
 
 challenge: "challenge-short"

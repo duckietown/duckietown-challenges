@@ -28,10 +28,10 @@ class ChallengesConstants(object):
     STATUS_JOB_ABORTED = 'aborted'
 
     ALLOWED_JOB_STATUS = [
-        STATUS_JOB_TIMEOUT,
         STATUS_JOB_EVALUATION,
-        STATUS_JOB_FAILED,
         STATUS_JOB_SUCCESS,
+        STATUS_JOB_TIMEOUT,
+        STATUS_JOB_FAILED,
         STATUS_JOB_ERROR,
         STATUS_JOB_ABORTED
     ]
