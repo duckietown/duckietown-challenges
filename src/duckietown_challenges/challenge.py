@@ -1,8 +1,9 @@
 # coding=utf-8
 from collections import namedtuple
 from datetime import datetime, date
-
+from typing import *
 import yaml
+from dataclasses import dataclass
 from networkx import DiGraph, ancestors
 
 from . import dclogger
@@ -154,10 +155,44 @@ def nice_repr(x):
 import six
 
 
-class ServiceDefinition(object):
-    def __init__(self, image, environment, image_digest, build):
+
+class Build(object):
+    def __init__(self, context, dockerfile, args):
+        self.context = context
+        self.dockerfile = dockerfile
+        self.args = args
+
+    def __repr__(self):
+        return nice_repr(self)
+
+    def as_dict(self):
+        return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
+
+    @classmethod
+    def from_yaml(cls, d0):
+        if not isinstance(d0, dict):
+            msg = 'Expected dict, got %s' % d0.__repr__()
+            raise ValueError(msg)
+        d = dict(**d0)
+
+        context = d.pop('context', '.')
+        dockerfile = d.pop('dockerfile', 'Dockerfile')
+        args = d.pop('args', {})
+
+        if d:
+            msg = 'Extra fields: %s' % list(d0)
+            raise ValueError(msg)
+        return Build(context, dockerfile, args)
+
+
+@dataclass
+class ServiceDefinition:
+    image: Optional[str]
+    image_digest: Optional[str]
+    build: Build
+    def __init__(self, image: str, environment, image_digest, build):
         check_isinstance(environment, dict)
-        check_isinstance(image, six.string_types)
+
         self.image = str(image)
         self.image_digest = image_digest
         self.environment = environment
@@ -185,7 +220,7 @@ class ServiceDefinition(object):
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, d0):
-        image = d0.pop('image')
+        image = d0.pop('image', None)
         environment = d0.pop('environment', {})
         if environment is None:
             environment = {}
@@ -197,6 +232,10 @@ class ServiceDefinition(object):
         else:
             build = None
         image_digest = d0.pop('image_digest', None)
+
+        if build and image:
+            msg = 'Cannot specify both "build" and "image".'
+            raise ValueError(msg)
 
         for k, v in list(environment.items()):
             if '-' in k:
@@ -228,34 +267,6 @@ class ServiceDefinition(object):
 
         return res
 
-
-class Build(object):
-    def __init__(self, context, dockerfile, args):
-        self.context = context
-        self.dockerfile = dockerfile
-        self.args = args
-
-    def __repr__(self):
-        return nice_repr(self)
-
-    def as_dict(self):
-        return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
-
-    @classmethod
-    def from_yaml(cls, d0):
-        if not isinstance(d0, dict):
-            msg = 'Expected dict, got %s' % d0.__repr__()
-            raise ValueError(msg)
-        d = dict(**d0)
-
-        context = d.pop('context', '.')
-        dockerfile = d.pop('dockerfile', 'Dockerfile')
-        args = d.pop('args', {})
-
-        if d:
-            msg = 'Extra fields: %s' % list(d0)
-            raise ValueError(msg)
-        return Build(context, dockerfile, args)
 
 
 #

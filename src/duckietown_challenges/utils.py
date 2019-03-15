@@ -1,10 +1,11 @@
 # coding=utf-8
+import json
 import math
 import os
-
 import traceback
-import six
+
 import decorator
+import six
 
 from . import dclogger, InvalidConfiguration
 
@@ -90,17 +91,21 @@ def d8n_mkdirs_thread_safe(dst):
 
 
 @decorator.decorator
-def wrap_config_reader2(f, cls, data, *args, **kwargs):
+def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
     """ Decorator for a function that takes a (clsname, dict) """
     # def f2(x, *args, **kwargs):
     if not isinstance(data, dict):
         msg = 'Expected dict, got %s' % data.__repr__()
         raise ValueError(msg)
 
-    def write(d):
+    def write(d: dict):
+        assert isinstance(d, dict)
         try:
-            return safe_yaml_dump(d)
+            return json.dumps(d, indent=4)
         except:
+            # try:
+            #     return safe_yaml_dump(d, default_flow_style=False).encode('utf-8')
+            # except:
             return str(d)
 
     data2 = dict(**data)
@@ -110,28 +115,30 @@ def wrap_config_reader2(f, cls, data, *args, **kwargs):
     except KeyError as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\nMissing configuration "%s". Specified: %s' % (e.args, list(data))
-        msg += '\n\n' + indent(write(data), '  ')
+        msg += '\n\n' + indent(write(data), '  > ') + '\n'
         raise InvalidConfiguration(msg)
     except InvalidConfiguration as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
-        msg += '\n\n' + indent(write(data), '  ')
-        raise_wrapped(InvalidConfiguration, e, msg, compact=True); raise
+        msg += '\n\n' + indent(write(data), '  > ') + '\n'
+        raise_wrapped(InvalidConfiguration, e, msg, compact=True);
+        raise
     except BaseException as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
-        msg += '\n\n' + indent(write(data), '  ')
-        raise_wrapped(InvalidConfiguration, e, msg, compact=False); raise
+        msg += '\n\n' + indent(write(data), '  > ') + '\n'
+        raise_wrapped(InvalidConfiguration, e, msg, compact=False);
+        raise
 
     if data2:
         msg = 'Unused fields %s ' % list(data2)
-        msg += '\n\n' + indent(write(data), '  ')
+        msg += '\n\n' + indent(write(data), '  > ')
         raise InvalidConfiguration(msg)
 
     return res
 
 
-def safe_yaml_dump(x):
+def safe_yaml_dump(x, **args):
     import yaml
-    s = yaml.safe_dump(x, encoding='utf-8', indent=4, allow_unicode=True)
+    s = yaml.safe_dump(x, encoding='utf-8', indent=4, allow_unicode=True, **args)
     return s
 
 
@@ -171,7 +178,6 @@ def friendly_size2(b):
 
     gbs = b / (1024.0 * 1024.0 * 1024)
     return '%.2f GB' % gbs
-
 
 
 def indent(s, prefix, first=None):

@@ -1,5 +1,5 @@
 # coding=utf-8
-__version__ = '3.2.15'
+__version__ = '3.3.0'
 import logging
 
 logging.basicConfig()
