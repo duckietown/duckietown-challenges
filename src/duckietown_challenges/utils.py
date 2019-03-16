@@ -2,10 +2,8 @@
 import json
 import math
 import os
-import traceback
 
 import decorator
-import six
 
 from . import dclogger, InvalidConfiguration
 
@@ -116,17 +114,16 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\nMissing configuration "%s". Specified: %s' % (e.args, list(data))
         msg += '\n\n' + indent(write(data), '  > ') + '\n'
-        raise InvalidConfiguration(msg)
+        raise InvalidConfiguration(msg) from e
     except InvalidConfiguration as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\n\n' + indent(write(data), '  > ') + '\n'
-        raise_wrapped(InvalidConfiguration, e, msg, compact=True);
-        raise
+        raise InvalidConfiguration(msg) from e
     except BaseException as e:
         msg = 'Could not interpret the configuration data using %s:%s()' % (cls.__name__, f.__name__)
         msg += '\n\n' + indent(write(data), '  > ') + '\n'
-        raise_wrapped(InvalidConfiguration, e, msg, compact=False);
-        raise
+        # raise_wrapped(InvalidConfiguration, e, msg, compact=False)
+        raise InvalidConfiguration(msg) from e
 
     if data2:
         msg = 'Unused fields %s ' % list(data2)
@@ -180,9 +177,9 @@ def friendly_size2(b):
     return '%.2f GB' % gbs
 
 
-def indent(s, prefix, first=None):
+def indent(s, prefix: str, first=None):
     s = str(s)
-    assert isinstance(prefix, six.string_types)
+
     lines = s.split('\n')
     if not lines:
         return ''
@@ -201,43 +198,45 @@ def indent(s, prefix, first=None):
     return '\n'.join(res)
 
 
-def raise_wrapped(etype, e, msg, compact=False, exc=None, **kwargs):
-    """ Raises an exception of type etype by wrapping
-        another exception "e" with its backtrace and adding
-        the objects in kwargs as formatted by format_obs.
-
-        if compact = False, write the whole traceback, otherwise just str(e).
-
-        exc = output of sys.exc_info()
-    """
-
-    e = raise_wrapped_make(etype, e, msg, compact=compact, **kwargs)
-
-    #     if exc is not None:
-    #         _, _, trace = exc
-    #         raise etype, e.args, trace
-    #     else:
-    raise e
-
-
-def raise_wrapped_make(etype, e, msg, compact=False, **kwargs):
-    """ Constructs the exception to be thrown by raise_wrapped() """
-    assert isinstance(e, BaseException), type(e)
-    assert isinstance(msg, str), type(msg)
-    s = msg
-
-    import sys
-    if sys.version_info[0] >= 3:
-        es = str(e)
-    else:
-        if compact:
-            es = str(e)
-        else:
-            es = traceback.format_exc(e)
-
-    s += '\n' + indent(es.strip(), '| ')
-
-    return etype(s)
+#
+#
+# def raise_wrapped(etype, e, msg, compact=False, exc=None, **kwargs):
+#     """ Raises an exception of type etype by wrapping
+#         another exception "e" with its backtrace and adding
+#         the objects in kwargs as formatted by format_obs.
+#
+#         if compact = False, write the whole traceback, otherwise just str(e).
+#
+#         exc = output of sys.exc_info()
+#     """
+#
+#     e = raise_wrapped_make(etype, e, msg, compact=compact, **kwargs)
+#
+#     #     if exc is not None:
+#     #         _, _, trace = exc
+#     #         raise etype, e.args, trace
+#     #     else:
+#     raise e
+#
+#
+# def raise_wrapped_make(etype, e, msg, compact=False, **kwargs):
+#     """ Constructs the exception to be thrown by raise_wrapped() """
+#     assert isinstance(e, BaseException), type(e)
+#     assert isinstance(msg, str), type(msg)
+#     s = msg
+#
+#     import sys
+#     if sys.version_info[0] >= 3:
+#         es = str(e)
+#     else:
+#         if compact:
+#             es = str(e)
+#         else:
+#             es = traceback.format_exc()
+#
+#     s += '\n' + indent(es.strip(), '| ')
+#
+#     return etype(s)
 
 
 def check_isinstance(ob, expected, **kwargs):

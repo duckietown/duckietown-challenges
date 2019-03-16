@@ -2,8 +2,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class ChallengeEvaluator(object):
-    __metaclass__ = ABCMeta
+class ChallengeEvaluator(metaclass=ABCMeta):
 
     @abstractmethod
     def prepare(self, cie):
@@ -14,8 +13,7 @@ class ChallengeEvaluator(object):
         pass
 
 
-class ChallengeScorer(object):
-    __metaclass__ = ABCMeta
+class ChallengeScorer(metaclass=ABCMeta):
 
     @abstractmethod
     def score(self, cie):

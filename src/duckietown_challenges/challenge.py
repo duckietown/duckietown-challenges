@@ -1,15 +1,16 @@
 # coding=utf-8
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime, date
 from typing import *
+
 import yaml
-from dataclasses import dataclass
 from networkx import DiGraph, ancestors
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
-from .utils import indent, safe_yaml_dump, raise_wrapped, check_isinstance, wrap_config_reader2
+from .utils import indent, safe_yaml_dump, check_isinstance, wrap_config_reader2
 
 
 class InvalidChallengeDescription(Exception):
@@ -27,48 +28,126 @@ ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
 allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 
-class ChallengeStep(object):
-    def __init__(self, name, title, description, evaluation_parameters,
-                 features_required, timeout):
-        self.name = name
-        self.title = title
-        self.description = description
-        check_isinstance(evaluation_parameters, EvaluationParameters)
-        self.evaluation_parameters = evaluation_parameters
-        check_isinstance(features_required, dict)
-        self.features_required = features_required
-        self.timeout = timeout
+@dataclass(repr=False)
+class Build:
+    context: str
+    dockerfile: str
+    args: Dict[str, Any]
+
+    #
+    # def __init__(self, context, dockerfile, args):
+    #     self.context = context
+    #     self.dockerfile = dockerfile
+    #     self.args = args
+
+    def __repr__(self):
+        return nice_repr(self)
 
     def as_dict(self):
-        data = {}
-        data['title'] = self.title
-        data['description'] = self.description
-        data['evaluation_parameters'] = self.evaluation_parameters.as_dict()
-        data['features_required'] = self.features_required
-        data['timeout'] = self.timeout
-        return data
+        return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
+
+    @classmethod
+    def from_yaml(cls, d0):
+        if not isinstance(d0, dict):
+            msg = 'Expected dict, got %s' % d0.__repr__()
+            raise ValueError(msg)
+        d = dict(**d0)
+
+        context = d.pop('context', '.')
+        dockerfile = d.pop('dockerfile', 'Dockerfile')
+        args = d.pop('args', {})
+
+        if d:
+            msg = 'Extra fields: %s' % list(d0)
+            raise ValueError(msg)
+        return Build(context, dockerfile, args)
+
+
+@dataclass
+class ServiceDefinition:
+    image: Optional[str]
+    image_digest: Optional[str]
+    build: Build
+    environment: Dict[str, Any]
+
+    # def __init__(self, image: str, environment, image_digest, build):
+    #     check_isinstance(environment, dict)
+    #
+    #     self.image = str(image)
+    #     self.image_digest = image_digest
+    #     self.environment = environment
+    #     self.build = build
+
+    def __repr__(self):
+        return nice_repr(self)
+
+    def equivalent(self, other):
+        if self.image != SUBMISSION_CONTAINER_TAG:
+            if self.image_digest is None or other.image_digest is None:
+                msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (self, other)
+                raise NotEquivalent(msg)
+            if self.image_digest != other.image_digest:
+                msg = 'Different digests:\n\n  %s\n\n  %s' % (self.image_digest, other.image_digest)
+                raise NotEquivalent(msg)
+
+        if self.environment != other.environment:
+            msg = 'Different environments:\n\n %s\n\n  %s' % (self.environment, other.environment)
+            raise NotEquivalent(msg)
 
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, data, name):
-        title = data.pop('title')
-        description = data.pop('description')
-        evaluation_parameters = EvaluationParameters.from_yaml(data.pop('evaluation_parameters'))
-        features_required = data.pop('features_required')
-        timeout = data.pop('timeout')
+    def from_yaml(cls, d0):
+        image = d0.pop('image', None)
+        environment = d0.pop('environment', {})
+        if environment is None:
+            environment = {}
 
-        return ChallengeStep(name, title, description, evaluation_parameters,
-                             features_required, timeout=timeout)
-    #
-    # def update_image(self):
-    #     self.evaluation_parameters.update_image()
+        if 'build' in d0:
+            build = d0.pop('build')
+            if build is not None:
+                build = Build.from_yaml(build)
+        else:
+            build = None
+        image_digest = d0.pop('image_digest', None)
+
+        if build and image:
+            msg = 'Cannot specify both "build" and "image".'
+            raise ValueError(msg)
+
+        for k, v in list(environment.items()):
+            if '-' in k:
+                msg = 'Invalid environment variable "%s" should not contain a space.' % k
+                raise InvalidConfiguration(msg)
+
+            if isinstance(v, (int, float)):
+                environment[k] = str(v)
+            elif isinstance(v, str):
+                pass
+            elif isinstance(v, dict):
+                # interpret as tring
+                s = yaml.safe_dump(v)
+                environment[k] = s
+            else:
+                msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k)
+                raise InvalidConfiguration(msg)
+
+        return ServiceDefinition(image=image, environment=environment, image_digest=image_digest, build=build)
+
+    def as_dict(self):
+
+        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
+
+        if self.build:
+            res['build'] = self.build.as_dict()
+        else:
+            pass
+
+        return res
 
 
-SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
-
-
-class EvaluationParameters(object):
+@dataclass
+class EvaluationParameters:
     """
         You can specify these fields for the docker file:
 
@@ -85,11 +164,14 @@ class EvaluationParameters(object):
                         var: var
 
     """
+    version: str
+    services: Dict[str, ServiceDefinition]
 
     def __init__(self, version, services):
         self.version = version
         self.services = services
 
+    # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, d):
@@ -143,6 +225,53 @@ class EvaluationParameters(object):
                 raise NotEquivalent(msg)
 
 
+@dataclass
+class ChallengeStep(object):
+    name: str
+    title: str
+    description: str
+    evaluation_parameters: EvaluationParameters
+    features_required: Dict[str, Any]
+    timeout: float
+
+    #
+    # def __init__(self, name, title, description, evaluation_parameters,
+    #              features_required, timeout):
+    #     self.name = name
+    #     self.title = title
+    #     self.description = description
+    #     check_isinstance(evaluation_parameters, EvaluationParameters)
+    #     self.evaluation_parameters = evaluation_parameters
+    #     check_isinstance(features_required, dict)
+    #     self.features_required = features_required
+    #     self.timeout = timeout
+
+    def as_dict(self):
+        data = {}
+        data['title'] = self.title
+        data['description'] = self.description
+        data['evaluation_parameters'] = self.evaluation_parameters.as_dict()
+        data['features_required'] = self.features_required
+        data['timeout'] = self.timeout
+        return data
+
+    # noinspection PyArgumentList
+    @classmethod
+    @wrap_config_reader2
+    def from_yaml(cls, data, name):
+        title = data.pop('title')
+        description = data.pop('description')
+        evaluation_parameters = EvaluationParameters.from_yaml(data.pop('evaluation_parameters'))
+        features_required = data.pop('features_required', {})
+        timeout = data.pop('timeout')
+
+        return ChallengeStep(name, title, description, evaluation_parameters,
+                             features_required, timeout=timeout)
+
+
+SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
+
+
 class NotEquivalent(Exception):
     pass
 
@@ -150,123 +279,6 @@ class NotEquivalent(Exception):
 def nice_repr(x):
     K = type(x).__name__
     return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
-
-
-import six
-
-
-
-class Build(object):
-    def __init__(self, context, dockerfile, args):
-        self.context = context
-        self.dockerfile = dockerfile
-        self.args = args
-
-    def __repr__(self):
-        return nice_repr(self)
-
-    def as_dict(self):
-        return dict(context=self.context, dockerfile=self.dockerfile, args=self.args)
-
-    @classmethod
-    def from_yaml(cls, d0):
-        if not isinstance(d0, dict):
-            msg = 'Expected dict, got %s' % d0.__repr__()
-            raise ValueError(msg)
-        d = dict(**d0)
-
-        context = d.pop('context', '.')
-        dockerfile = d.pop('dockerfile', 'Dockerfile')
-        args = d.pop('args', {})
-
-        if d:
-            msg = 'Extra fields: %s' % list(d0)
-            raise ValueError(msg)
-        return Build(context, dockerfile, args)
-
-
-@dataclass
-class ServiceDefinition:
-    image: Optional[str]
-    image_digest: Optional[str]
-    build: Build
-    def __init__(self, image: str, environment, image_digest, build):
-        check_isinstance(environment, dict)
-
-        self.image = str(image)
-        self.image_digest = image_digest
-        self.environment = environment
-        self.build = build
-
-    def __repr__(self):
-        return nice_repr(self)
-
-    def equivalent(self, other):
-        if self.image != SUBMISSION_CONTAINER_TAG:
-            if self.image_digest is None or other.image_digest is None:
-                msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (self, other)
-                raise NotEquivalent(msg)
-            if self.image_digest != other.image_digest:
-                msg = 'Different digests:\n\n  %s\n\n  %s' % (self.image_digest, other.image_digest)
-                raise NotEquivalent(msg)
-
-        if self.environment != other.environment:
-            msg = 'Different environments:\n\n %s\n\n  %s' % (self.environment, other.environment)
-            raise NotEquivalent(msg)
-
-    # def update_image(self):
-    #     self.image = get_latest(self.image)
-
-    @classmethod
-    @wrap_config_reader2
-    def from_yaml(cls, d0):
-        image = d0.pop('image', None)
-        environment = d0.pop('environment', {})
-        if environment is None:
-            environment = {}
-
-        if 'build' in d0:
-            build = d0.pop('build')
-            if build is not None:
-                build = Build.from_yaml(build)
-        else:
-            build = None
-        image_digest = d0.pop('image_digest', None)
-
-        if build and image:
-            msg = 'Cannot specify both "build" and "image".'
-            raise ValueError(msg)
-
-        for k, v in list(environment.items()):
-            if '-' in k:
-                msg = 'Invalid environment variable "%s" should not contain a space.' % k
-                raise InvalidConfiguration(msg)
-
-            if isinstance(v, (int, float)):
-                environment[k] = str(v)
-            elif isinstance(v, six.string_types):
-                pass
-            elif isinstance(v, dict):
-                # interpret as tring
-                s = yaml.safe_dump(v)
-                environment[k] = s
-            else:
-                msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k)
-                raise InvalidConfiguration(msg)
-
-        return ServiceDefinition(image, environment, image_digest, build)
-
-    def as_dict(self):
-
-        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
-
-        if self.build:
-            res['build'] = self.build.as_dict()
-        else:
-            pass
-
-        return res
-
 
 
 #
@@ -297,7 +309,10 @@ class InvalidSteps(Exception):
     pass
 
 
-class ChallengeTransitions(object):
+@dataclass(repr=False)
+class ChallengeTransitions:
+    steps: List[str]
+    transitions: List[Transition]
 
     @staticmethod
     def steps_from_transitions(transitions):
@@ -310,14 +325,25 @@ class ChallengeTransitions(object):
 
         return steps
 
-    def __init__(self, transitions, steps):
-        self.transitions = []
-        self.steps = steps
-        for first, condition, second in transitions:
-            assert first == STATE_START or first in self.steps, first
-            assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in self.steps, second
+    @staticmethod
+    def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]):
+        transitions = []
+        for first, condition, second in transitions_str:
+            assert first == STATE_START or first in steps, first
+            assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps, second
             assert condition in ALLOWED_CONDITION_TRIGGERS, condition
-            self.transitions.append(Transition(first, condition, second))
+            transitions.append(Transition(first, condition, second))
+        return ChallengeTransitions(steps, transitions)
+
+    #
+    # def __init__(self, transitions, steps):
+    #     self.transitions = []
+    #     self.steps = steps
+    #     for first, condition, second in self.transitions:
+    #         assert first == STATE_START or first in self.steps, first
+    #         assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in self.steps, second
+    #         assert condition in ALLOWED_CONDITION_TRIGGERS, condition
+    #         self.transitions.append(Transition(first, condition, second))
 
     def as_list(self):
         res = []
@@ -343,7 +369,7 @@ class ChallengeTransitions(object):
         return ts
 
     def top_ordered(self):
-        G = self.get_graph()
+        _G = self.get_graph() # XXX
         return list(self.steps)
 
     def get_graph(self):
@@ -444,42 +470,6 @@ class ChallengeTransitions(object):
         return False, None, to_activate
 
 
-class Scoring(object):
-    def __init__(self, scores):
-        self.scores = scores
-
-    def as_dict(self):
-        scores = [_.as_dict() for _ in self.scores]
-        return dict(scores=scores)
-
-    def __repr__(self):
-        return nice_repr(self)
-
-    @classmethod
-    def from_yaml(cls, data0):
-        try:
-            if not isinstance(data0, dict):
-                msg = 'Expected dict, got %s' % type(data0).__name__
-                raise InvalidChallengeDescription(msg)
-
-            data = dict(**data0)
-            scores = data.pop('scores')
-            if not isinstance(scores, list):
-                msg = 'Expected list, got %s' % type(scores).__name__
-                raise InvalidChallengeDescription(msg)
-
-            scores = [Score.from_yaml(_) for _ in scores]
-            if data:
-                msg = 'Extra keys in configuration file: %s' % list(data)
-                raise InvalidChallengeDescription(msg)
-
-            return Scoring(scores)
-
-        except KeyError as e:
-            msg = 'Missing config %s' % e
-            raise_wrapped(InvalidChallengeDescription, e, msg)
-
-
 class Score(object):
     HIGHER_IS_BETTER = 'higher-is-better'
     LOWER_IS_BETTER = 'lower-is-better'
@@ -541,10 +531,46 @@ class Score(object):
                 msg = 'Extra keys in configuration file: %s' % list(data)
                 raise InvalidChallengeDescription(msg)
 
-            return Score(name, description, order, discretization=discretization, short=short)
+            return Score(name=name, description=description, order=order, discretization=discretization, short=short)
         except KeyError as e:
             msg = 'Missing config %s' % e
-            raise_wrapped(InvalidChallengeDescription, e, msg)
+            raise InvalidChallengeDescription(msg) from e
+
+@dataclass(repr=False)
+class Scoring:
+    scores: List[Score]
+
+
+    def as_dict(self):
+        scores = [_.as_dict() for _ in self.scores]
+        return dict(scores=scores)
+
+    def __repr__(self):
+        return nice_repr(self)
+
+    @classmethod
+    def from_yaml(cls, data0):
+        try:
+            if not isinstance(data0, dict):
+                msg = 'Expected dict, got %s' % type(data0).__name__
+                raise InvalidChallengeDescription(msg)
+
+            data = dict(**data0)
+            scores = data.pop('scores')
+            if not isinstance(scores, list):
+                msg = 'Expected list, got %s' % type(scores).__name__
+                raise InvalidChallengeDescription(msg)
+
+            scores = [Score.from_yaml(_) for _ in scores]
+            if data:
+                msg = 'Extra keys in configuration file: %s' % list(data)
+                raise InvalidChallengeDescription(msg)
+
+            return Scoring(scores)
+
+        except KeyError as e:
+            msg = 'Missing config %s' % e
+            raise InvalidChallengeDescription(msg) from e
 
 
 class ChallengeDescription(object):
@@ -575,7 +601,7 @@ class ChallengeDescription(object):
                 raise InvalidChallengeDescription(msg)
 
         self.first_step = None
-        self.ct = ChallengeTransitions(transitions, list(self.steps))
+        self.ct = ChallengeTransitions.from_steps_transitions(list(self.steps), transitions)
 
     def get_steps(self):
         return self.steps
@@ -583,6 +609,7 @@ class ChallengeDescription(object):
     def get_next_steps(self, status):
         return self.ct.get_next_steps(status)
 
+    # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, data):
@@ -643,7 +670,7 @@ def interpret_date(d):
     if isinstance(d, date):
         return datetime.combine(d, datetime.min.time())
 
-    if isinstance(d, six.string_types):
+    if isinstance(d, str):
         from dateutil import parser
         return parser.parse(d)
     raise ValueError(d.__repr__())

@@ -6,7 +6,7 @@ import sys
 import yaml
 from .challenge import SubmissionDescription
 
-from . import dclogger
+from . import dclogger, DEFAULT_DTSERVER
 
 
 def make_readmes_templates_main():

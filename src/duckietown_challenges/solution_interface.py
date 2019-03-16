@@ -2,14 +2,12 @@
 from abc import ABCMeta, abstractmethod
 
 
-class ChallengeInterfaceSolution(object):
+class ChallengeInterfaceSolution(metaclass=ABCMeta):
     """
       When a solution runs, an instance of this class
       is passed to the solution's run() method.
 
     """
-
-    __metaclass__ = ABCMeta
 
     # Misc methods for accessing the environment
     @abstractmethod
@@ -160,8 +158,8 @@ class ChallengeInterfaceSolution(object):
             return f.read()
 
 
-class ChallengeInterfaceEvaluator(object):
-    __metaclass__ = ABCMeta
+class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
+
 
     # Methods for the
 

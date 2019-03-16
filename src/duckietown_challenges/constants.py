@@ -1,6 +1,8 @@
 # coding=utf-8
 import os
 
+DEFAULT_ROOT = '/challenges'
+
 # In the end, the evaluator must create this file
 CHALLENGE_RESULTS_DIR = 'challenge-results'
 CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')
@@ -18,6 +20,7 @@ CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.
 CHALLENGE_SOLUTION_OUTPUT_DIR = 'challenge-solution-output'
 CHALLENGE_EVALUATION_OUTPUT_DIR = 'challenge-evaluation-output'
 CHALLENGE_DESCRIPTION_DIR = 'challenge-description'
+CHALLENGE_TMP_SUBDIR = 'tmp'
 
 CHALLENGE_PREVIOUS_STEPS_DIR = 'previous-steps'
 

@@ -2,8 +2,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class ChallengeSolution(object):
-    __metaclass__ = ABCMeta
+class ChallengeSolution(metaclass=ABCMeta):
 
     @abstractmethod
     def run(self, cie):

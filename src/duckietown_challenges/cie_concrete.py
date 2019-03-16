@@ -12,10 +12,10 @@ from collections import namedtuple
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
 from .constants import CHALLENGE_DESCRIPTION_YAML, CHALLENGE_SOLUTION_OUTPUT_YAML, CHALLENGE_SOLUTION_OUTPUT_DIR, \
     CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, ChallengeResultsStatus, CHALLENGE_PREVIOUS_STEPS_DIR, \
-    ENV_CHALLENGE_NAME
+    ENV_CHALLENGE_NAME, DEFAULT_ROOT, CHALLENGE_TMP_SUBDIR
 from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
-from .utils import raise_wrapped, d8n_make_sure_dir_exists
+from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
 
 ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
@@ -75,7 +75,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         self.failure_declared_msg = False
 
     def get_tmp_dir(self):
-        return tempfile.mkdtemp()
+        return a_tmp_dir(self.root)
 
     def get_challenge_parameters(self):
         fn = os.path.join(self.root, CHALLENGE_DESCRIPTION_YAML)
@@ -108,14 +108,14 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
             self.solution_output_files.add(basename, from_file, description)
         except ValueError as e:
             msg = 'Invalid set_solution_output_file()'
-            raise_wrapped(InvalidSubmission, e, msg)
+            raise InvalidSubmission(msg) from e
 
     def set_solution_output_file_from_data(self, basename, contents, description=None):
         try:
             self.solution_output_files.add_from_data(basename, contents, description)
         except ValueError as e:
             msg = 'Invalid set_solution_output_file()'
-            raise_wrapped(InvalidSubmission, e, msg)
+            raise InvalidSubmission(msg) from e
 
     def info(self, s):
         dclogger.info('solution:%s' % s)
@@ -234,9 +234,17 @@ def wait_for_file(fn, timeout, wait):
         i += 1
 
 
+def a_tmp_dir(root):
+    dirname = os.path.join(root, CHALLENGE_TMP_SUBDIR)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    return tempfile.mkdtemp(dir=dirname)
+
+
 class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
-    def __init__(self, root='/'):
+    def __init__(self, root=DEFAULT_ROOT):
+        dclogger.info(f'ChallengeInterfaceEvaluatorConcrete root = {root}')
         self.root = root
 
         self.challenge_files = FS()  # -> ChallengeFile
@@ -250,7 +258,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.parameters = data
 
     def get_tmp_dir(self):
-        return tempfile.mkdtemp()
+        return a_tmp_dir(self.root)
 
     # preparation
 
@@ -259,7 +267,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             self.challenge_files.add(basename, from_file, description)
         except ValueError as e:
             msg = 'Invalid set_challenge_file()'
-            raise_wrapped(InvalidEvaluator, e, msg)
+            raise InvalidEvaluator(msg) from e
 
     def wait_for_solution(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
@@ -267,7 +275,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             return wait_for_file(fn, timeout=TIMEOUT_SOLUTION, wait=1)
         except Timeout as e:
             msg = 'Time out: %s' % e
-            raise InvalidSubmission(msg)
+            raise InvalidSubmission(msg) from e
 
     def get_solution_output_dict(self):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_YAML)
@@ -307,14 +315,14 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             self.evaluation_files.add(basename, from_file, description)
         except ValueError as e:
             msg = 'Invalid set_evaluation_file()'
-            raise_wrapped(InvalidEvaluator, e, msg)
+            raise InvalidEvaluator(msg) from e
 
     def set_evaluation_file_from_data(self, basename, contents, description=None):
         try:
             self.evaluation_files.add_from_data(basename, contents, description)
         except ValueError as e:
             msg = 'Invalid set_evaluation_file_from_data()'
-            raise_wrapped(InvalidEvaluator, e, msg)
+            raise InvalidEvaluator(msg) from e
 
     def info(self, s):
         dclogger.info('evaluation: %s' % s)
@@ -448,9 +456,11 @@ SPECIAL_INVALID_EVALUATOR = 'invalid-evaluator'
 SPECIAL_INVALID_SUBMISSION = 'invalid-submission'
 
 
-def wrap_evaluator(evaluator, root='/'):
+def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
     from .col_logging import setup_logging_color
     setup_logging_color()
+
+    dclogger.info(f'wrap_evaluator with root = {root}')
 
     def declare(status, message):
         if status != ChallengeResultsStatus.SUCCESS:
@@ -467,10 +477,10 @@ def wrap_evaluator(evaluator, root='/'):
     try:
         try:
             evaluator.prepare(cie)
-        except (BaseException, KeyboardInterrupt):
-            msg = 'Preparation aborted:\n%s' % traceback.format_exc()
+        except (BaseException, KeyboardInterrupt) as e:
+            msg = 'Preparation aborted'
             cie.set_challenge_parameters({SPECIAL_ABORT: msg})
-            raise
+            raise Exception(msg) from e
         finally:
             cie.after_prepare()
 
@@ -490,7 +500,7 @@ def wrap_evaluator(evaluator, root='/'):
 
     except KeyboardInterrupt:
         msg = 'Interrupted by user:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg) # TODO: aborted
+        declare(ChallengeResultsStatus.ERROR, msg)  # TODO: aborted
 
     # failure
     except InvalidSubmission:
@@ -513,7 +523,7 @@ def wrap_evaluator(evaluator, root='/'):
         declare(ChallengeResultsStatus.ERROR, msg)
 
 
-def wrap_scorer(evaluator, root='/'):
+def wrap_scorer(evaluator, root=DEFAULT_ROOT):
     from .col_logging import setup_logging_color
     setup_logging_color()
 
@@ -555,10 +565,11 @@ def wrap_scorer(evaluator, root='/'):
         declare(ChallengeResultsStatus.ERROR, msg)
 
 
-def wrap_solution(solution, root='/'):
+def wrap_solution(solution, root=DEFAULT_ROOT):
     from .col_logging import setup_logging_color
     setup_logging_color()
     cis = ChallengeInterfaceSolutionConcrete(root=root)
+    # noinspection PyBroadException
     try:
 
         try:

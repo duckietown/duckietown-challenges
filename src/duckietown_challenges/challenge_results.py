@@ -7,7 +7,7 @@ from .utils import wrap_config_reader2
 from .yaml_utils import write_yaml, read_yaml_file
 
 
-class ChallengeResults(object):
+class ChallengeResults:
 
     def __init__(self, status, msg, scores, stats=None):
         assert status in ChallengeResultsStatus.ALL, (status, ChallengeResultsStatus.ALL)
@@ -29,6 +29,7 @@ class ChallengeResults(object):
     def __repr__(self):
         return 'ChallengeResults(%s)' % self.to_yaml()
 
+    # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, d0):
