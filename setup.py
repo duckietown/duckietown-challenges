@@ -33,6 +33,7 @@ setup(name='duckietown-challenges',
           'six',
           'future',
           'networkx>=2.2',
+          'dataclasses',
       ],
 
       tests_require=[
