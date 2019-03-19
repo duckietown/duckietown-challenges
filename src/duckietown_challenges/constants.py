@@ -49,7 +49,7 @@ class ChallengeResultsStatus(object):
     # XXX: to merge
 
 
-DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v3'
+DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v4'
 
 
 class Storage(object):
