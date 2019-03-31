@@ -384,17 +384,18 @@ class ChallengeTransitions:
         # print('precs of %s: %s' % (x, res))
         return res
 
-    def get_next_steps(self, status, step2age=None):
-        """ status is a dictionary from step ID to
-            status.
+    def get_next_steps(self, status: Dict[str, str],
+                       step2age=None) -> Tuple[bool, Optional[str], List[str]]:
+        """ status is a dictionary from step name to status.
 
             It contains at the beginning
 
                 START: success
 
-            Returns a list of steps.
-
-            If the list is empty, then we are done
+            Returns:
+                 bool (completE)
+                 optional status:  ['error', 'failed', 'success']
+                 a list of steps to activate next
 
         """
         CS = ChallengesConstants
@@ -434,19 +435,6 @@ class ChallengeTransitions:
                     return False
             return True
 
-        #
-        #
-        # for k in self.top_ordered():
-        #
-        #     if status.get(k, '?') != 'evaluating':
-        #         for k2 in precs:
-        #             k2_status = status.get(k2, 'missing')
-        #             if k2_status not in ['success', 'evaluating']:
-        #                 msg = 'Marking step %s as not done because  %s = "%s"' % (k, k2, k2_status)
-        #                 dclogger.error(msg)
-        #                 status.pop(k, None)
-
-        # dclogger.info('Updated status = %s' % status)
 
         to_activate = []
         for t in self.transitions:
