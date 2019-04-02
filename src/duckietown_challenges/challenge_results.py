@@ -2,7 +2,8 @@
 import os
 from collections import OrderedDict
 
-from .constants import CHALLENGE_RESULTS_YAML, ChallengeResultsStatus
+from .challenges_constants import ChallengesConstants
+from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import write_yaml, read_yaml_file
 
@@ -10,7 +11,8 @@ from .yaml_utils import write_yaml, read_yaml_file
 class ChallengeResults:
 
     def __init__(self, status, msg, scores, stats=None):
-        assert status in ChallengeResultsStatus.ALL, (status, ChallengeResultsStatus.ALL)
+        assert status in ChallengesConstants.ALLOWED_JOB_STATUS, \
+            (status,  ChallengesConstants.ALLOWED_JOB_STATUS)
         self.status = status
         self.msg = msg
         self.scores = scores
@@ -48,10 +50,10 @@ class ChallengeResults:
         stats['msg'] = self.msg
         return stats
 
+from typing import *
 
-def declare_challenge_results(root, cr):
-    if root is None:
-        root = '/'
+def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
+    root = root or DEFAULT_ROOT
     data = cr.to_yaml()
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)

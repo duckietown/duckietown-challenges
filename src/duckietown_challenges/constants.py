@@ -35,18 +35,17 @@ CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, 'descriptio
 ENV_CHALLENGE_NAME = 'challenge_name'
 ENV_CHALLENGE_STEP_NAME = 'challenge_step_name'
 
-
-class ChallengeResultsStatus(object):
-    SUCCESS = 'success'
-    FAILED = 'failed'  # the solution failed
-    ERROR = 'error'  # there was a problem with the evaluation (but not the solution)
-    ABORTED = 'aborted' # interrupted by user
-
-    ERROR_CODE = ERROR
-    ERROR_TMP_EVALUATOR = ERROR
-
-    ALL = [SUCCESS, FAILED, ERROR, ABORTED]
-    # XXX: to merge
+#
+# class ChallengeResultsStatus(object):
+#     SUCCESS = 'success'
+#     FAILED = 'failed'  # the solution failed
+#     ERROR = 'error'  # there was a problem with the evaluation code (but not the solution). Definitive.
+#     ERROR_TMP_EVALUATOR = 'host-error' # there was a problem with the host (e.g. ownloading.) Try again!
+#     ABORTED = 'aborted' # interrupted by user
+#
+#     ERROR_CODE = ERROR
+#     ALL = [SUCCESS, FAILED, ERROR, ABORTED, ERROR_TMP_EVALUATOR]
+#     # XXX: to merge
 
 
 DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v4'

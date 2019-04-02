@@ -414,10 +414,8 @@ class ChallengeTransitions:
                 dclogger.error(msg)
                 status.pop(k)
 
-            # timeout or aborted = like it never happened
-            if ks == CS.STATUS_JOB_TIMEOUT:
-                status.pop(k)
-            if ks == CS.STATUS_JOB_ABORTED:
+            # timeout or aborted or host error = like it never happened
+            if ks in [CS.STATUS_JOB_TIMEOUT, CS.STATUS_JOB_ABORTED, CS.STATUS_JOB_HOST_ERROR]:
                 status.pop(k)
 
         # make sure that the steps in which they depend are ok
@@ -441,7 +439,7 @@ class ChallengeTransitions:
             if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
                 # dclogger.debug('Transition %s is activated' % str(t))
 
-                like_it_does_not_exist = [ChallengesConstants.STATUS_ABORTED]
+                like_it_does_not_exist = [ChallengesConstants.STATUS_JOB_ABORTED]
                 if t.second in status and status[t.second] not in like_it_does_not_exist and \
                         predecessors_success(t.second):
                     # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))

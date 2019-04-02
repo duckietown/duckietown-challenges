@@ -8,10 +8,12 @@ import tempfile
 import time
 import traceback
 from collections import namedtuple
+from contextlib import contextmanager
 
+from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
 from .constants import CHALLENGE_DESCRIPTION_YAML, CHALLENGE_SOLUTION_OUTPUT_YAML, CHALLENGE_SOLUTION_OUTPUT_DIR, \
-    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, ChallengeResultsStatus, CHALLENGE_PREVIOUS_STEPS_DIR, \
+    CHALLENGE_EVALUATION_OUTPUT_DIR, CHALLENGE_DESCRIPTION_DIR, CHALLENGE_PREVIOUS_STEPS_DIR, \
     ENV_CHALLENGE_NAME, DEFAULT_ROOT, CHALLENGE_TMP_SUBDIR
 from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
@@ -300,10 +302,15 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
                 raise ValueError(msg)
 
         import numpy as np
-        if type(value) is np.ndarray:
+
+        if isinstance(value, (np.float64, np.float32)):
+            value = float(value)
+
+        if isinstance(value, np.ndarray):
             msg = 'Please use regular floats and not numpy array. Invalid value for %s: %s' % (name, value)
             raise Exception(msg)
 
+        # dclogger.info('found %s %s' % (value, type(value)))
         if name in self.scores:
             msg = 'Already know score %r' % name
             raise InvalidEvaluator(msg)
@@ -354,7 +361,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         d = os.path.join(self.root, CHALLENGE_EVALUATION_OUTPUT_DIR)
         self.evaluation_files.write(d)
 
-        status = ChallengeResultsStatus.SUCCESS
+        status = ChallengesConstants.STATUS_JOB_SUCCESS
         msg = None
         scores = {}
         for k, v in self.scores.items():
@@ -463,7 +470,7 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
     dclogger.info(f'wrap_evaluator with root = {root}')
 
     def declare(status, message):
-        if status != ChallengeResultsStatus.SUCCESS:
+        if status != ChallengesConstants.STATUS_JOB_SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
             dclogger.error(msg)
         else:
@@ -500,27 +507,27 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
 
     except KeyboardInterrupt:
         msg = 'Interrupted by user:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)  # TODO: aborted
+        declare(ChallengesConstants.STATUS_JOB_ABORTED, msg)  # TODO: aborted
 
     # failure
     except InvalidSubmission:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.FAILED, msg)
+        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
 
     # error of evaluator
     except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
     # error of environment (not distinguished so far)
 
     except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
 
-    except BaseException:
+    except BaseException as e:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
 
 def wrap_scorer(evaluator, root=DEFAULT_ROOT):
@@ -528,7 +535,7 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
     setup_logging_color()
 
     def declare(status, message):
-        if status != ChallengeResultsStatus.SUCCESS:
+        if status != ChallengesConstants.STATUS_JOB_SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
             dclogger.error(msg)
         else:
@@ -547,22 +554,135 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
     # failure
     except InvalidSubmission:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.FAILED, msg)
+        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
 
     # error of evaluator
     except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
     # error of environment (not distinguished so far)
 
     except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
 
     except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
-        declare(ChallengeResultsStatus.ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+
+
+def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+
+    dclogger.info(f'wrap_evaluator with root = {root}')
+
+    def declare(status, message):
+        if status != ChallengesConstants.STATUS_JOB_SUCCESS:
+            msg = 'declare %s:\n%s' % (status, message)
+            dclogger.error(msg)
+        else:
+            dclogger.info('Completed.')
+        cr = ChallengeResults(status, message, {})
+        declare_challenge_results(root, cr)
+        sys.exit(0)
+
+    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
+
+    try:
+        try:
+            evaluator.prepare(cie)
+        except (BaseException, KeyboardInterrupt) as e:
+            msg = 'Preparation aborted'
+            cie.set_challenge_parameters({SPECIAL_ABORT: msg})
+            raise Exception(msg) from e
+        finally:
+            cie.after_prepare()
+
+        cie.wait_for_solution()
+
+        out = cie.get_solution_output_dict()
+
+        if SPECIAL_INVALID_ENVIRONMENT in out:
+            raise InvalidEnvironment(out[SPECIAL_INVALID_ENVIRONMENT])
+        elif SPECIAL_INVALID_EVALUATOR in out:
+            raise InvalidEvaluator(out[SPECIAL_INVALID_EVALUATOR])
+        elif SPECIAL_INVALID_SUBMISSION in out:
+            raise InvalidSubmission(out[SPECIAL_INVALID_SUBMISSION])
+        else:
+            evaluator.score(cie)
+            cie.after_score()
+
+    except KeyboardInterrupt:
+        msg = 'Interrupted by user:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_ABORTED, msg)  # TODO: aborted
+
+    # failure
+    except InvalidSubmission:
+        msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
+
+    # error of evaluator
+    except InvalidEvaluator:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+
+    # error of environment (not distinguished so far)
+
+    except InvalidEnvironment:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
+
+    except BaseException as e:
+        msg = 'Unexpected exception:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+
+
+@contextmanager
+def scoring_context(root=DEFAULT_ROOT):
+    from .col_logging import setup_logging_color
+    setup_logging_color()
+
+    def declare(status, message, scores=None):
+        if status != ChallengesConstants.STATUS_JOB_SUCCESS:
+            msg = 'declare %s:\n%s' % (status, message)
+            dclogger.error(msg)
+        else:
+            dclogger.info('Completed.')
+        cr = ChallengeResults(status, message, scores or {})
+        declare_challenge_results(root, cr)
+        retcode = 0 if status == ChallengesConstants.STATUS_JOB_SUCCESS else 1
+        sys.exit(retcode)
+
+    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
+
+    try:
+        yield cie
+
+        scores = {}
+        for k, v in cie.scores.items():
+            scores[k] = v.value
+        declare(ChallengesConstants.STATUS_JOB_SUCCESS, None, scores)
+    # failure
+    except InvalidSubmission:
+        msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
+
+    except InvalidEvaluator:
+        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+
+    except InvalidEnvironment:
+        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
+
+    except SystemExit:
+        raise
+
+    except BaseException:
+        msg = 'Unexpected exception:\n%s' % traceback.format_exc()
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
 
 def wrap_solution(solution, root=DEFAULT_ROOT):
