@@ -4,7 +4,7 @@ import tempfile
 from comptests import run_module_tests
 
 from duckietown_challenges import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution, read_challenge_results, \
-    ChallengeResultsStatus, wrap_solution, wrap_evaluator
+    wrap_solution, wrap_evaluator, ChallengesConstants
 from duckietown_challenges.challenge_evaluator import ChallengeEvaluator
 from duckietown_challenges.challenge_solution import ChallengeSolution
 from duckietown_challenges.utils import write_data_to_file
@@ -95,7 +95,7 @@ def test_interaction1():
     S = S1()
     E = E1()
     cr = run_interaction(S, E)
-    assert cr.get_status() == ChallengeResultsStatus.SUCCESS
+    assert cr.get_status() == ChallengesConstants.STATUS_JOB_SUCCESS
     assert cr.scores[SCORE1] == SCORE1_VAL, cr.scores
 
 
@@ -114,7 +114,7 @@ def test_no_scores():
             cis.set_solution_output_dict({K1: V1})
 
     cr = run_interaction(SDummy(), ENoScores())
-    assert cr.get_status() == ChallengeResultsStatus.ERROR
+    assert cr.get_status() == ChallengesConstants.STATUS_JOB_ERROR
 
 
 def test_no_solution_output():
@@ -132,7 +132,7 @@ def test_no_solution_output():
             pass  # cis.set_solution_output_dict({K1: V1})
 
     cr = run_interaction(SDummy(), EDummy())
-    assert cr.get_status() == ChallengeResultsStatus.FAILED
+    assert cr.get_status() == ChallengesConstants.STATUS_JOB_FAILED
 
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@ from typing import *
 import yaml
 from networkx import DiGraph, ancestors
 
+from duckietown_challenges.cmd_submit_build import parse_complete_tag
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
@@ -66,28 +67,28 @@ class Build:
 @dataclass
 class ServiceDefinition:
     image: Optional[str]
-    image_digest: Optional[str]
     build: Build
     environment: Dict[str, Any]
-
-    # def __init__(self, image: str, environment, image_digest, build):
-    #     check_isinstance(environment, dict)
-    #
-    #     self.image = str(image)
-    #     self.image_digest = image_digest
-    #     self.environment = environment
-    #     self.build = build
 
     def __repr__(self):
         return nice_repr(self)
 
     def equivalent(self, other):
         if self.image != SUBMISSION_CONTAINER_TAG:
-            if self.image_digest is None or other.image_digest is None:
-                msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (self, other)
+            br2 = parse_complete_tag(other.image)
+
+            try:
+                br1 = parse_complete_tag(self.image)
+            except ValueError as e:
+                msg = 'Could not even parse mine'
+                raise NotEquivalent(msg) from e
+
+
+            if br1.digest is None or br2.digest is None:
+                msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (br1, br2)
                 raise NotEquivalent(msg)
-            if self.image_digest != other.image_digest:
-                msg = 'Different digests:\n\n  %s\n\n  %s' % (self.image_digest, other.image_digest)
+            if br1.digest != br2.digest:
+                msg = 'Different digests:\n\n  %s\n\n  %s' % (br1, br2)
                 raise NotEquivalent(msg)
 
         if self.environment != other.environment:
@@ -109,11 +110,14 @@ class ServiceDefinition:
                 build = Build.from_yaml(build)
         else:
             build = None
-        image_digest = d0.pop('image_digest', None)
 
         if build and image:
             msg = 'Cannot specify both "build" and "image".'
             raise ValueError(msg)
+
+        image_digest = d0.pop('image_digest', None)
+        if image_digest:
+            image = f'{image}@{image_digest}'
 
         for k, v in list(environment.items()):
             if '-' in k:
@@ -132,11 +136,11 @@ class ServiceDefinition:
                 msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k)
                 raise InvalidConfiguration(msg)
 
-        return ServiceDefinition(image=image, environment=environment, image_digest=image_digest, build=build)
+        return ServiceDefinition(image=image, environment=environment, build=build)
 
     def as_dict(self):
 
-        res = dict(image=self.image, environment=self.environment, image_digest=self.image_digest)
+        res = dict(image=self.image, environment=self.environment)
 
         if self.build:
             res['build'] = self.build.as_dict()
@@ -204,6 +208,8 @@ class EvaluationParameters:
         #     msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
         #     raise ValueError(msg)
 
+
+
         return EvaluationParameters(services=services, version=version)
 
     def __repr__(self):
@@ -233,18 +239,6 @@ class ChallengeStep(object):
     evaluation_parameters: EvaluationParameters
     features_required: Dict[str, Any]
     timeout: float
-
-    #
-    # def __init__(self, name, title, description, evaluation_parameters,
-    #              features_required, timeout):
-    #     self.name = name
-    #     self.title = title
-    #     self.description = description
-    #     check_isinstance(evaluation_parameters, EvaluationParameters)
-    #     self.evaluation_parameters = evaluation_parameters
-    #     check_isinstance(features_required, dict)
-    #     self.features_required = features_required
-    #     self.timeout = timeout
 
     def as_dict(self):
         data = {}
@@ -369,7 +363,7 @@ class ChallengeTransitions:
         return ts
 
     def top_ordered(self):
-        _G = self.get_graph() # XXX
+        _G = self.get_graph()  # XXX
         return list(self.steps)
 
     def get_graph(self):
@@ -432,7 +426,6 @@ class ChallengeTransitions:
                 if k2 not in status or status[k2] != CS.STATUS_JOB_SUCCESS:
                     return False
             return True
-
 
         to_activate = []
         for t in self.transitions:
@@ -522,10 +515,10 @@ class Score(object):
             msg = 'Missing config %s' % e
             raise InvalidChallengeDescription(msg) from e
 
+
 @dataclass(repr=False)
 class Scoring:
     scores: List[Score]
-
 
     def as_dict(self):
         scores = [_.as_dict() for _ in self.scores]
@@ -662,20 +655,20 @@ def interpret_date(d):
     raise ValueError(d.__repr__())
 
 
-class SubmissionDescription(object):
-    def __init__(self, challenge_name, protocol, user_label, user_metadata, description):
-        self.challenge_name = challenge_name
-        self.protocol = protocol
-        self.user_label = user_label
-        self.user_metadata = user_metadata
-        self.description = description
+@dataclass(repr=False)
+class SubmissionDescription:
+    challenge_names: List[str]
+    protocol: List[str]
+    user_label: Optional[str]
+    user_metadata: dict
+    description: Optional[str]
 
     def __repr__(self):
         return nice_repr(self)
 
     def as_dict(self):
         return dict(protocol=self.protocol,
-                    challenge_name=self.challenge_name,
+                    challenge_names=self.challenge_names,
                     user_label=self.user_label,
                     user_metadata=self.user_metadata,
                     description=self.description)
@@ -685,12 +678,17 @@ class SubmissionDescription(object):
     @wrap_config_reader2
     def from_yaml(cls, data):
         challenge_name = data.pop('challenge')
+        if isinstance(challenge_name, list):
+            challenges = challenge_name
+        else:
+            challenges = [challenge_name]
+
         protocol = data.pop('protocol')
         description = data.pop('description', None)
         user_label = data.pop('user-label', None)
         user_metadata = data.pop('user-payload', None)
 
-        return SubmissionDescription(challenge_name=challenge_name,
+        return SubmissionDescription(challenge_names=challenges,
                                      protocol=protocol,
                                      description=description,
                                      user_label=user_label,

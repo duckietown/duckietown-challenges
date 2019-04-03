@@ -89,7 +89,7 @@ class E1(ChallengeEvaluator):
         assert isinstance(cie, ChallengeInterfaceEvaluator)
         cie.set_score('passed1', 1)
 
-        cie.set_evaluation_file_from_data(E1fn, 'one')
+        cie.set_evaluation_file_from_data(E1fn, b'one')
 
 
 class S1(ChallengeSolution):
@@ -100,7 +100,7 @@ class S1(ChallengeSolution):
         assert step1_name == cis.get_current_step()
         assert [] == cis.get_completed_steps()
 
-        cis.set_solution_output_file_from_data(S1fn, 'two')
+        cis.set_solution_output_file_from_data(S1fn, b'two')
         cis.info('hello')
         cis.set_solution_output_dict({})
 

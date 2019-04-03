@@ -1,24 +1,5 @@
 # coding=utf-8
 class ChallengesConstants:
-    # status for submission
-    # STATUS_SUBMITTED = 'submitted'
-    # # STATUS_RETIRED = 'retired'
-    # STATUS_EVALUATION = 'evaluating'
-    # STATUS_ABORTED = 'aborted'
-    # STATUS_SUCCESS = 'success'
-    # STATUS_FAILED = 'failed'
-    # STATUS_ERROR = 'error'
-    #
-    # ALLOWED_SUB_STATUS = [
-    #     STATUS_SUBMITTED,
-    #     # STATUS_RETIRED,
-    #     STATUS_EVALUATION,
-    #     STATUS_ABORTED,
-    #     STATUS_SUCCESS,
-    #     STATUS_FAILED,
-    #     STATUS_ERROR,
-    # ]
-
     # status for evaluation jobs
     STATUS_JOB_TIMEOUT = 'timeout'
     STATUS_JOB_EVALUATION = 'evaluating'
@@ -38,4 +19,24 @@ class ChallengesConstants:
         STATUS_JOB_HOST_ERROR
     ]
 
-    JOB_TIMEOUT_MINUTES= 30
+    JOB_TIMEOUT_MINUTES = 30
+
+    DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v4'
+    DEFAULT_TIMEOUT = 5
+
+    class Endpoints:
+        challenge_define = '/challenge-define'
+        registry_info = '/api/registry-info'
+        user_info = '/api/user-info'
+        submissions = '/api/submissions'
+        components = '/api/components'
+        challenges = '/api/challenges'
+        take_submission = '/api/take-submission'
+        reset_submission = '/api/reset-submission'
+        reset_job = '/api/reset-job'
+        submissions_list = '/api/submissions-list'
+        submission_single = '/api/submission-single'
+        sub_by_challenges = '/api/sub-by-challenges'
+
+        jobs_by_submission = '/api/jobs-by-submission'
+        leaderboards_data = '/api/leaderboardds-data'

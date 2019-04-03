@@ -234,7 +234,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
                 self.set_evaluation_file(os.path.join(basename, bn), fn)
 
     @abstractmethod
-    def set_evaluation_file_from_data(self, basename, contents, description=None):
+    def set_evaluation_file_from_data(self, basename, contents: bytes, description=None):
         pass
 
     @abstractmethod

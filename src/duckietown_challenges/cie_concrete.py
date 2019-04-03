@@ -10,6 +10,7 @@ import time
 import traceback
 from collections import namedtuple
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
@@ -20,27 +21,36 @@ from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
+from typing import *
 
-ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
+@dataclass
+class ChallengeFile:
+    basename: str
+    from_file: Optional[str]
+    contents: Optional[bytes]
+    description: str
+
+# ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
 ReportedScore = namedtuple('ReportedScore', 'name value description')
+
 
 
 def check_valid_basename(s):
     pass  # TODO
 
 
-class FS(object):
+class FS:
     def __init__(self):
         self.files = {}
 
-    def add_from_data(self, basename, contents, description):
+    def add_from_data(self, basename: str, contents: bytes, description: str):
         if basename in self.files:
             msg = 'Already know %r' % basename
             raise ValueError(msg)
 
         self.files[basename] = ChallengeFile(basename, None, contents, description)
 
-    def add(self, basename, from_file, description):
+    def add(self, basename: str, from_file: str, description: str):
         if not os.path.exists(from_file):
             msg = 'The file does not exist: %s' % from_file
             raise ValueError(msg)
@@ -113,7 +123,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
             msg = 'Invalid set_solution_output_file()'
             raise InvalidSubmission(msg) from e
 
-    def set_solution_output_file_from_data(self, basename, contents, description=None):
+    def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
         try:
             self.solution_output_files.add_from_data(basename, contents, description)
         except ValueError as e:
@@ -573,71 +583,6 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
         declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
 
-def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
-    from .col_logging import setup_logging_color
-    setup_logging_color()
-
-    dclogger.info(f'wrap_evaluator with root = {root}')
-
-    def declare(status, message):
-        if status != ChallengesConstants.STATUS_JOB_SUCCESS:
-            msg = 'declare %s:\n%s' % (status, message)
-            dclogger.error(msg)
-        else:
-            dclogger.info('Completed.')
-        cr = ChallengeResults(status, message, {})
-        declare_challenge_results(root, cr)
-        sys.exit(0)
-
-    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
-
-    try:
-        try:
-            evaluator.prepare(cie)
-        except (BaseException, KeyboardInterrupt) as e:
-            msg = 'Preparation aborted'
-            cie.set_challenge_parameters({SPECIAL_ABORT: msg})
-            raise Exception(msg) from e
-        finally:
-            cie.after_prepare()
-
-        cie.wait_for_solution()
-
-        out = cie.get_solution_output_dict()
-
-        if SPECIAL_INVALID_ENVIRONMENT in out:
-            raise InvalidEnvironment(out[SPECIAL_INVALID_ENVIRONMENT])
-        elif SPECIAL_INVALID_EVALUATOR in out:
-            raise InvalidEvaluator(out[SPECIAL_INVALID_EVALUATOR])
-        elif SPECIAL_INVALID_SUBMISSION in out:
-            raise InvalidSubmission(out[SPECIAL_INVALID_SUBMISSION])
-        else:
-            evaluator.score(cie)
-            cie.after_score()
-
-    except KeyboardInterrupt:
-        msg = 'Interrupted by user:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ABORTED, msg)  # TODO: aborted
-
-    # failure
-    except InvalidSubmission:
-        msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
-
-    # error of evaluator
-    except InvalidEvaluator:
-        msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
-
-    # error of environment (not distinguished so far)
-
-    except InvalidEnvironment:
-        msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
-
-    except BaseException as e:
-        msg = 'Unexpected exception:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
 
 @contextmanager

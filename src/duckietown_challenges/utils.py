@@ -252,3 +252,15 @@ def raise_type_mismatch(ob, expected, **kwargs):
     e += '\n  obtained: %s' % str(type(ob))
     # e += '\n' + indent(format_obs(kwargs), ' ')
     raise ValueError(e)
+
+
+
+def tag_from_date(d):
+    # YYYY-MM-DDTHH:MM:SS[.mmmmmm][+HH:MM].
+    s = d.isoformat()
+
+    s = s.replace(':', '_')
+    s = s.replace('T', '_')
+    s = s.replace('-', '_')
+    s = s[:s.index('.')]
+    return s
