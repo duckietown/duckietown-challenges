@@ -1,4 +1,5 @@
 # coding=utf-8
+import json
 import math
 import os
 import shutil
@@ -641,6 +642,9 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
 
 @contextmanager
 def scoring_context(root=DEFAULT_ROOT):
+    dclogger.info('Environment variables:\n\n' + json.dumps(dict(os.environ), indent=2))
+    
+
     from .col_logging import setup_logging_color
     setup_logging_color()
 
