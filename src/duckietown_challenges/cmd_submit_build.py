@@ -38,7 +38,8 @@ def parse_complete_tag(x: str) -> BuildResult:
         registry = None
         rest = x
     else:
-        raise ValueError(x)
+        msg = 'Could not parse complete tag: %s' % x
+        raise ValueError(msg)
 
     n = rest.count(':')
     if n:
@@ -52,7 +53,7 @@ def parse_complete_tag(x: str) -> BuildResult:
 
     organization, repository = org_repo.split('/')
 
-    if '@' in tag:
+    if tag is not None and '@' in tag:
         tag, digest = tag.split('@')
         if not digest.startswith('sha256'):
             msg = 'Unknown digest format: %s for %s' % (digest, x)
@@ -66,11 +67,13 @@ def parse_complete_tag(x: str) -> BuildResult:
         raise ValueError(x) from e
 
 def get_complete_tag(br: BuildResult):
-    complete = '%s/%s:%s' % (br.organization, br.repository, br.tag)
+    complete = '%s/%s' % (br.organization, br.repository)
+    if br.tag is not None:
+        complete += f':{br.tag}'
     if br.registry:
         complete = f'{br.registry}/{complete}'
     if br.digest is not None:
-        complete = f'{complete}@{br.digest}'
+        complete += f'@{br.digest}'
     return complete
 
 
@@ -93,6 +96,7 @@ def submission_build(username: str,
         raise Exception(msg)
 
     cmd = ['docker', 'build',
+           '--pull',
            '-t', complete_image,
            '-f', df,
            '.',
