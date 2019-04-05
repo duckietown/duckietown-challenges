@@ -80,10 +80,7 @@ def dtserver_get_info(token, submission_id):
     endpoint = Endpoints.submission_single + '/%s' % submission_id
     method = 'GET'
     data = {}
-    try:
-        return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
-    except:
-        return make_server_request(token, endpoint, data=data, method=method)
+    return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
 
 
 def dtserver_reset_submission(token, submission_id, step_name):
@@ -112,10 +109,7 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             'evaluator_version': evaluator_version,
             'uploaded': uploaded
             }
-    try:
-        return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
-    except:
-        return make_server_request(token, endpoint, data=data, method=method, timeout=timeout)
+    return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
 
 
 def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset, timeout):
