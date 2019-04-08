@@ -40,3 +40,5 @@ class ChallengesConstants:
 
         jobs_by_submission = '/api/jobs-by-submission'
         leaderboards_data = '/api/leaderboardds-data'
+
+    SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'

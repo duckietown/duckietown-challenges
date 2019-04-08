@@ -65,16 +65,23 @@ class Build:
 
 
 @dataclass
+class PortDefinition:
+    external: int
+    internal: int
+
+
+@dataclass
 class ServiceDefinition:
     image: Optional[str]
     build: Build
     environment: Dict[str, Any]
+    ports: List[PortDefinition]
 
     def __repr__(self):
         return nice_repr(self)
 
     def equivalent(self, other):
-        if self.image != SUBMISSION_CONTAINER_TAG:
+        if self.image != ChallengesConstants.SUBMISSION_CONTAINER_TAG:
             br2 = parse_complete_tag(other.image)
 
             try:
@@ -83,11 +90,13 @@ class ServiceDefinition:
                 msg = 'Could not even parse mine'
                 raise NotEquivalent(msg) from e
 
-
             if br1.digest is None or br2.digest is None:
                 msg = 'No digest information, assuming different.\nself: %s\nother: %s' % (br1, br2)
                 raise NotEquivalent(msg)
             if br1.digest != br2.digest:
+                msg = 'Different digests:\n\n  %s\n\n  %s' % (br1, br2)
+                raise NotEquivalent(msg)
+            if self.ports != other.ports:
                 msg = 'Different digests:\n\n  %s\n\n  %s' % (br1, br2)
                 raise NotEquivalent(msg)
 
@@ -135,13 +144,27 @@ class ServiceDefinition:
             else:
                 msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k)
                 raise InvalidConfiguration(msg)
-
-        return ServiceDefinition(image=image, environment=environment, build=build)
+        ports_ = d0.pop('ports', [])
+        ports = []
+        for s in ports_:
+            if not ':' in s:
+                raise InvalidConfiguration(s)
+            tokens = s.split(':')
+            external = int(tokens[0])
+            internal = int(tokens[1])
+            ports.append(PortDefinition(external=external, internal=internal))
+        return ServiceDefinition(image=image, environment=environment, build=build, ports=ports)
 
     def as_dict(self):
 
         res = dict(image=self.image, environment=self.environment)
 
+        ports = []
+        for p in self.ports:
+            ports.append('%s:%s' % (p.external, p.internal))
+
+        if ports:
+            res['ports'] = ports
         if self.build:
             res['build'] = self.build.as_dict()
         else:
@@ -199,7 +222,7 @@ class EvaluationParameters:
         # SUBMISSION_CONTAINER
         n = 0
         for service_definition in services.values():
-            if service_definition.image == SUBMISSION_CONTAINER_TAG:
+            if service_definition.image == ChallengesConstants.SUBMISSION_CONTAINER_TAG:
                 n += 1
         # if n == 0:
         #     msg = 'I expect one of the services to have "image: %s".' % SUBMISSION_CONTAINER_TAG
@@ -207,8 +230,6 @@ class EvaluationParameters:
         # if n > 1:
         #     msg = 'Too many services with  "image: %s".' % SUBMISSION_CONTAINER_TAG
         #     raise ValueError(msg)
-
-
 
         return EvaluationParameters(services=services, version=version)
 
@@ -232,7 +253,7 @@ class EvaluationParameters:
 
 
 @dataclass
-class ChallengeStep(object):
+class ChallengeStep:
     name: str
     title: str
     description: str
@@ -263,9 +284,6 @@ class ChallengeStep(object):
                              features_required, timeout=timeout)
 
 
-SUBMISSION_CONTAINER_TAG = 'SUBMISSION_CONTAINER'
-
-
 class NotEquivalent(Exception):
     pass
 
@@ -274,27 +292,6 @@ def nice_repr(x):
     K = type(x).__name__
     return '%s\n\n%s' % (K, indent(safe_yaml_dump(x.as_dict()), '   '))
 
-
-#
-#
-# def get_latest(image_name):
-#     if '@' in image_name:
-#         msg = 'The image %r already has a qualified hash. Not updating.' % image_name
-#         dclogger.warning(msg)
-#         return
-#     import docker
-#     client = docker.from_env()
-#     dclogger.info('Finding latest version of %s' % image_name)
-#     image = client.images.get(image_name)
-#     if ':' in image_name:
-#         # remove tag
-#         image_name_no_tag = image_name[:image_name.index(':')]
-#         image_name = image_name_no_tag
-#
-#     fq = image_name + '@' + image.id
-#     dclogger.info('updated %s -> %r' % (image_name, fq))
-#     return fq
-#
 
 Transition = namedtuple('Transition', 'first condition second')
 
@@ -449,7 +446,7 @@ class ChallengeTransitions:
         return False, None, to_activate
 
 
-class Score(object):
+class Score:
     HIGHER_IS_BETTER = 'higher-is-better'
     LOWER_IS_BETTER = 'lower-is-better'
     ALLOWED = [HIGHER_IS_BETTER, LOWER_IS_BETTER]
@@ -552,7 +549,18 @@ class Scoring:
             raise InvalidChallengeDescription(msg) from e
 
 
-class ChallengeDescription(object):
+class ChallengeDescription:
+    name: str
+    title: str
+    description: str
+    protocol: str
+    date_open: datetime
+    date_close: datetime
+    steps: Dict[str, ChallengeStep]
+    roles: Any
+    ct: ChallengeTransitions
+    scoring: Scoring
+
     def __init__(self, name, title, description, protocol,
                  date_open, date_close, steps, roles, transitions, tags, scoring):
         self.name = name
