@@ -35,6 +35,15 @@ def get_registry_info(token) -> RegistryInfo:
     return ri
 
 
+def dtserver_auth(token, cmd):
+    endpoint = '/api/auth'
+    method = 'GET'
+    data = {'query': cmd}
+    add_version_info(data)
+    res = make_server_request(token, endpoint, data=data, method=method)
+    return res
+
+
 def get_dtserver_user_info(token):
     """ Returns a dictionary with information about the user """
     endpoint = Endpoints.user_info
@@ -154,6 +163,7 @@ def add_version_info(data):
         data['versions'] = get_packages_version()
     except:
         pass
+
 
 def get_packages_version():
     try:
