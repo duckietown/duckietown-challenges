@@ -112,6 +112,15 @@ def submission_build(username: str,
         raise Exception(msg)
 
     cmd = ['docker', 'push', complete_image]
+    dclogger.info('Pushing the image: %s' % " ".join(cmd))
+
+    p = subprocess.Popen(cmd)
+    p.communicate()
+    if p.returncode != 0:
+        msg = 'Could not run docker push.'
+        raise Exception(msg)
+
+
     try:
         stdout = subprocess.check_output(cmd, stderr=sys.stderr)
     except subprocess.CalledProcessError as e:

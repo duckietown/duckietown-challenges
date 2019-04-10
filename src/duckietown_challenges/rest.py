@@ -46,8 +46,11 @@ class RequestFailed(RequestException):
     """
 
 
-def make_server_request(token, endpoint, data=None,
-                        method: str = 'GET', timeout: int = None,
+def make_server_request(token,
+                        endpoint,
+                        data=None,
+                        method: str = 'GET',
+                        timeout: int = None,
                         suppress_user_msg: bool = False):
     """
         Raise RequestFailed or ConnectionError.
@@ -82,12 +85,12 @@ def make_server_request(token, endpoint, data=None,
         # dtslogger.info('read')
         data_read = res.read()
     except urllib.error.HTTPError as e:
-        msg = 'Operation failed for %s' % url
+        msg = 'Operation failed for %s: %s' % (url, e)
         err_msg = e.read().decode("utf-8")
         msg += f'\n\n{err_msg}'
-        raise ConnectionError(msg)
+        raise ConnectionError(msg) from e
     except urllib.error.URLError as e:
-        msg = 'Cannot connect to server %s' % url
+        msg = 'Cannot connect to server %s:\n%s' % (url, e)
         raise ConnectionError(msg) from e
 
     # delta = time.time() - t0
