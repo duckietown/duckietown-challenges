@@ -72,8 +72,8 @@ def make_server_request(token,
 
     if data is not None:
         data = json.dumps(data)
-        if six.PY3:
-            data = data.encode('utf-8')
+
+        data = data.encode('utf-8')
     # t0 = time.time()
     # dtslogger.info('server request with timeout %s' % timeout)
     req = urllib.request.Request(url, headers=headers, data=data)
