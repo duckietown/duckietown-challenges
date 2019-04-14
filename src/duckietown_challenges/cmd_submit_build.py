@@ -62,9 +62,10 @@ def parse_complete_tag(x: str) -> BuildResult:
         digest = None
     try:
         return BuildResult(registry=registry, organization=organization, repository=repository,
-                       tag=tag, digest=digest)
+                           tag=tag, digest=digest)
     except ValueError as e:
         raise ValueError(x) from e
+
 
 def get_complete_tag(br: BuildResult):
     complete = '%s/%s' % (br.organization, br.repository)
@@ -120,6 +121,7 @@ def submission_build(username: str,
         msg = 'Could not run docker push.'
         raise Exception(msg)
 
+    dclogger.info('After pushing; please wait...')
 
     try:
         stdout = subprocess.check_output(cmd, stderr=sys.stderr)
