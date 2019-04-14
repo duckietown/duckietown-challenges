@@ -19,7 +19,7 @@ class ChallengesConstants:
         STATUS_JOB_HOST_ERROR
     ]
 
-    JOB_TIMEOUT_MINUTES = 30
+    # JOB_TIMEOUT_MINUTES = 30
 
     DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v4'
     DEFAULT_TIMEOUT = 5

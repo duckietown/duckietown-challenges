@@ -7,9 +7,9 @@ from typing import *
 import yaml
 from networkx import DiGraph, ancestors
 
-from duckietown_challenges.cmd_submit_build import parse_complete_tag
 from . import dclogger
 from .challenges_constants import ChallengesConstants
+from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, check_isinstance, wrap_config_reader2
 
@@ -26,7 +26,7 @@ STATE_FAILED = 'FAILED'
 
 ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
 
-allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
+# allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 
 @dataclass(repr=False)
@@ -557,12 +557,12 @@ class ChallengeDescription:
     date_open: datetime
     date_close: datetime
     steps: Dict[str, ChallengeStep]
-    roles: Any
+    # roles: Any
     ct: ChallengeTransitions
     scoring: Scoring
 
     def __init__(self, name, title, description, protocol,
-                 date_open, date_close, steps, roles, transitions, tags, scoring):
+                 date_open, date_close, steps, transitions, tags, scoring):
         self.name = name
         self.title = title
         self.scoring = scoring
@@ -573,19 +573,19 @@ class ChallengeDescription:
         check_isinstance(date_close, datetime)
         self.date_close = date_close
         self.steps = steps
-        self.roles = roles
+        # self.roles = roles
         self.tags = tags
 
-        for k, permissions in self.roles.items():
-            if not k.startswith('user:'):
-                msg = 'Permissions should start with "user:", %s' % k
-                raise InvalidChallengeDescription(msg)
-            p2 = dict(**permissions)
-            for perm in allowed_permissions:
-                p2.pop(perm, None)
-            if p2:
-                msg = 'Unknown permissions: %s' % p2
-                raise InvalidChallengeDescription(msg)
+        # for k, permissions in self.roles.items():
+        #     if not k.startswith('user:'):
+        #         msg = 'Permissions should start with "user:", %s' % k
+        #         raise InvalidChallengeDescription(msg)
+        #     p2 = dict(**permissions)
+        #     for perm in allowed_permissions:
+        #         p2.pop(perm, None)
+        #     if p2:
+        #         msg = 'Unknown permissions: %s' % p2
+        #         raise InvalidChallengeDescription(msg)
 
         self.first_step = None
         self.ct = ChallengeTransitions.from_steps_transitions(list(self.steps), transitions)
@@ -608,18 +608,32 @@ class ChallengeDescription:
         date_open = interpret_date(data.pop('date-open'))
         date_close = interpret_date(data.pop('date-close'))
 
-        roles = data.pop('roles')
-        transitions = data.pop('transitions')
+        data.pop('roles', None)
+
         steps = data.pop('steps')
         Steps = {}
         for k, v in steps.items():
             Steps[k] = ChallengeStep.from_yaml(v, k)
 
+        transitions = data.pop('transitions', None)
+        if transitions is None:
+            if len(Steps) == 1:
+                stepname = list(Steps)[0]
+                transitions = [
+                    ['START', 'success', stepname, ],
+                    [stepname, 'success', 'SUCCESS'],
+                    [stepname, 'failed', 'FAILED'],
+                    [stepname, 'error', 'ERROR'],
+                ]
+            else:
+                msg = 'Need transitions if there is more than one step.'
+                raise ValueError(msg)
+
         scoring = Scoring.from_yaml(data.pop('scoring'))
 
         return ChallengeDescription(name, title, description,
                                     protocol, date_open, date_close, Steps,
-                                    roles=roles, transitions=transitions,
+                                    transitions=transitions,
                                     tags=tags, scoring=scoring)
 
     def as_dict(self):
@@ -630,14 +644,16 @@ class ChallengeDescription:
         data['protocol'] = self.protocol
         data['date-open'] = self.date_open.isoformat() if self.date_open else None
         data['date-close'] = self.date_close.isoformat() if self.date_close else None
-        data['roles'] = self.roles
+        # data['roles'] = self.roles
         data['transitions'] = []
         for t in self.ct.transitions:
             tt = [t.first, t.condition, t.second]
             data['transitions'].append(tt)
-        data['steps'] = {}
+        steps = {}
         for k, v in self.steps.items():
-            data['steps'][k] = v.as_dict()
+            steps[k] = v.as_dict()
+        data['steps'] = steps
+
         data['tags'] = self.tags
         data['scoring'] = self.scoring.as_dict()
         return data

@@ -16,9 +16,10 @@ class RegistryInfo:
 
 
 def add_impersonate_info(data, impersonate):
-
     if impersonate is not None:
         data['impersonate'] = impersonate
+
+
 def dtserver_challenge_define(token, yaml, force_invalidate, impersonate=None):
     endpoint = Endpoints.challenge_define
     method = 'POST'
@@ -42,7 +43,7 @@ def get_registry_info(token, impersonate=None) -> RegistryInfo:
 
 
 def dtserver_auth(token, cmd):
-    endpoint = '/api/auth'
+    endpoint = Endpoints.auth
     method = 'GET'
     data = {'query': cmd}
     add_version_info(data)
@@ -58,6 +59,7 @@ def get_dtserver_user_info(token, impersonate=None):
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
+
 
 #
 # def dtserver_submit(token, queue, data):
@@ -168,6 +170,20 @@ def get_challenge_description(token, challenge_name: str, impersonate=None) -> C
     res = make_server_request(token, endpoint, data=data, method=method)
     cd = ChallengeDescription.from_yaml(res['challenge'])
     return cd
+
+
+def dtserver_get_challenges(token, impersonate=None) -> Dict[str, ChallengeDescription]:
+    endpoint = Endpoints.challenges
+    method = 'GET'
+    data = {}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    res = make_server_request(token, endpoint, data=data, method=method)
+    r = {}
+    for challenge_id_s, challenge_desc in res.items():
+        cd = ChallengeDescription.from_yaml(challenge_desc)
+        r[challenge_id_s] = cd
+    return r
 
 
 def add_version_info(data):

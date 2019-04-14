@@ -1,3 +1,5 @@
+import traceback
+
 import yaml
 from comptests import comptest, run_module_tests
 
@@ -238,11 +240,14 @@ another:
 def assert_raises_s(E, contained, f, *args):
     try:
         f(*args)
-    except E as e:
-        s = str(e)
+    except E:
+        s = traceback.format_exc()
         if contained not in s:
             msg = 'Expected %r in error:\n%s' % (contained, s)
             raise Exception(msg)
+    except BaseException as e:
+        msg = 'Expected to get %s but found %s: %s' % (E, type(e), e)
+        raise Exception(msg)
     else:
         msg = 'Expected to find exception %s' % str(E)
         raise Exception(msg)
