@@ -2,7 +2,6 @@
 import json
 import os
 
-import six
 import termcolor
 
 from duckietown_challenges import ChallengesConstants
@@ -32,13 +31,21 @@ def get_duckietown_server_url():
 class RequestException(Exception):
     pass
 
+
 class ServerIsDown(RequestException):
     pass
+
 
 class ConnectionError(RequestException):
     """ The server could not be reached or completed request or
         provided an invalid or not well-formatted answer. """
 
+
+class NotAuthorized(RequestException):
+    pass
+
+class NotFound(RequestException):
+    pass
 
 class RequestFailed(RequestException):
     """
@@ -87,8 +94,18 @@ def make_server_request(token,
         # dtslogger.info('read')
         data_read = res.read()
     except urllib.error.HTTPError as e:
-        msg = 'Operation failed for %s: %s' % (url, e)
         err_msg = e.read().decode("utf-8")
+
+        if e.code == 401:
+            msg = 'Not authorized to perform operation.'
+            msg += f'\n\n{err_msg}'
+            raise NotAuthorized(msg) from None
+        if e.code == 404:
+            msg = 'Cannot find the specified object'
+            msg += f'\n\n{err_msg}'
+            raise NotFound(msg) from None
+
+        msg = 'Operation failed for %s: %s' % (url, e)
         msg += f'\n\n{err_msg}'
         raise ConnectionError(msg) from e
     except urllib.error.URLError as e:
