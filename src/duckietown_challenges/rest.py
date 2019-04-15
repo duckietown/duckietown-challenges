@@ -32,6 +32,8 @@ def get_duckietown_server_url():
 class RequestException(Exception):
     pass
 
+class ServerIsDown(RequestException):
+    pass
 
 class ConnectionError(RequestException):
     """ The server could not be reached or completed request or
@@ -90,6 +92,9 @@ def make_server_request(token,
         msg += f'\n\n{err_msg}'
         raise ConnectionError(msg) from e
     except urllib.error.URLError as e:
+        if '61' in str(e.reason):
+            msg = 'Server is temporarily down; cannot open %s' % url
+            raise ServerIsDown(msg) from None
         msg = 'Cannot connect to server %s:\n%s' % (url, e)
         raise ConnectionError(msg) from e
 

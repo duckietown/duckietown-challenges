@@ -681,17 +681,26 @@ def interpret_date(d):
 
 @dataclass(repr=False)
 class SubmissionDescription:
-    challenge_names: List[str]
-    protocol: List[str]
+    challenge_names: Optional[List[str]]
+    protocols: List[str]
     user_label: Optional[str]
     user_metadata: dict
     description: Optional[str]
+
+    def __post_init_(self):
+        if self.challenge_names is not None:
+            if not isinstance(self.challenge_names, list):
+                msg = 'Expected a list of strings for challenge names, got %s' % self.challenge_names
+                raise ValueError(msg)
+        if not isinstance(self.protocols, list):
+            msg = 'Expected a list of strings for protocols names, got %s' % self.protocols
+            raise ValueError(msg)
 
     def __repr__(self):
         return nice_repr(self)
 
     def as_dict(self):
-        return dict(protocol=self.protocol,
+        return dict(protocols=self.protocols,
                     challenge_names=self.challenge_names,
                     user_label=self.user_label,
                     user_metadata=self.user_metadata,
@@ -701,19 +710,27 @@ class SubmissionDescription:
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, data):
-        challenge_name = data.pop('challenge')
-        if isinstance(challenge_name, list):
-            challenges = challenge_name
+        challenge_name = data.pop('challenge', None)
+        if challenge_name is None:
+            challenges = None
         else:
-            challenges = [challenge_name]
+            if isinstance(challenge_name, list):
+                challenges = challenge_name
+            else:
+                challenges = [challenge_name]
 
         protocol = data.pop('protocol')
+        if isinstance(protocol, list):
+            protocols = protocol
+        else:
+            protocols = [protocol]
+
         description = data.pop('description', None)
         user_label = data.pop('user-label', None)
         user_metadata = data.pop('user-payload', None)
 
         return SubmissionDescription(challenge_names=challenges,
-                                     protocol=protocol,
+                                     protocols=protocols,
                                      description=description,
                                      user_label=user_label,
                                      user_metadata=user_metadata)

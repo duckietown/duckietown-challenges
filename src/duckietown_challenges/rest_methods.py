@@ -1,10 +1,14 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import *
 
 import dateutil.parser
+import termcolor
+
 
 from duckietown_challenges import ChallengesConstants
 from duckietown_challenges.challenge import ChallengeDescription
+from duckietown_challenges.utils import pad_to_screen_length
 from .rest import make_server_request
 
 Endpoints = ChallengesConstants.Endpoints
@@ -95,6 +99,9 @@ def dtserver_get_user_submissions(token, impersonate=None):
 
 
 def dtserver_submit2(*, token, challenges: List[str], data, impersonate=None):
+    if not isinstance(challenges, list):
+        msg = 'Expected a list of strings, got %s' % challenges
+        raise ValueError(msg)
     endpoint = Endpoints.components
     method = 'POST'
     data = {'challenges': challenges, 'parameters': data}
@@ -161,7 +168,8 @@ def dtserver_work_submission(token, submission_id, machine_id, process_id, evalu
 
 def get_challenge_description(token, challenge_name: str, impersonate=None) -> ChallengeDescription:
     if not isinstance(challenge_name, str):
-        raise ValueError(challenge_name)
+        msg = 'Expected a string for the challenge name, I got %s' % challenge_name
+        raise ValueError(msg)
     endpoint = Endpoints.challenges + '/%s/description' % challenge_name
     method = 'GET'
     data = {}
@@ -209,3 +217,43 @@ def get_packages_version():
 
         # assert isinstance(i, (pkg_resources.EggInfoDistribution, pkg_resources.DistInfoDistribution))
     return packages
+
+
+@dataclass
+class CompatibleChallenges:
+    available_submit: Dict[str, ChallengeDescription]
+    compatible: List[str]
+
+
+def dtserver_get_compatible_challenges(*, token: str,
+                                   impersonate: Optional[int],
+                                   submission_protocols: List[str]) -> CompatibleChallenges:
+    """
+    Returns the list of compatible challenges for the protocols specified.
+    """
+    challenges = dtserver_get_challenges(token=token, impersonate=impersonate)
+    compatible = []
+    print('Looking for compatible and open challenges: \n')
+    fmt = '  %s  %-32s  %-10s    %s'
+    print(fmt % ('%-32s' % 'name', 'protocol', 'open?', 'title'))
+    print(fmt % ('%-32s' % '----', '--------', '-----', '-----'))
+
+    S = sorted(challenges, key=lambda _: tuple(_.split('_-')))
+    for challenge_name in S:
+        cd = challenges[challenge_name]
+        is_open = cd.date_open < datetime.now() < cd.date_close
+        if not is_open:
+            continue
+
+        is_compatible = cd.protocol in submission_protocols
+        s = "open" if is_open else "closed"
+
+        if is_compatible:
+            compatible.append(challenge_name)
+            challenge_name = termcolor.colored(challenge_name, 'blue')
+        challenge_name = pad_to_screen_length(challenge_name, 32)
+        s2 = fmt % (challenge_name, cd.protocol, s, cd.title)
+        print(s2)
+    print('')
+    print('')
+    return CompatibleChallenges(challenges, compatible)

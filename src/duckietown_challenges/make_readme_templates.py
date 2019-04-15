@@ -3,9 +3,7 @@ import argparse
 import os
 import sys
 
-import yaml
-from .challenge import SubmissionDescription
-
+from .submission_read import read_submission_info
 from . import dclogger, DEFAULT_DTSERVER
 
 
@@ -61,23 +59,6 @@ For submitting, please follow [the instructions available in the book][book].
         f.write(out)
 
     dclogger.info('written to %s' % fn)
-
-
-def read_submission_info(fn):
-    contents = open(fn).read()
-    data = yaml.load(contents)
-
-    if 'description' not in data or data['description'] is None:
-        fnd = os.path.join(os.path.dirname(fn), 'submission.description.md')
-        if os.path.exists(fnd):
-            desc = open(fnd).read()
-            data['description'] = desc
-            msg = 'Read description from %s' % fnd
-            dclogger.info(msg)
-
-    base = os.path.dirname(fn)
-    sd = SubmissionDescription.from_yaml(data)
-    return base, sd
 
 
 if __name__ == '__main__':
