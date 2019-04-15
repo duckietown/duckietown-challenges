@@ -5,7 +5,6 @@ from typing import *
 import dateutil.parser
 import termcolor
 
-
 from duckietown_challenges import ChallengesConstants
 from duckietown_challenges.challenge import ChallengeDescription
 from duckietown_challenges.utils import pad_to_screen_length
@@ -46,11 +45,12 @@ def get_registry_info(token, impersonate=None) -> RegistryInfo:
     return ri
 
 
-def dtserver_auth(token, cmd):
+def dtserver_auth(token, cmd, impersonate=None):
     endpoint = Endpoints.auth
     method = 'GET'
     data = {'query': cmd}
     add_version_info(data)
+    add_impersonate_info(data, impersonate)
     res = make_server_request(token, endpoint, data=data, method=method)
     return res
 
@@ -153,7 +153,8 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
     return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
 
 
-def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset, timeout):
+def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset, timeout,
+                             impersonate=None):
     endpoint = Endpoints.take_submission
     method = 'GET'
     data = {'submission_id': submission_id,
@@ -163,6 +164,7 @@ def dtserver_work_submission(token, submission_id, machine_id, process_id, evalu
             'features': features,
             'reset': reset}
     add_version_info(data)
+    add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
 
 
@@ -226,8 +228,8 @@ class CompatibleChallenges:
 
 
 def dtserver_get_compatible_challenges(*, token: str,
-                                   impersonate: Optional[int],
-                                   submission_protocols: List[str]) -> CompatibleChallenges:
+                                       impersonate: Optional[int],
+                                       submission_protocols: List[str]) -> CompatibleChallenges:
     """
     Returns the list of compatible challenges for the protocols specified.
     """
