@@ -123,6 +123,7 @@ def submission_build(username: str,
 
     dclogger.info('After pushing; please wait...')
 
+
     try:
         stdout = subprocess.check_output(cmd, stderr=sys.stderr)
     except subprocess.CalledProcessError as e:

@@ -138,7 +138,7 @@ def dtserver_reset_job(token, job_id, impersonate=None):
 
 
 def dtserver_report_job(token, job_id, result, stats, machine_id,
-                        process_id, evaluator_version, uploaded, timeout):
+                        process_id, evaluator_version, uploaded, timeout, impersonate=None):
     endpoint = Endpoints.take_submission
     method = 'POST'
     data = {'job_id': job_id,
@@ -150,6 +150,7 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             'uploaded': uploaded
             }
     add_version_info(data)
+    add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
 
 
@@ -182,7 +183,7 @@ def get_challenge_description(token, challenge_name: str, impersonate=None) -> C
     return cd
 
 
-def dtserver_get_challenges(token, impersonate=None) -> Dict[str, ChallengeDescription]:
+def dtserver_get_challenges(token, impersonate=None) -> Dict[int, ChallengeDescription]:
     endpoint = Endpoints.challenges
     method = 'GET'
     data = {}
@@ -190,12 +191,13 @@ def dtserver_get_challenges(token, impersonate=None) -> Dict[str, ChallengeDescr
     add_impersonate_info(data, impersonate)
     res = make_server_request(token, endpoint, data=data, method=method)
     r = {}
-    for challenge_id_s, challenge_desc in res.items():
+    for challenge_id, challenge_desc in res.items():
         cd = ChallengeDescription.from_yaml(challenge_desc)
-        r[challenge_id_s] = cd
+        r[challenge_id] = cd
     return r
 
 
+# noinspection PyBroadException
 def add_version_info(data):
     try:
         data['versions'] = get_packages_version()
@@ -203,6 +205,7 @@ def add_version_info(data):
         pass
 
 
+# noinspection PyUnresolvedReferences,PyBroadException
 def get_packages_version():
     try:
         from pip import get_installed_distributions
@@ -240,9 +243,11 @@ def dtserver_get_compatible_challenges(*, token: str,
     print(fmt % ('%-32s' % 'name', 'protocol', 'open?', 'title'))
     print(fmt % ('%-32s' % '----', '--------', '-----', '-----'))
 
-    S = sorted(challenges, key=lambda _: tuple(_.split('_-')))
-    for challenge_name in S:
-        cd = challenges[challenge_name]
+    S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split('_-')))
+    res = {}
+    for challenge_id in S:
+        cd = challenges[challenge_id]
+        challenge_name = cd.name
         is_open = cd.date_open < datetime.now() < cd.date_close
         if not is_open:
             continue
@@ -250,12 +255,15 @@ def dtserver_get_compatible_challenges(*, token: str,
         is_compatible = cd.protocol in submission_protocols
         s = "open" if is_open else "closed"
 
+        res[challenge_name] = cd
         if is_compatible:
             compatible.append(challenge_name)
-            challenge_name = termcolor.colored(challenge_name, 'blue')
-        challenge_name = pad_to_screen_length(challenge_name, 32)
-        s2 = fmt % (challenge_name, cd.protocol, s, cd.title)
+            challenge_name_s = termcolor.colored(challenge_name, 'blue')
+
+
+        challenge_name_s = pad_to_screen_length(challenge_name_s, 32)
+        s2 = fmt % (challenge_name_s, cd.protocol, s, cd.title)
         print(s2)
     print('')
     print('')
-    return CompatibleChallenges(challenges, compatible)
+    return CompatibleChallenges(res, compatible)
