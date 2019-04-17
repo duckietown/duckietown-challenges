@@ -259,7 +259,8 @@ def dtserver_get_compatible_challenges(*, token: str,
         if is_compatible:
             compatible.append(challenge_name)
             challenge_name_s = termcolor.colored(challenge_name, 'blue')
-
+        else:
+            challenge_name_s = challenge_name
 
         challenge_name_s = pad_to_screen_length(challenge_name_s, 32)
         s2 = fmt % (challenge_name_s, cd.protocol, s, cd.title)
