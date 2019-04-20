@@ -118,11 +118,11 @@ def submission_build(username: str,
     p = subprocess.Popen(cmd)
     p.communicate()
     if p.returncode != 0:
-        msg = 'Could not run docker push.'
+        msg = 'Could not run docker push. Exit code %s.' % p.returncode
+        msg += "\n\nThis is likely to be because you have not logged in to dockerhub using `docker login`."
         raise Exception(msg)
 
     dclogger.info('After pushing; please wait...')
-
 
     try:
         stdout = subprocess.check_output(cmd, stderr=sys.stderr)

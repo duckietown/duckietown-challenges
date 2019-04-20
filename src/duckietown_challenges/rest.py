@@ -1,6 +1,7 @@
 # coding=utf-8
 import json
 import os
+from json import JSONDecodeError
 
 import termcolor
 
@@ -44,8 +45,10 @@ class ConnectionError(RequestException):
 class NotAuthorized(RequestException):
     pass
 
+
 class NotFound(RequestException):
     pass
+
 
 class RequestFailed(RequestException):
     """
@@ -96,13 +99,38 @@ def make_server_request(token,
     except urllib.error.HTTPError as e:
         err_msg = e.read().decode("utf-8")
 
+        # XXX: temporary solution with new interface
+        try:
+            result = json.loads(err_msg)
+            received_msg = result.get('msg', None)
+        except JSONDecodeError:
+
+            if e.code == 401:
+                msg = 'Not authorized to perform operation.'
+                msg += f'\n\n{err_msg}'
+                raise NotAuthorized(msg) from None
+
+            if e.code == 404:
+                msg = 'Cannot find the specified object'
+                msg += f'\n\n{err_msg}'
+                raise NotFound(msg) from None
+            msg = 'Cannot read answer from server.'
+            msg += '\n\n' + indent(err_msg, '  > ')
+            raise ConnectionError(msg) from e
+
+        except (ValueError, KeyError) as e:
+            msg = 'Cannot read answer from server.'
+            msg += '\n\n' + indent(err_msg, '  > ')
+            raise ConnectionError(msg) from e
+
         if e.code == 401:
             msg = 'Not authorized to perform operation.'
-            msg += f'\n\n{err_msg}'
+            msg += f'\n\n{received_msg}'
             raise NotAuthorized(msg) from None
+
         if e.code == 404:
             msg = 'Cannot find the specified object'
-            msg += f'\n\n{err_msg}'
+            msg += f'\n\n{received_msg}'
             raise NotFound(msg) from None
 
         msg = 'Operation failed for %s: %s' % (url, e)
