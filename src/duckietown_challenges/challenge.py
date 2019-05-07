@@ -260,6 +260,7 @@ class ChallengeStep:
     evaluation_parameters: EvaluationParameters
     features_required: Dict[str, Any]
     timeout: float
+    uptodate_token: Optional[str] = None
 
     def as_dict(self):
         data = {}
@@ -268,6 +269,7 @@ class ChallengeStep:
         data['evaluation_parameters'] = self.evaluation_parameters.as_dict()
         data['features_required'] = self.features_required
         data['timeout'] = self.timeout
+        data['uptodate_token'] = self.uptodate_token
         return data
 
     # noinspection PyArgumentList
@@ -279,9 +281,9 @@ class ChallengeStep:
         evaluation_parameters = EvaluationParameters.from_yaml(data.pop('evaluation_parameters'))
         features_required = data.pop('features_required', {})
         timeout = data.pop('timeout')
-
+        uptodate_token = data.pop('uptodate_token', None)
         return ChallengeStep(name, title, description, evaluation_parameters,
-                             features_required, timeout=timeout)
+                             features_required, timeout=timeout, uptodate_token=uptodate_token)
 
 
 class NotEquivalent(Exception):
