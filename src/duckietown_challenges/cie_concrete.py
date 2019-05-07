@@ -596,7 +596,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
     from .col_logging import setup_logging_color
     setup_logging_color()
 
-    def declare(status, message, scores=None):
+    def declare(status, message, scores: Dict, ipfs_hashes: Dict[str, str]):
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
             dclogger.error(msg)
@@ -609,32 +609,35 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
-    try:
-        yield cie
-
+    def read_scores():
         scores = {}
         for k, v in cie.scores.items():
             scores[k] = v.value
-        declare(ChallengesConstants.STATUS_JOB_SUCCESS, None, scores)
+        return scores
+
+    try:
+        yield cie
+
+        declare(ChallengesConstants.STATUS_JOB_SUCCESS, None, read_scores(), cie.ipfs_hashes)
     # failure
     except InvalidSubmission:
         msg = 'InvalidSubmission:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_FAILED, msg)
+        declare(ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes)
 
     except InvalidEvaluator:
         msg = 'InvalidEvaluator:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes)
 
     except InvalidEnvironment:
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg, read_scores(), cie.ipfs_hashes)
 
     except SystemExit:
         raise
 
     except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes)
 
 
 def wrap_solution(solution, root=DEFAULT_ROOT):
