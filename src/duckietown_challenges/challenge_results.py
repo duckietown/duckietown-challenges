@@ -6,11 +6,12 @@ from .challenges_constants import ChallengesConstants
 from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import write_yaml, read_yaml_file
-
+from typing import *
 
 class ChallengeResults:
+    ipfs_hashes: Dict[str, str]
 
-    def __init__(self, status, msg, scores, stats=None):
+    def __init__(self, status, msg, scores, stats=None, ipfs_hashes: Optional[Dict[str, str]] =None):
         assert status in ChallengesConstants.ALLOWED_JOB_STATUS, \
             (status,  ChallengesConstants.ALLOWED_JOB_STATUS)
         self.status = status
@@ -19,6 +20,7 @@ class ChallengeResults:
         if stats is None:
             stats = {}
         self.stats = stats
+        self.ipfs_hashes = ipfs_hashes or {}
 
     def to_yaml(self):
         data = {}
@@ -26,6 +28,7 @@ class ChallengeResults:
         data['msg'] = self.msg
         data['scores'] = self.scores
         data['stats'] = self.stats
+        data['ipfs_hashes'] = self.ipfs_hashes
         return data
 
     def __repr__(self):
@@ -39,7 +42,8 @@ class ChallengeResults:
         msg = d0.pop('msg')
         scores = d0.pop('scores')
         stats = d0.pop('stats', {})
-        return ChallengeResults(status, msg, scores, stats)
+        ipfs_hashes = d0.pop('ipfs_hashes', {})
+        return ChallengeResults(status, msg, scores, stats, ipfs_hashes)
 
     def get_status(self):
         return self.status

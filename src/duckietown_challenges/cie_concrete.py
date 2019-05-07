@@ -255,7 +255,7 @@ def a_tmp_dir(root):
 
 
 class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
-
+    ipfs_hashes: Dict[str, str]
     def __init__(self, root=DEFAULT_ROOT):
         dclogger.info(f'ChallengeInterfaceEvaluatorConcrete root = {root}')
         self.root = root
@@ -264,6 +264,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.parameters = None
 
         self.evaluation_files = FS()  # -> ChallengeFile
+        self.ipfs_hashes = {}
         self.scores = {}  # str -> ReportedScore
 
     def set_challenge_parameters(self, data):
@@ -328,6 +329,9 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         self.scores[name] = ReportedScore(name, value, description)
 
+    def set_evaluation_ipfs_hash(self, rpath: str, ipfs_hash:str):
+        self.ipfs_hashes[rpath]= ipfs_hash
+
     def set_evaluation_file(self, basename, from_file, description=None):
         try:
             self.evaluation_files.add(basename, from_file, description)
@@ -377,7 +381,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         scores = {}
         for k, v in self.scores.items():
             scores[k] = v.value
-        cr = ChallengeResults(status, msg, scores)
+        cr = ChallengeResults(status, msg, scores, ipfs_hashes=self.ipfs_hashes)
 
         declare_challenge_results(self.root, cr)
 
@@ -588,7 +592,6 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
 @contextmanager
 def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvaluator]:
     dclogger.info('Environment variables:\n\n' + json.dumps(dict(os.environ), indent=2))
-
 
     from .col_logging import setup_logging_color
     setup_logging_color()

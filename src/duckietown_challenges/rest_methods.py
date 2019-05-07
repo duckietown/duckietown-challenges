@@ -138,7 +138,9 @@ def dtserver_reset_job(token, job_id, impersonate=None):
 
 
 def dtserver_report_job(token, job_id, result, stats, machine_id,
-                        process_id, evaluator_version, uploaded, timeout, impersonate=None):
+                        process_id, evaluator_version, uploaded, timeout,
+                        ipfs_hashes: Dict[str, str],
+                        impersonate=None):
     endpoint = Endpoints.take_submission
     method = 'POST'
     data = {'job_id': job_id,
@@ -147,7 +149,8 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             'machine_id': machine_id,
             'process_id': process_id,
             'evaluator_version': evaluator_version,
-            'uploaded': uploaded
+            'uploaded': uploaded,
+            'ipfs_hashes': ipfs_hashes,
             }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
