@@ -602,7 +602,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
             dclogger.error(msg)
         else:
             dclogger.info('Completed.')
-        cr = ChallengeResults(status, message, scores or {})
+        cr = ChallengeResults(status, message, scores or {}, ipfs_hashes)
         declare_challenge_results(root, cr)
         retcode = 0 if status == ChallengesConstants.STATUS_JOB_SUCCESS else 1
         sys.exit(retcode)
