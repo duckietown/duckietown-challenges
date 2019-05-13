@@ -11,6 +11,7 @@ import traceback
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import *
 
 from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
@@ -21,7 +22,7 @@ from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
 from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
-from typing import *
+
 
 @dataclass
 class ChallengeFile:
@@ -30,9 +31,9 @@ class ChallengeFile:
     contents: Optional[bytes]
     description: str
 
+
 # ChallengeFile = namedtuple('ChallengeFile', 'basename from_file contents description')
 ReportedScore = namedtuple('ReportedScore', 'name value description')
-
 
 
 def check_valid_basename(s):
@@ -256,6 +257,7 @@ def a_tmp_dir(root):
 
 class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     ipfs_hashes: Dict[str, str]
+
     def __init__(self, root=DEFAULT_ROOT):
         dclogger.info(f'ChallengeInterfaceEvaluatorConcrete root = {root}')
         self.root = root
@@ -304,6 +306,8 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
     def get_solution_output_files(self):
         d = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_DIR)
+        if not os.path.exists(d):
+            return []
         fns = list(os.listdir(d))
         return fns
 
@@ -329,8 +333,15 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         self.scores[name] = ReportedScore(name, value, description)
 
-    def set_evaluation_ipfs_hash(self, rpath: str, ipfs_hash:str):
-        self.ipfs_hashes[rpath]= ipfs_hash
+    def set_evaluation_ipfs_hash(self, rpath: str, ipfs_hash: str):
+
+        if not isinstance(ipfs_hash, str):
+            raise ValueError(ipfs_hash)
+        ipfs_hash = ipfs_hash.strip()
+        if not ipfs_hash.startswith('Qm'):
+            raise ValueError(ipfs_hash)
+        rpath = os.path.join(CHALLENGE_EVALUATION_OUTPUT_DIR, rpath)
+        self.ipfs_hashes[rpath] = ipfs_hash
 
     def set_evaluation_file(self, basename, from_file, description=None):
         try:
@@ -496,6 +507,7 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
 
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
+    # noinspection PyBroadException
     try:
         try:
             evaluator.prepare(cie)
@@ -540,7 +552,7 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
         msg = 'InvalidEnvironment:\n%s' % traceback.format_exc()
         declare(ChallengesConstants.STATUS_JOB_HOST_ERROR, msg)
 
-    except BaseException as e:
+    except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
         declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
 
@@ -585,8 +597,6 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
     except BaseException:
         msg = 'Unexpected exception:\n%s' % traceback.format_exc()
         declare(ChallengesConstants.STATUS_JOB_ERROR, msg)
-
-
 
 
 @contextmanager
