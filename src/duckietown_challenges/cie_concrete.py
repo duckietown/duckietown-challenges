@@ -462,6 +462,7 @@ def get_completed_step_evaluation_files(root, step_name):
         msg = 'Could not find dir %s' % d
         raise InvalidEnvironment(msg)
 
+    dclogger.info('step dir is %s' % d)
     return list(os.listdir(d))
 
 
@@ -472,10 +473,18 @@ def get_completed_step_evaluation_file(root, step_name, basename):
     #     msg = 'No file %r' % basename
     #     raise KeyError(msg)
 
-    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+    step_dir = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+    fn = os.path.join(step_dir, basename)
     if not os.path.exists(fn):
-        msg = 'Cannot find %s; know %s' % (fn, available)
-        raise KeyError(msg)
+        msg = 'File %s -> %s does not exist ' % (basename, fn)
+
+        for x in available:
+            msg += f'\n available {x}'
+
+        msg += f'\n\n step_dir: {step_dir}'
+        msg += '\n\n list: ' + str(os.listdir(step_dir))
+        dclogger.warning(msg)
+        # raise KeyError(msg)
     return fn
 
 
