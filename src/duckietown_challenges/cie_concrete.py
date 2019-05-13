@@ -597,6 +597,10 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
     setup_logging_color()
 
     def declare(status, message, scores: Dict, ipfs_hashes: Dict[str, str]):
+        # write files
+        d = os.path.join(root, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        cie.evaluation_files.write(d)
+
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
             msg = 'declare %s:\n%s' % (status, message)
             dclogger.error(msg)
