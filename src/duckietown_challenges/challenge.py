@@ -402,14 +402,16 @@ class ChallengeTransitions:
                 msg = 'Ignoring invalid step %s -> %s' % (k, ks)
                 dclogger.error(msg)
                 status.pop(k)
+
             if ks not in ChallengesConstants.ALLOWED_JOB_STATUS:
-                msg = 'Ignoring invalid step %s -> %s' % (k, ks)
+                msg = f'Ignoring invalid step {k} -> {ks!r}'
                 dclogger.error(msg)
                 status.pop(k)
 
             # timeout or aborted or host error = like it never happened
             if ks in [CS.STATUS_JOB_TIMEOUT, CS.STATUS_JOB_ABORTED, CS.STATUS_JOB_HOST_ERROR]:
-                status.pop(k)
+                if k in status:
+                    status.pop(k)
 
         # make sure that the steps in which they depend are ok
 
