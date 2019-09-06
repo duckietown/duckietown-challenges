@@ -66,8 +66,9 @@ class FS:
 
     def write(self, dest):
         rfs = list(self.files.values())
-
+        dclogger.info(f'writing files {rfs}')
         for rf in rfs:
+
             out = os.path.join(dest, rf.basename)
             d8n_make_sure_dir_exists(out)
 
