@@ -137,10 +137,28 @@ def dtserver_reset_job(token, job_id, impersonate=None):
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_report_job(token, job_id, result, stats, machine_id,
-                        process_id, evaluator_version, uploaded, timeout,
-                        ipfs_hashes: Dict[str, str],
+def dtserver_report_job(token: str, job_id: int,
+                        result: str, # code
+
+                        stats: dict , # <- data 1
+
+                        machine_id,
+                        process_id,
+                        evaluator_version,
+
+                        uploaded, # <- uploaded via S3
+                        timeout, # <- how long to wait for the server
+                        ipfs_hashes: Dict[str, str], # <- IPFS files
+
                         impersonate=None):
+    """
+
+        uploaded: structure returned by upload_files(directory, aws_config)
+         which uses S3
+
+        ipfs_hashes: the files represented by IPFS
+            filename -> IPFS hash
+    """
     endpoint = Endpoints.take_submission
     method = 'POST'
     data = {'job_id': job_id,
@@ -154,11 +172,54 @@ def dtserver_report_job(token, job_id, result, stats, machine_id,
             }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
+    return make_server_request(token, endpoint, data=data, method=method,
+                               timeout=timeout, suppress_user_msg=True)
 
 
 def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset, timeout,
                              impersonate=None):
+    """
+
+        Pipeline:
+
+        1) get a job using
+
+            res = dtserver_work_submission(...)
+
+        2) Take
+
+            aws_config = res['aws_config']
+
+        3) Use upload_files:
+
+            uploaded = upload_files(directory, aws_config)
+
+        4) Use your code to upload IPFS, get
+
+            ipfs_hashes = {
+                'rel/filename' : '/ipfs/<hash>'
+            }
+
+        5) Put the statistics in a "scores" dictionary.
+
+            stats = {'metric1': 1.0, 'metric2': 2.0}
+
+        5) Give this structure to the server using
+
+            dtserver_report_job(...,
+                uploaded=uploaded,
+                ipfs_hashes_hashes,
+                stats=stats)
+
+
+
+        Used to get a job from the server.
+
+        Returns a dict containing among others.
+
+            aws_config: credentials to pass to upload_files
+
+    """
     endpoint = Endpoints.take_submission
     method = 'GET'
     data = {'submission_id': submission_id,
