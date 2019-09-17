@@ -31,7 +31,7 @@ class ChallengeResults:
         data['ipfs_hashes'] = self.ipfs_hashes
         return data
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ChallengeResults(%s)' % self.to_yaml()
 
     # noinspection PyArgumentList

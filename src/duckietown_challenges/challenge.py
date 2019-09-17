@@ -41,7 +41,7 @@ class Build:
     #     self.dockerfile = dockerfile
     #     self.args = args
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     def as_dict(self):
@@ -77,7 +77,7 @@ class ServiceDefinition:
     environment: Dict[str, Any]
     ports: List[PortDefinition]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     def equivalent(self, other):
@@ -233,7 +233,7 @@ class EvaluationParameters:
 
         return EvaluationParameters(services=services, version=version)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     def as_dict(self):
@@ -344,7 +344,7 @@ class ChallengeTransitions:
             res.append([transition.first, transition.condition, transition.second])
         return res
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return u"\n".join(self.steps_explanation())
 
     def steps_explanation(self):
@@ -477,7 +477,7 @@ class Score:
         self.discretization = discretization
         self.short = short
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     def as_dict(self):
@@ -525,7 +525,7 @@ class Scoring:
         scores = [_.as_dict() for _ in self.scores]
         return dict(scores=scores)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     @classmethod
@@ -665,7 +665,7 @@ class ChallengeDescription:
     def as_yaml(self):
         return yaml.dump(self.as_dict())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
 
@@ -700,7 +700,7 @@ class SubmissionDescription:
             msg = 'Expected a list of strings for protocols names, got %s' % self.protocols
             raise ValueError(msg)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return nice_repr(self)
 
     def as_dict(self):
