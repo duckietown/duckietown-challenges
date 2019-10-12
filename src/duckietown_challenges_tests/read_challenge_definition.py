@@ -3,7 +3,11 @@ import traceback
 import yaml
 from comptests import comptest, run_module_tests
 
-from duckietown_challenges.challenge import ChallengeDescription, ServiceDefinition, EvaluationParameters
+from duckietown_challenges.challenge import (
+    ChallengeDescription,
+    ServiceDefinition,
+    EvaluationParameters,
+)
 
 from duckietown_challenges.utils import InvalidConfiguration
 
@@ -108,85 +112,74 @@ def read_challenge_1():
     assert c.title
     assert len(c.get_steps()) == 2
 
-    status = {'START': 'success'}
+    status = {"START": "success"}
     complete, _, steps = c.get_next_steps(status)
     assert not complete
-    assert steps == ['step1'], steps
+    assert steps == ["step1"], steps
 
-    status['step1'] = 'evaluating'
+    status["step1"] = "evaluating"
     complete, _, steps = c.get_next_steps(status)
     assert not complete
     assert steps == [], steps
 
-    status['step1'] = 'success'
+    status["step1"] = "success"
     complete, _, steps = c.get_next_steps(status)
     assert not complete
-    assert steps == ['step2'], steps
+    assert steps == ["step2"], steps
 
-    status['step1'] = 'error'
+    status["step1"] = "error"
     complete, result, steps = c.get_next_steps(status)
     assert complete
-    assert result == 'error'
+    assert result == "error"
     assert steps == [], steps
 
-    status['step1'] = 'failed'
+    status["step1"] = "failed"
     complete, result, steps = c.get_next_steps(status)
     assert complete
-    assert result == 'failed'
+    assert result == "failed"
     assert steps == [], steps
 
-    status['step1'] = 'success'
-    status['step2'] = 'success'
+    status["step1"] = "success"
+    status["step2"] = "success"
     complete, result, steps = c.get_next_steps(status)
     assert complete
-    assert result == 'success', result
+    assert result == "success", result
     assert steps == [], steps
 
-    status['step1'] = 'success'
-    status['step2'] = 'evaluating'
+    status["step1"] = "success"
+    status["step2"] = "evaluating"
     complete, result, steps = c.get_next_steps(status)
     assert not complete
     assert result is None, result
     assert steps == [], steps
 
-    status['step1'] = 'success'
-    status['step2'] = 'failed'
+    status["step1"] = "success"
+    status["step2"] = "failed"
     complete, result, steps = c.get_next_steps(status)
     assert complete
-    assert result == 'failed', result
+    assert result == "failed", result
     assert steps == [], steps
 
-    status['step1'] = 'success'
-    status['step2'] = 'error'
+    status["step1"] = "success"
+    status["step2"] = "error"
     complete, result, steps = c.get_next_steps(status)
     assert complete
-    assert result == 'error', result
+    assert result == "error", result
     assert steps == [], steps
 
-    status = {
-        'START': 'success',
-        'step2': 'success',
-    }
+    status = {"START": "success", "step2": "success"}
     complete, result, steps = c.get_next_steps(status)
     assert not complete
     assert result is None
-    assert steps == ['step1'], steps
+    assert steps == ["step1"], steps
 
-    status = {
-        'START': 'success',
-        'step1': 'evaluating',
-        'step2': 'success',
-    }
+    status = {"START": "success", "step1": "evaluating", "step2": "success"}
     complete, result, steps = c.get_next_steps(status)
     assert not complete
     assert result is None
     assert steps == [], steps
 
-    status = {
-        'START': 'success',
-        'step1': 'success',
-        'step2': 'evaluating',
-    }
+    status = {"START": "success", "step1": "success", "step2": "evaluating"}
     complete, result, steps = c.get_next_steps(status)
     assert not complete
     assert result is None
@@ -200,7 +193,9 @@ version: '3'
 services:
 
 """
-    assert_raises_s(InvalidConfiguration, 'Expected dict', test_reading_evaluation_parameters, data)
+    assert_raises_s(
+        InvalidConfiguration, "Expected dict", test_reading_evaluation_parameters, data
+    )
 
 
 @comptest
@@ -210,7 +205,12 @@ version: '3'
 services: {}
 
 """
-    assert_raises_s(InvalidConfiguration, 'No services described', test_reading_evaluation_parameters, data)
+    assert_raises_s(
+        InvalidConfiguration,
+        "No services described",
+        test_reading_evaluation_parameters,
+        data,
+    )
 
 
 @comptest
@@ -220,7 +220,9 @@ version: '3'
 
 
 """
-    assert_raises_s(InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data)
+    assert_raises_s(
+        InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data
+    )
 
 
 @comptest
@@ -234,7 +236,9 @@ services:
         image: SUBMISSION_CONTAINER
 another:
 """
-    assert_raises_s(InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data)
+    assert_raises_s(
+        InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data
+    )
 
 
 def assert_raises_s(E, contained, f, *args):
@@ -243,13 +247,13 @@ def assert_raises_s(E, contained, f, *args):
     except E:
         s = traceback.format_exc()
         if contained not in s:
-            msg = 'Expected %r in error:\n%s' % (contained, s)
+            msg = "Expected %r in error:\n%s" % (contained, s)
             raise Exception(msg)
     except BaseException as e:
-        msg = 'Expected to get %s but found %s: %s' % (E, type(e), e)
+        msg = "Expected to get %s but found %s: %s" % (E, type(e), e)
         raise Exception(msg)
     else:
-        msg = 'Expected to find exception %s' % str(E)
+        msg = "Expected to find exception %s" % str(E)
         raise Exception(msg)
 
 
@@ -271,5 +275,5 @@ def test_reading_evaluation_parameters(s):
     return c0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_module_tests()

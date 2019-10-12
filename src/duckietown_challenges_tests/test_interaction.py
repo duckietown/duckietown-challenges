@@ -3,27 +3,32 @@ import tempfile
 
 from comptests import run_module_tests
 
-from duckietown_challenges import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution, read_challenge_results, \
-    wrap_solution, wrap_evaluator, ChallengesConstants
+from duckietown_challenges import (
+    ChallengeInterfaceEvaluator,
+    ChallengeInterfaceSolution,
+    read_challenge_results,
+    wrap_solution,
+    wrap_evaluator,
+    ChallengesConstants,
+)
 from duckietown_challenges.challenge_evaluator import ChallengeEvaluator
 from duckietown_challenges.challenge_solution import ChallengeSolution
 from duckietown_challenges.utils import write_data_to_file
 
-FN1 = 'c1'
-K1 = 'dummy'
-V1 = 'dumm'
-K2 = 'r'
-V2 = 'r2'
+FN1 = "c1"
+K1 = "dummy"
+V1 = "dumm"
+K2 = "r"
+V2 = "r2"
 
-FN2 = 'fn2'
-FN3 = 'fn3'
-SCORE1 = 'score1'
+FN2 = "fn2"
+FN3 = "fn3"
+SCORE1 = "score1"
 SCORE1_VAL = 42
-DUMMY_DATA = 'djeoijdo'
+DUMMY_DATA = "djeoijdo"
 
 
 class E1(ChallengeEvaluator):
-
     def prepare(self, cie):
         assert isinstance(cie, ChallengeInterfaceEvaluator)
         cie.set_challenge_parameters({K1: V1})
@@ -48,7 +53,6 @@ class E1(ChallengeEvaluator):
 
 
 class S1(ChallengeSolution):
-
     def run(self, cis):
         assert isinstance(cis, ChallengeInterfaceSolution)
 
@@ -73,7 +77,7 @@ from multiprocessing import Process
 
 def run_interaction(S, E):
     root = tempfile.mkdtemp()
-    print('Root: %s' % root)
+    print("Root: %s" % root)
 
     def process_evaluator():
         wrap_evaluator(E, root=root)
@@ -101,7 +105,6 @@ def test_interaction1():
 
 def test_no_scores():
     class ENoScores(ChallengeEvaluator):
-
         def prepare(self, cie):
             cie.set_challenge_parameters({K1: V1})
 
@@ -109,7 +112,6 @@ def test_no_scores():
             pass
 
     class SDummy(ChallengeSolution):
-
         def run(self, cis):
             cis.set_solution_output_dict({K1: V1})
 
@@ -119,7 +121,6 @@ def test_no_scores():
 
 def test_no_solution_output():
     class EDummy(ChallengeEvaluator):
-
         def prepare(self, cie):
             cie.set_challenge_parameters({K1: V1})
 
@@ -127,7 +128,6 @@ def test_no_solution_output():
             pass
 
     class SDummy(ChallengeSolution):
-
         def run(self, cis):
             pass  # cis.set_solution_output_dict({K1: V1})
 
@@ -135,5 +135,5 @@ def test_no_solution_output():
     assert cr.get_status() == ChallengesConstants.STATUS_JOB_FAILED
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_module_tests()

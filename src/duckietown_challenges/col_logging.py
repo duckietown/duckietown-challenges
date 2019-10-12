@@ -3,21 +3,22 @@ import logging
 
 import termcolor
 
-__all__ = ['setup_logging_color', 'setup_logging_format', 'setup_logging']
+__all__ = ["setup_logging_color", "setup_logging_format", "setup_logging"]
 
 
 def get_FORMAT_datefmt():
-    pre = '%(asctime)s|%(name)s|%(filename)s:%(lineno)s|%(funcName)s(): '
-    pre = termcolor.colored(pre, attrs=['dark'])
+    pre = "%(asctime)s|%(name)s|%(filename)s:%(lineno)s|%(funcName)s(): "
+    pre = termcolor.colored(pre, attrs=["dark"])
     FORMAT = pre + "%(message)s"
     datefmt = "%H:%M:%S"
     return FORMAT, datefmt
+
 
 def setup_logging_format():
     from logging import Logger, StreamHandler, Formatter
     import logging
 
-    FORMAT, datefmt  = get_FORMAT_datefmt()
+    FORMAT, datefmt = get_FORMAT_datefmt()
     logging.basicConfig(format=FORMAT, datefmt=datefmt)
 
     if Logger.root.handlers:  # @UndefinedVariable
@@ -34,24 +35,24 @@ def add_coloring_to_emit_ansi(fn):
     def new(*args):
         levelno = args[1].levelno
         if levelno >= 50:
-            color = '\x1b[31m'  # red
+            color = "\x1b[31m"  # red
         elif levelno >= 40:
-            color = '\x1b[31m'  # red
+            color = "\x1b[31m"  # red
         elif levelno >= 30:
-            color = '\x1b[33m'  # yellow
+            color = "\x1b[33m"  # yellow
         elif levelno >= 20:
-            color = '\x1b[32m'  # green
+            color = "\x1b[32m"  # green
         elif levelno >= 10:
-            color = '\x1b[35m'  # pink
+            color = "\x1b[35m"  # pink
         else:
-            color = '\x1b[0m'  # normal
+            color = "\x1b[0m"  # normal
 
         msg = str(args[1].msg)
 
-        lines = msg.split('\n')
+        lines = msg.split("\n")
 
         def color_line(l):
-            return "%s%s%s" % (color, l, '\x1b[0m')  # normal
+            return "%s%s%s" % (color, l, "\x1b[0m")  # normal
 
         lines = list(map(color_line, lines))
 
@@ -64,7 +65,7 @@ def add_coloring_to_emit_ansi(fn):
 def setup_logging_color():
     import platform
 
-    if platform.system() != 'Windows':
+    if platform.system() != "Windows":
         emit2 = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
         logging.StreamHandler.emit = emit2
 

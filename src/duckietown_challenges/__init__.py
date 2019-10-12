@@ -1,11 +1,11 @@
 # coding=utf-8
-__version__ = '5.0.2'
+__version__ = "5.0.2"
 import logging
 
 logging.basicConfig()
-dclogger = logging.getLogger('duckietown-challenges')
+dclogger = logging.getLogger("duckietown-challenges")
 dclogger.setLevel(logging.DEBUG)
-dclogger.info('duckietown-challenges %s' % __version__)
+dclogger.info("duckietown-challenges %s" % __version__)
 
 from .challenges_constants import ChallengesConstants
 from .solution_interface import *
@@ -19,4 +19,3 @@ from .cie_concrete import *
 
 from .make_readmes import make_readmes_main as make_readmes_main
 from .make_readme_templates import make_readmes_templates_main
-

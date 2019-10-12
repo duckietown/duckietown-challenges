@@ -1,4 +1,5 @@
 from comptests import comptest, run_module_tests
+
 # from duckietown_challenges.yaml_utils import interpret_yaml_string
 #
 # example = """\
@@ -17,5 +18,5 @@ from comptests import comptest, run_module_tests
 #     assert isinstance(x, dict), type(x)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_module_tests()

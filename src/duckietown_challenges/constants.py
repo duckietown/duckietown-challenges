@@ -1,11 +1,11 @@
 # coding=utf-8
 import os
 
-DEFAULT_ROOT = '/challenges'
+DEFAULT_ROOT = "/challenges"
 
 # In the end, the evaluator must create this file
-CHALLENGE_RESULTS_DIR = 'challenge-results'
-CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.yaml')
+CHALLENGE_RESULTS_DIR = "challenge-results"
+CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, "challenge_results.yaml")
 
 # Example content of the file:
 #
@@ -17,23 +17,27 @@ CHALLENGE_RESULTS_YAML = os.path.join(CHALLENGE_RESULTS_DIR, 'challenge_results.
 
 
 # Folder for the output of the solution
-CHALLENGE_SOLUTION_OUTPUT_DIR = 'challenge-solution-output'
-CHALLENGE_EVALUATION_OUTPUT_DIR = 'challenge-evaluation-output'
-CHALLENGE_DESCRIPTION_DIR = 'challenge-description'
-CHALLENGE_TMP_SUBDIR = 'tmp'
+CHALLENGE_SOLUTION_OUTPUT_DIR = "challenge-solution-output"
+CHALLENGE_EVALUATION_OUTPUT_DIR = "challenge-evaluation-output"
+CHALLENGE_DESCRIPTION_DIR = "challenge-description"
+CHALLENGE_TMP_SUBDIR = "tmp"
 
-CHALLENGE_PREVIOUS_STEPS_DIR = 'previous-steps'
+CHALLENGE_PREVIOUS_STEPS_DIR = "previous-steps"
 
 # File to be created by the solution, which also signals
 # the termination of the run
-CHALLENGE_SOLUTION_OUTPUT_YAML = os.path.join(CHALLENGE_SOLUTION_OUTPUT_DIR, 'output-solution.yaml')
-CHALLENGE_EVALUATION_OUTPUT_YAML = os.path.join(CHALLENGE_EVALUATION_OUTPUT_DIR, 'output-evaluation.yaml')
-CHALLENGE_SOLUTION_DIR = 'challenge-solution'
-CHALLENGE_EVALUATION_DIR = 'challenge-evaluation'
-CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, 'description.yaml')
+CHALLENGE_SOLUTION_OUTPUT_YAML = os.path.join(
+    CHALLENGE_SOLUTION_OUTPUT_DIR, "output-solution.yaml"
+)
+CHALLENGE_EVALUATION_OUTPUT_YAML = os.path.join(
+    CHALLENGE_EVALUATION_OUTPUT_DIR, "output-evaluation.yaml"
+)
+CHALLENGE_SOLUTION_DIR = "challenge-solution"
+CHALLENGE_EVALUATION_DIR = "challenge-evaluation"
+CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, "description.yaml")
 
-ENV_CHALLENGE_NAME = 'challenge_name'
-ENV_CHALLENGE_STEP_NAME = 'challenge_step_name'
+ENV_CHALLENGE_NAME = "challenge_name"
+ENV_CHALLENGE_STEP_NAME = "challenge_step_name"
 
 #
 # class ChallengeResultsStatus(object):
@@ -48,7 +52,7 @@ ENV_CHALLENGE_STEP_NAME = 'challenge_step_name'
 #     # XXX: to merge
 
 
-DEFAULT_DTSERVER = 'https://challenges.duckietown.org/v4'
+DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
 
 
 class Storage(object):
@@ -56,14 +60,15 @@ class Storage(object):
 
 
 def get_duckietown_server_url():
-    V = 'DTSERVER'
+    V = "DTSERVER"
 
     if V in os.environ:
         use = os.environ[V]
         if not Storage.done:
             if use != DEFAULT_DTSERVER:
-                msg = 'Using server %s instead of default %s' % (use, DEFAULT_DTSERVER)
+                msg = "Using server %s instead of default %s" % (use, DEFAULT_DTSERVER)
                 from . import dclogger
+
                 dclogger.info(msg)
             Storage.done = True
         return use

@@ -17,8 +17,8 @@ def get_version(filename):
 
 
 version = get_version(filename='src/duckietown_challenges/__init__.py')
-
-setup(name='duckietown-challenges',
+line = 'daffy'
+setup(name=f'duckietown-challenges-{line}',
       version=version,
       download_url='http://github.com/duckietown/duckietown-challenges/tarball/%s' % version,
       package_dir={'': 'src'},

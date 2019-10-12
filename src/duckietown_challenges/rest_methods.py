@@ -20,22 +20,21 @@ class RegistryInfo:
 
 def add_impersonate_info(data, impersonate):
     if impersonate is not None:
-        data['impersonate'] = impersonate
+        data["impersonate"] = impersonate
 
 
 def dtserver_challenge_define(token, yaml, force_invalidate, impersonate=None):
     endpoint = Endpoints.challenge_define
-    method = 'POST'
-    data = {'yaml': yaml, 'force-invalidate': force_invalidate}
+    method = "POST"
+    data = {"yaml": yaml, "force-invalidate": force_invalidate}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method,
-                               timeout=15)
+    return make_server_request(token, endpoint, data=data, method=method, timeout=15)
 
 
 def get_registry_info(token, impersonate=None) -> RegistryInfo:
     endpoint = Endpoints.registry_info
-    method = 'GET'
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
@@ -47,8 +46,8 @@ def get_registry_info(token, impersonate=None) -> RegistryInfo:
 
 def dtserver_auth(token, cmd, impersonate=None):
     endpoint = Endpoints.auth
-    method = 'GET'
-    data = {'query': cmd}
+    method = "GET"
+    data = {"query": cmd}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     res = make_server_request(token, endpoint, data=data, method=method)
@@ -58,7 +57,7 @@ def dtserver_auth(token, cmd, impersonate=None):
 def get_dtserver_user_info(token, impersonate=None):
     """ Returns a dictionary with information about the user """
     endpoint = Endpoints.user_info
-    method = 'GET'
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
@@ -76,8 +75,8 @@ def get_dtserver_user_info(token, impersonate=None):
 
 def dtserver_retire(token, submission_id, impersonate=None):
     endpoint = Endpoints.submissions
-    method = 'DELETE'
-    data = {'submission_id': submission_id}
+    method = "DELETE"
+    data = {"submission_id": submission_id}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
@@ -86,43 +85,45 @@ def dtserver_retire(token, submission_id, impersonate=None):
 def dtserver_get_user_submissions(token, impersonate=None):
     """ Returns a dictionary with information about the user submissions """
     endpoint = Endpoints.submissions
-    method = 'GET'
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     submissions = make_server_request(token, endpoint, data=data, method=method)
 
     for v in submissions.values():
-        for k in ['date_submitted', 'last_status_change']:
+        for k in ["date_submitted", "last_status_change"]:
             v[k] = dateutil.parser.parse(v[k])
     return submissions
 
 
 def dtserver_submit2(*, token, challenges: List[str], data, impersonate=None):
     if not isinstance(challenges, list):
-        msg = 'Expected a list of strings, got %s' % challenges
+        msg = "Expected a list of strings, got %s" % challenges
         raise ValueError(msg)
     endpoint = Endpoints.components
-    method = 'POST'
-    data = {'challenges': challenges, 'parameters': data}
+    method = "POST"
+    data = {"challenges": challenges, "parameters": data}
     add_impersonate_info(data, impersonate)
     add_version_info(data)
     return make_server_request(token, endpoint, data=data, method=method)
 
 
 def dtserver_get_info(token, submission_id, impersonate=None):
-    endpoint = Endpoints.submission_single + '/%s' % submission_id
-    method = 'GET'
+    endpoint = Endpoints.submission_single + "/%s" % submission_id
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
+    return make_server_request(
+        token, endpoint, data=data, method=method, suppress_user_msg=True
+    )
 
 
 def dtserver_reset_submission(token, submission_id, step_name, impersonate=None):
     endpoint = Endpoints.reset_submission
-    method = 'POST'
-    data = {'submission_id': submission_id, 'step_name': step_name}
+    method = "POST"
+    data = {"submission_id": submission_id, "step_name": step_name}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
@@ -130,27 +131,26 @@ def dtserver_reset_submission(token, submission_id, step_name, impersonate=None)
 
 def dtserver_reset_job(token, job_id, impersonate=None):
     endpoint = Endpoints.reset_job
-    method = 'POST'
-    data = {'job_id': job_id}
+    method = "POST"
+    data = {"job_id": job_id}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_report_job(token: str, job_id: int,
-                        result: str, # code
-
-                        stats: dict , # <- data 1
-
-                        machine_id,
-                        process_id,
-                        evaluator_version,
-
-                        uploaded, # <- uploaded via S3
-                        timeout, # <- how long to wait for the server
-                        ipfs_hashes: Dict[str, str], # <- IPFS files
-
-                        impersonate=None):
+def dtserver_report_job(
+    token: str,
+    job_id: int,
+    result: str,  # code
+    stats: dict,  # <- data 1
+    machine_id,
+    process_id,
+    evaluator_version,
+    uploaded,  # <- uploaded via S3
+    timeout,  # <- how long to wait for the server
+    ipfs_hashes: Dict[str, str],  # <- IPFS files
+    impersonate=None,
+):
     """
 
         uploaded: structure returned by upload_files(directory, aws_config)
@@ -160,24 +160,40 @@ def dtserver_report_job(token: str, job_id: int,
             filename -> IPFS hash
     """
     endpoint = Endpoints.take_submission
-    method = 'POST'
-    data = {'job_id': job_id,
-            'result': result,
-            'stats': stats,
-            'machine_id': machine_id,
-            'process_id': process_id,
-            'evaluator_version': evaluator_version,
-            'uploaded': uploaded,
-            'ipfs_hashes': ipfs_hashes,
-            }
+    method = "POST"
+    data = {
+        "job_id": job_id,
+        "result": result,
+        "stats": stats,
+        "machine_id": machine_id,
+        "process_id": process_id,
+        "evaluator_version": evaluator_version,
+        "uploaded": uploaded,
+        "ipfs_hashes": ipfs_hashes,
+    }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method,
-                               timeout=timeout, suppress_user_msg=True)
+    return make_server_request(
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
+    )
 
 
-def dtserver_work_submission(token, submission_id, machine_id, process_id, evaluator_version, features, reset, timeout,
-                             impersonate=None):
+def dtserver_work_submission(
+    token,
+    submission_id,
+    machine_id,
+    process_id,
+    evaluator_version,
+    features,
+    reset,
+    timeout,
+    impersonate=None,
+):
     """
 
         Pipeline:
@@ -221,35 +237,46 @@ def dtserver_work_submission(token, submission_id, machine_id, process_id, evalu
 
     """
     endpoint = Endpoints.take_submission
-    method = 'GET'
-    data = {'submission_id': submission_id,
-            'machine_id': machine_id,
-            'process_id': process_id,
-            'evaluator_version': evaluator_version,
-            'features': features,
-            'reset': reset}
+    method = "GET"
+    data = {
+        "submission_id": submission_id,
+        "machine_id": machine_id,
+        "process_id": process_id,
+        "evaluator_version": evaluator_version,
+        "features": features,
+        "reset": reset,
+    }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True)
+    return make_server_request(
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
+    )
 
 
-def get_challenge_description(token, challenge_name: str, impersonate=None) -> ChallengeDescription:
+def get_challenge_description(
+    token, challenge_name: str, impersonate=None
+) -> ChallengeDescription:
     if not isinstance(challenge_name, str):
-        msg = 'Expected a string for the challenge name, I got %s' % challenge_name
+        msg = "Expected a string for the challenge name, I got %s" % challenge_name
         raise ValueError(msg)
-    endpoint = Endpoints.challenges + '/%s/description' % challenge_name
-    method = 'GET'
+    endpoint = Endpoints.challenges + "/%s/description" % challenge_name
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     res = make_server_request(token, endpoint, data=data, method=method)
-    cd = ChallengeDescription.from_yaml(res['challenge'])
+    cd = ChallengeDescription.from_yaml(res["challenge"])
     return cd
 
 
 def dtserver_get_challenges(token, impersonate=None) -> Dict[int, ChallengeDescription]:
     endpoint = Endpoints.challenges
-    method = 'GET'
+    method = "GET"
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
@@ -264,7 +291,7 @@ def dtserver_get_challenges(token, impersonate=None) -> Dict[int, ChallengeDescr
 # noinspection PyBroadException
 def add_version_info(data):
     try:
-        data['versions'] = get_packages_version()
+        data["versions"] = get_packages_version()
     except:
         pass
 
@@ -278,10 +305,7 @@ def get_packages_version():
 
     packages = {}
     for i in get_installed_distributions(local_only=False):
-        pkg = {
-            'version': i._version,
-            'location': i.location
-        }
+        pkg = {"version": i._version, "location": i.location}
         packages[i.project_name] = pkg
 
         # assert isinstance(i, (pkg_resources.EggInfoDistribution, pkg_resources.DistInfoDistribution))
@@ -294,20 +318,20 @@ class CompatibleChallenges:
     compatible: List[str]
 
 
-def dtserver_get_compatible_challenges(*, token: str,
-                                       impersonate: Optional[int],
-                                       submission_protocols: List[str]) -> CompatibleChallenges:
+def dtserver_get_compatible_challenges(
+    *, token: str, impersonate: Optional[int], submission_protocols: List[str]
+) -> CompatibleChallenges:
     """
     Returns the list of compatible challenges for the protocols specified.
     """
     challenges = dtserver_get_challenges(token=token, impersonate=impersonate)
     compatible = []
-    print('Looking for compatible and open challenges: \n')
-    fmt = '  %s  %-32s  %-10s    %s'
-    print(fmt % ('%-32s' % 'name', 'protocol', 'open?', 'title'))
-    print(fmt % ('%-32s' % '----', '--------', '-----', '-----'))
+    print("Looking for compatible and open challenges: \n")
+    fmt = "  %s  %-32s  %-10s    %s"
+    print(fmt % ("%-32s" % "name", "protocol", "open?", "title"))
+    print(fmt % ("%-32s" % "----", "--------", "-----", "-----"))
 
-    S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split('_-')))
+    S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split("_-")))
     res = {}
     for challenge_id in S:
         cd = challenges[challenge_id]
@@ -322,13 +346,13 @@ def dtserver_get_compatible_challenges(*, token: str,
         res[challenge_name] = cd
         if is_compatible:
             compatible.append(challenge_name)
-            challenge_name_s = termcolor.colored(challenge_name, 'blue')
+            challenge_name_s = termcolor.colored(challenge_name, "blue")
         else:
             challenge_name_s = challenge_name
 
         challenge_name_s = pad_to_screen_length(challenge_name_s, 32)
         s2 = fmt % (challenge_name_s, cd.protocol, s, cd.title)
         print(s2)
-    print('')
-    print('')
+    print("")
+    print("")
     return CompatibleChallenges(res, compatible)

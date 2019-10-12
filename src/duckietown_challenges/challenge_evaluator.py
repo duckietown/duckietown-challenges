@@ -3,7 +3,6 @@ from abc import ABCMeta, abstractmethod
 
 
 class ChallengeEvaluator(metaclass=ABCMeta):
-
     @abstractmethod
     def prepare(self, cie):
         pass
@@ -14,7 +13,6 @@ class ChallengeEvaluator(metaclass=ABCMeta):
 
 
 class ChallengeScorer(metaclass=ABCMeta):
-
     @abstractmethod
     def score(self, cie):
         pass

@@ -13,13 +13,13 @@ def make_readmes_main():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--config', default='challenge.yaml',
     #                     help="YAML configuration file")
-    parser.add_argument('-C', dest='cwd', default='.', help='Base directory')
+    parser.add_argument("-C", dest="cwd", default=".", help="Base directory")
 
     parsed = parser.parse_args(sys.argv[1:])
 
     d = parsed.cwd
 
-    f = os.path.join(d, 'challenge.yaml')
+    f = os.path.join(d, "challenge.yaml")
     if not os.path.exists(f):
         msg = 'Please run in a directory containing "challenge.yaml".'
         raise Exception(msg)
@@ -29,6 +29,7 @@ def make_readmes_main():
     out = ""
 
     from .constants import get_duckietown_server_url
+
     base_url = get_duckietown_server_url()
 
     # language=markdown
@@ -67,26 +68,29 @@ For more details, see [the online leaderboard][leaderboard].
 
 {challenge.description}
 
-""".format(challenge=challenge, DTSERVER=base_url).strip()
+""".format(
+        challenge=challenge, DTSERVER=base_url
+    ).strip()
 
     out += base
 
-    fn = os.path.join(d, 'README.md')
-    with open(fn, 'w') as f:
+    fn = os.path.join(d, "README.md")
+    with open(fn, "w") as f:
         f.write(out)
 
-    dclogger.info('written to %s' % fn)
+    dclogger.info("written to %s" % fn)
+
 
 def read_challenge_info(fn):
     contents = open(fn).read()
     data = yaml.load(contents)
 
-    if 'description' not in data or data['description'] is None:
-        fnd = os.path.join(os.path.dirname(fn), 'challenge.description.md')
+    if "description" not in data or data["description"] is None:
+        fnd = os.path.join(os.path.dirname(fn), "challenge.description.md")
         if os.path.exists(fnd):
             desc = open(fnd).read()
-            data['description'] = desc
-            msg = 'Read description from %s' % fnd
+            data["description"] = desc
+            msg = "Read description from %s" % fnd
             dclogger.info(msg)
 
     base = os.path.dirname(fn)
@@ -94,5 +98,5 @@ def read_challenge_info(fn):
     return base, challenge
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     make_readmes_main()

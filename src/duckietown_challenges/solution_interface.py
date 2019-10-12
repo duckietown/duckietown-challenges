@@ -92,7 +92,9 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
+    def set_solution_output_file_from_data(
+        self, basename: str, contents: bytes, description=None
+    ):
         """
             Same as before, but the contents is passed as a string.
 
@@ -143,7 +145,9 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
 
         """
 
-    def get_completed_step_solution_file_contents(self, step_name: str, basename: str) -> bytes:
+    def get_completed_step_solution_file_contents(
+        self, step_name: str, basename: str
+    ) -> bytes:
         """
             Same as `get_completed_step_solution_file` but returns the contents
             directly.
@@ -154,12 +158,11 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
 
         """
         fn = self.get_completed_step_solution_file(step_name, basename)
-        with open(fn, 'rb') as f:
+        with open(fn, "rb") as f:
             return f.read()
 
 
 class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
-
 
     # Methods for the
 
@@ -181,7 +184,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
 
     def get_completed_step_evaluation_file_contents(self, step_name, basename) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
-        with open(fn, 'rb') as f:
+        with open(fn, "rb") as f:
             return f.read()
 
     @abstractmethod
@@ -226,6 +229,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
 
     def set_evaluation_dir(self, basename, realdir):
         import os
+
         for bn in os.listdir(realdir):
             fn = os.path.join(realdir, bn)
             if os.path.isdir(fn):
@@ -238,7 +242,9 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_evaluation_file_from_data(self, basename, contents: bytes, description=None):
+    def set_evaluation_file_from_data(
+        self, basename, contents: bytes, description=None
+    ):
         pass
 
     @abstractmethod

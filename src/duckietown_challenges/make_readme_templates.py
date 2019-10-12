@@ -10,13 +10,13 @@ from . import dclogger, DEFAULT_DTSERVER
 def make_readmes_templates_main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-C', dest='cwd', default='.', help='Base directory')
+    parser.add_argument("-C", dest="cwd", default=".", help="Base directory")
 
     parsed = parser.parse_args(sys.argv[1:])
 
     d = parsed.cwd
 
-    f = os.path.join(d, 'submission.yaml')
+    f = os.path.join(d, "submission.yaml")
     if not os.path.exists(f):
         msg = 'Please run in a directory containing "submission.yaml".'
         raise Exception(msg)
@@ -50,16 +50,18 @@ For submitting, please follow [the instructions available in the book][book].
 
 {si.description}
 
-""".format(si=si, DTSERVER=DEFAULT_DTSERVER).strip()
+""".format(
+        si=si, DTSERVER=DEFAULT_DTSERVER
+    ).strip()
 
     out += base
 
-    fn = os.path.join(d, 'README.md')
-    with open(fn, 'w') as f:
+    fn = os.path.join(d, "README.md")
+    with open(fn, "w") as f:
         f.write(out)
 
-    dclogger.info('written to %s' % fn)
+    dclogger.info("written to %s" % fn)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     make_readmes_templates_main()
