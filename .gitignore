@@ -5,4 +5,4 @@ src/duckietown_challenges.egg-info/
 dist
 *pyc 
 out-comptests 
-.idea/ 
+.idea/ *egg-info
