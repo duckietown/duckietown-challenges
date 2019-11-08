@@ -11,23 +11,23 @@ import traceback
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import *
+from typing import Optional, Dict, ContextManager
 
 from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
 from .constants import (
-    CHALLENGE_DESCRIPTION_YAML,
-    CHALLENGE_SOLUTION_OUTPUT_YAML,
-    CHALLENGE_SOLUTION_OUTPUT_DIR,
-    CHALLENGE_EVALUATION_OUTPUT_DIR,
     CHALLENGE_DESCRIPTION_DIR,
+    CHALLENGE_DESCRIPTION_YAML,
+    CHALLENGE_EVALUATION_OUTPUT_DIR,
     CHALLENGE_PREVIOUS_STEPS_DIR,
-    ENV_CHALLENGE_NAME,
-    DEFAULT_ROOT,
+    CHALLENGE_SOLUTION_OUTPUT_DIR,
+    CHALLENGE_SOLUTION_OUTPUT_YAML,
     CHALLENGE_TMP_SUBDIR,
+    DEFAULT_ROOT,
+    ENV_CHALLENGE_NAME,
 )
-from .exceptions import InvalidSubmission, InvalidEvaluator, InvalidEnvironment
-from .solution_interface import ChallengeInterfaceSolution, ChallengeInterfaceEvaluator
+from .exceptions import InvalidEnvironment, InvalidEvaluator, InvalidSubmission
+from .solution_interface import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
 
@@ -459,7 +459,8 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         # if basename not in self.get_completed_step_evaluation_files(step_name):
         #     msg = 'No file %r' % basename
         #     raise KeyError(msg)
-        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR, basename)
+        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR,
+        # basename)
         # return fn
 
         return get_completed_step_evaluation_file(self.root, step_name, basename)

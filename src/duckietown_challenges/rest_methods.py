@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import *
+from typing import Dict, List, Optional
 
 import dateutil.parser
 import termcolor

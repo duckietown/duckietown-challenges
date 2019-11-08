@@ -1,17 +1,17 @@
 # coding=utf-8
 from collections import namedtuple
 from dataclasses import dataclass
-from datetime import datetime, date
-from typing import *
+from datetime import date, datetime
+from typing import Dict, Any, Optional, List, Union, Tuple
 
 import yaml
-from networkx import DiGraph, ancestors
+from networkx import ancestors, DiGraph
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
-from .utils import indent, safe_yaml_dump, check_isinstance, wrap_config_reader2
+from .utils import check_isinstance, indent, safe_yaml_dump, wrap_config_reader2
 
 
 class InvalidChallengeDescription(Exception):
@@ -25,6 +25,7 @@ STATE_SUCCESS = "SUCCESS"
 STATE_FAILED = "FAILED"
 
 ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
+
 
 # allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 

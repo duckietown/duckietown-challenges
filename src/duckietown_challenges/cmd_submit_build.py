@@ -3,10 +3,12 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import *
+from typing import Optional
 
 from duckietown_challenges import dclogger
 from duckietown_challenges.utils import tag_from_date
+
+__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag"]
 
 
 @dataclass
@@ -27,7 +29,8 @@ class BuildResult:
                 raise ValueError(msg)
 
 
-# localhost:5000/andreacensi/aido2_simple_prediction_r1-step1-simulation-evaluation:2019_04_03_20_03_28@sha256:9c1ed66dc31ad9f1b6e454448f010277e38edf051f15b56ff985ec4292290614
+# localhost:5000/andreacensi/aido2_simple_prediction_r1-step1-simulation-evaluation:2019_04_03_20_03_28@sha256
+# :9c1ed66dc31ad9f1b6e454448f010277e38edf051f15b56ff985ec4292290614
 
 
 def parse_complete_tag(x: str) -> BuildResult:

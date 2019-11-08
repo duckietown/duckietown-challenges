@@ -6,7 +6,7 @@ from .challenges_constants import ChallengesConstants
 from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import write_yaml, read_yaml_file
-from typing import *
+from typing import Optional, Dict
 
 
 class ChallengeResults:
@@ -65,9 +65,6 @@ class ChallengeResults:
         return stats
 
 
-from typing import *
-
-
 def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
     root = root or DEFAULT_ROOT
     data = cr.to_yaml()
@@ -79,7 +76,7 @@ class NoResultsFound(Exception):
     pass
 
 
-def read_challenge_results(root):
+def read_challenge_results(root: str) -> ChallengeResults:
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     if not os.path.exists(fn):
         msg = "File %r does not exist." % fn

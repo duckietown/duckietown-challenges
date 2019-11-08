@@ -1,6 +1,8 @@
 # coding=utf-8
 from abc import ABCMeta, abstractmethod
 
+__all__ = ["ChallengeEvaluator", "ChallengeScorer"]
+
 
 class ChallengeEvaluator(metaclass=ABCMeta):
     @abstractmethod

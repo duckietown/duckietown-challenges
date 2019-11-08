@@ -14,6 +14,7 @@ def get_FORMAT_datefmt():
     return FORMAT, datefmt
 
 
+# noinspection PyUnresolvedReferences
 def setup_logging_format():
     from logging import Logger, StreamHandler, Formatter
     import logging
@@ -21,8 +22,9 @@ def setup_logging_format():
     FORMAT, datefmt = get_FORMAT_datefmt()
     logging.basicConfig(format=FORMAT, datefmt=datefmt)
 
-    if Logger.root.handlers:  # @UndefinedVariable
-        for handler in Logger.root.handlers:  # @UndefinedVariable
+    root = Logger.root
+    if root.handlers:
+        for handler in root.handlers:
             if isinstance(handler, StreamHandler):
                 formatter = Formatter(FORMAT, datefmt=datefmt)
                 handler.setFormatter(formatter)
