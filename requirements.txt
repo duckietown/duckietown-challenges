@@ -10,3 +10,4 @@ six
 future
 networkx>=2.2
 dataclasses
+zuper-ipce-z5

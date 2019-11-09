@@ -1,12 +1,12 @@
 # coding=utf-8
-from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Dict, Any, Optional, List, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from networkx import ancestors, DiGraph
 
+from zuper_ipce import ipce_from_object, object_from_ipce
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .cmd_submit_build import parse_complete_tag
@@ -25,9 +25,6 @@ STATE_SUCCESS = "SUCCESS"
 STATE_FAILED = "FAILED"
 
 ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
-
-
-# allowed_permissions = ['snoop', 'change', 'moderate', 'grant']
 
 
 @dataclass(repr=False)
@@ -74,7 +71,7 @@ class PortDefinition:
 @dataclass
 class ServiceDefinition:
     image: Optional[str]
-    build: Build
+    build: Optional[Build]
     environment: Dict[str, Any]
     ports: List[PortDefinition]
 
@@ -274,7 +271,7 @@ class ChallengeStep:
     description: str
     evaluation_parameters: EvaluationParameters
     features_required: Dict[str, Any]
-    timeout: float
+    timeout: int
     uptodate_token: Optional[str] = None
 
     def as_dict(self):
@@ -319,7 +316,12 @@ def nice_repr(x):
     return "%s\n\n%s" % (K, indent(safe_yaml_dump(x.as_dict()), "   "))
 
 
-Transition = namedtuple("Transition", "first condition second")
+# Transition = namedtuple("Transition", "first condition second")
+@dataclass
+class Transition:
+    first: str
+    condition: str
+    second: str
 
 
 class InvalidSteps(Exception):
@@ -330,29 +332,6 @@ class InvalidSteps(Exception):
 class ChallengeTransitions:
     steps: List[str]
     transitions: List[Transition]
-
-    @staticmethod
-    def steps_from_transitions(transitions):
-        steps = set()
-        for first, condition, second in transitions:
-            if first not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                steps.add(first)
-            if second not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                steps.add(second)
-
-        return steps
-
-    @staticmethod
-    def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]):
-        transitions = []
-        for first, condition, second in transitions_str:
-            assert first == STATE_START or first in steps, first
-            assert (
-                second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps
-            ), second
-            assert condition in ALLOWED_CONDITION_TRIGGERS, condition
-            transitions.append(Transition(first, condition, second))
-        return ChallengeTransitions(steps, transitions)
 
     #
     # def __init__(self, transitions, steps):
@@ -375,19 +354,19 @@ class ChallengeTransitions:
 
     def steps_explanation(self):
         ts = []
-        for first, condition, second in self.transitions:
-            if first == STATE_START:
-                ts.append("At the beginning execute step `%s`." % second)
+        for t in self.transitions:
+            if t.first == STATE_START:
+                ts.append("At the beginning execute step `%s`." % t.second)
             else:
-                if second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+                if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
                     ts.append(
                         "If step `%s` finishes with status `%s`, then declare the submission `%s`."
-                        % (first, condition, second)
+                        % (t.first, t.condition, t.second)
                     )
                 else:
                     ts.append(
                         "If step `%s` finishes with status `%s`, then execute step `%s`."
-                        % (first, condition, second)
+                        % (t.first, t.condition, t.second)
                     )
         return ts
 
@@ -397,8 +376,8 @@ class ChallengeTransitions:
 
     def get_graph(self):
         G = DiGraph()
-        for first, condition, second in self.transitions:
-            G.add_edge(first, second)
+        for t in self.transitions:
+            G.add_edge(t.first, t.second)
         return G
 
     def get_precs(self, x):
@@ -492,32 +471,60 @@ class ChallengeTransitions:
         return False, None, to_activate
 
 
+def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
+    steps = []
+    for first, _, second in transitions:
+        if first not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+            steps.append(first)
+        if second not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
+            steps.append(second)
+    return steps
+
+
+def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]) -> ChallengeTransitions:
+    transitions = []
+    for first, condition, second in transitions_str:
+        assert first == STATE_START or first in steps, first
+        assert (
+            second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps
+        ), second
+        assert condition in ALLOWED_CONDITION_TRIGGERS, condition
+        transitions.append(Transition(first, condition, second))
+    return ChallengeTransitions(steps, transitions)
+
+
+def order_from_description(description: str) -> str:
+    if description == "descending":
+        order = Score.HIGHER_IS_BETTER
+        return order
+    if description == "ascending":
+        order = Score.LOWER_IS_BETTER
+        return order
+    raise ValueError(description)
+
+
+@dataclass
 class Score:
     HIGHER_IS_BETTER = "higher-is-better"
     LOWER_IS_BETTER = "lower-is-better"
     ALLOWED = [HIGHER_IS_BETTER, LOWER_IS_BETTER]
 
-    def __init__(self, name, description, order, discretization, short):
-        if description == "descending":
-            order = Score.HIGHER_IS_BETTER
+    order: str
+    name: str
+    description: str
+    discretization: Optional[float]
+    short: str
 
-        if description == "ascending":
-            order = Score.LOWER_IS_BETTER
-
-        if order not in Score.ALLOWED:
-            msg = "Invalid value %s" % order
+    def __post_init__(self):
+        if self.order not in Score.ALLOWED:
+            msg = "Invalid value %s" % self.order
             raise ValueError(msg)
 
-        if discretization is not None:
-            discretization = float(discretization)
+        if self.discretization is not None:
+            discretization = float(self.discretization)
             if discretization <= 0:
                 msg = "Need a strictly positive discretization: %s" % discretization
                 raise ValueError(msg)
-        self.name = name
-        self.description = description
-        self.order = order
-        self.discretization = discretization
-        self.short = short
 
     def __repr__(self):
         return nice_repr(self)
@@ -570,13 +577,24 @@ class Score:
             raise InvalidChallengeDescription(msg) from e
 
 
+def Score_as_dict(score: Score):
+    return dict(
+        description=score.description,
+        name=score.name,
+        order=score.order,
+        discretization=score.discretization,
+        short=score.short,
+    )
+
+
 @dataclass(repr=False)
 class Scoring:
     scores: List[Score]
 
-    def as_dict(self):
-        scores = [_.as_dict() for _ in self.scores]
-        return dict(scores=scores)
+    #
+    # def as_dict(self):
+    #     scores = [_.as_dict() for _ in self.scores]
+    #     return dict(scores=scores)
 
     def __repr__(self):
         return nice_repr(self)
@@ -606,6 +624,38 @@ class Scoring:
             raise InvalidChallengeDescription(msg) from e
 
 
+def Scoring_as_dict(s: Scoring):
+    scores = [Score_as_dict(_) for _ in s.scores]
+    return dict(scores=scores)
+
+
+@dataclass
+class DepScore:
+    description: str
+    importance: float
+    score_name: str
+    score_min: float
+    score_max: float
+
+
+@dataclass
+class DepBetter:
+    description: str
+    importance: float
+
+    username: str
+    sub_label: str
+
+
+@dataclass
+class ChallengeDependency:
+    description: str
+    min_threshold: float
+    scores: Dict[str, DepScore]
+    comparisons: Dict[str, DepBetter]
+
+
+@dataclass
 class ChallengeDescription:
     name: str
     title: str
@@ -614,54 +664,23 @@ class ChallengeDescription:
     date_open: datetime
     date_close: datetime
     steps: Dict[str, ChallengeStep]
-    # roles: Any
-    ct: ChallengeTransitions
+    transitions: List[List[str]]  # 3 elements each
+
     scoring: Scoring
+    tags: List[str]
 
-    def __init__(
-        self,
-        name,
-        title,
-        description,
-        protocol,
-        date_open,
-        date_close,
-        steps,
-        transitions,
-        tags,
-        scoring,
-    ):
-        self.name = name
-        self.title = title
-        self.scoring = scoring
-        self.description = description
-        self.protocol = protocol
-        self.date_open = date_open
-        check_isinstance(date_open, datetime)
-        check_isinstance(date_close, datetime)
-        self.date_close = date_close
-        self.steps = steps
-        # self.roles = roles
-        self.tags = tags
+    dependencies: Dict[str, ChallengeDependency]
 
-        # for k, permissions in self.roles.items():
-        #     if not k.startswith('user:'):
-        #         msg = 'Permissions should start with "user:", %s' % k
-        #         raise InvalidChallengeDescription(msg)
-        #     p2 = dict(**permissions)
-        #     for perm in allowed_permissions:
-        #         p2.pop(perm, None)
-        #     if p2:
-        #         msg = 'Unknown permissions: %s' % p2
-        #         raise InvalidChallengeDescription(msg)
+    ct: ChallengeTransitions
+    closure: Optional[List[str]] = field(default_factory=list)
 
-        self.first_step = None
-        self.ct = ChallengeTransitions.from_steps_transitions(
-            list(self.steps), transitions
-        )
+    def __post_init__(self):
+        check_isinstance(self.date_open, datetime)
+        check_isinstance(self.date_close, datetime)
 
-    def get_steps(self):
-        return self.steps
+    #
+    # def get_steps(self):
+    #     return self.steps
 
     def get_next_steps(self, status):
         return self.ct.get_next_steps(status)
@@ -690,10 +709,10 @@ class ChallengeDescription:
             if len(Steps) == 1:
                 stepname = list(Steps)[0]
                 transitions = [
-                    ["START", "success", stepname],
-                    [stepname, "success", "SUCCESS"],
-                    [stepname, "failed", "FAILED"],
-                    [stepname, "error", "ERROR"],
+                    [STATE_START, "success", stepname],
+                    [stepname, "success", STATE_SUCCESS],
+                    [stepname, "failed", STATE_FAILED],
+                    [stepname, "error", STATE_ERROR],
                 ]
             else:
                 msg = "Need transitions if there is more than one step."
@@ -701,17 +720,27 @@ class ChallengeDescription:
 
         scoring = Scoring.from_yaml(data.pop("scoring"))
 
+        closure = data.pop("closure", [])
+        dependencies_ = data.pop("dependencies", {})
+        dependencies = object_from_ipce(dependencies_, Dict[str, ChallengeDependency])
+        ct = from_steps_transitions(
+            list(Steps), transitions
+        )
+
         return ChallengeDescription(
-            name,
-            title,
-            description,
-            protocol,
-            date_open,
-            date_close,
-            Steps,
+            name=name,
+            title=title,
+            description=description,
+            protocol=protocol,
+            date_open=date_open,
+            date_close=date_close,
+            steps=Steps,
             transitions=transitions,
             tags=tags,
             scoring=scoring,
+            dependencies=dependencies,
+            ct=ct,
+            closure=closure,
         )
 
     def as_dict(self):
@@ -731,9 +760,10 @@ class ChallengeDescription:
         for k, v in self.steps.items():
             steps[k] = v.as_dict()
         data["steps"] = steps
-
+        data["closure"] = self.closure
         data["tags"] = self.tags
-        data["scoring"] = self.scoring.as_dict()
+        data["scoring"] = Scoring_as_dict(self.scoring)
+        data["dependencies"] = ipce_from_object(self.dependencies, Dict[str, ChallengeDependency])
         return data
 
     def as_yaml(self):

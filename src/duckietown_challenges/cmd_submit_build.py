@@ -20,6 +20,11 @@ class BuildResult:
     digest: Optional[str]
 
     def __post_init__(self):
+        if self.repository:
+            assert not "@" in self.repository, self
+        if self.tag:
+            assert not "@" in self.tag, self
+
         if self.digest is not None:
             if not self.digest.startswith("sha256"):
                 msg = "Unknown digest format: %s " % self.digest
@@ -45,6 +50,15 @@ def parse_complete_tag(x: str) -> BuildResult:
         msg = "Could not parse complete tag: %s" % x
         raise ValueError(msg)
 
+    nsha = rest.count('@')
+    if nsha:
+        rest, digest = rest.split('@')
+        if not digest.startswith("sha256"):
+            msg = "Unknown digest format: %s for %s" % (digest, x)
+            raise ValueError(msg)
+    else:
+        digest = None
+
     n = rest.count(":")
     if n:
         org_repo, tag = rest.split(":", maxsplit=1)
@@ -56,14 +70,14 @@ def parse_complete_tag(x: str) -> BuildResult:
         raise ValueError((x, rest, org_repo))
 
     organization, repository = org_repo.split("/")
-
-    if tag is not None and "@" in tag:
-        tag, digest = tag.split("@")
-        if not digest.startswith("sha256"):
-            msg = "Unknown digest format: %s for %s" % (digest, x)
-            raise ValueError(msg)
-    else:
-        digest = None
+    #
+    # if tag is not None and "@" in tag:
+    #     tag, digest = tag.split("@")
+    #     if not digest.startswith("sha256"):
+    #         msg = "Unknown digest format: %s for %s" % (digest, x)
+    #         raise ValueError(msg)
+    # else:
+    #     digest = None
     try:
         return BuildResult(
             registry=registry,

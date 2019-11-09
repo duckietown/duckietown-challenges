@@ -34,6 +34,7 @@ setup(name=f'duckietown-challenges-{line}',
           'future',
           'networkx>=2.2',
           'dataclasses',
+          'zuper-ipce-z5',
       ],
 
       tests_require=[

@@ -23,7 +23,7 @@ def add_impersonate_info(data, impersonate):
         data["impersonate"] = impersonate
 
 
-def dtserver_challenge_define(token, yaml, force_invalidate, impersonate=None):
+def dtserver_challenge_define(token: str, yaml, force_invalidate: bool, impersonate: int=None):
     endpoint = Endpoints.challenge_define
     method = "POST"
     data = {"yaml": yaml, "force-invalidate": force_invalidate}
@@ -32,7 +32,7 @@ def dtserver_challenge_define(token, yaml, force_invalidate, impersonate=None):
     return make_server_request(token, endpoint, data=data, method=method, timeout=15)
 
 
-def get_registry_info(token, impersonate=None) -> RegistryInfo:
+def get_registry_info(token: str, impersonate: int=None) -> RegistryInfo:
     endpoint = Endpoints.registry_info
     method = "GET"
     data = {}
@@ -327,11 +327,13 @@ def dtserver_get_compatible_challenges(
     challenges = dtserver_get_challenges(token=token, impersonate=impersonate)
     compatible = []
     print("Looking for compatible and open challenges: \n")
+
     fmt = "  %s  %-32s  %-10s    %s"
     print(fmt % ("%-32s" % "name", "protocol", "open?", "title"))
     print(fmt % ("%-32s" % "----", "--------", "-----", "-----"))
 
-    S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split("_-")))
+    # S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split("_-")))
+    S = list(challenges)
     res = {}
     for challenge_id in S:
         cd = challenges[challenge_id]
@@ -353,6 +355,14 @@ def dtserver_get_compatible_challenges(
         challenge_name_s = pad_to_screen_length(challenge_name_s, 32)
         s2 = fmt % (challenge_name_s, cd.protocol, s, cd.title)
         print(s2)
+
     print("")
+    print("")
+    q = lambda x: termcolor.colored(x, "blue")
+    for challenge_id, challenge in challenges.items():
+        if challenge.closure:
+            others = ", ".join(map(q, challenge.closure))
+            msg = f'* Submitting to {q(challenge.name)} will also submit to: {others}.'
+            print(msg)
     print("")
     return CompatibleChallenges(res, compatible)
