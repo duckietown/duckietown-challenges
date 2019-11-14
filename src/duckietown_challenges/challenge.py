@@ -409,13 +409,13 @@ class ChallengeTransitions:
         status = dict(**status)
         for k, ks in list(status.items()):
             if k != STATE_START and k not in self.steps:
-                msg = "Ignoring invalid step %s -> %s" % (k, ks)
-                dclogger.error(msg)
+                # msg = "Ignoring invalid step %s -> %s" % (k, ks)
+                # dclogger.error(msg)
                 status.pop(k)
 
             if ks not in ChallengesConstants.ALLOWED_JOB_STATUS:
-                msg = f"Ignoring invalid step {k} -> {ks!r}"
-                dclogger.error(msg)
+                # msg = f"Ignoring invalid step {k} -> {ks!r}"
+                # dclogger.error(msg)
                 status.pop(k)
 
             # timeout or aborted or host error = like it never happened
