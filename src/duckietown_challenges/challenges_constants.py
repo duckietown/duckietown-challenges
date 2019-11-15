@@ -1,13 +1,19 @@
 # coding=utf-8
+from typing import cast, ClassVar, NewType
+
+JobStatusString = NewType('JobStatusString', str)
+StepName = NewType('StepName', str)
+
+
 class ChallengesConstants:
     # status for evaluation jobs
-    STATUS_JOB_TIMEOUT = "timeout"
-    STATUS_JOB_EVALUATION = "evaluating"
-    STATUS_JOB_FAILED = "failed"  # submission failed
-    STATUS_JOB_ERROR = "error"  # evaluation failed
-    STATUS_JOB_HOST_ERROR = "host-error"  # evaluation failed
-    STATUS_JOB_SUCCESS = "success"
-    STATUS_JOB_ABORTED = "aborted"
+    STATUS_JOB_TIMEOUT: ClassVar[JobStatusString] = cast(JobStatusString, "timeout")
+    STATUS_JOB_EVALUATION: ClassVar[JobStatusString] = cast(JobStatusString, "evaluating")
+    STATUS_JOB_FAILED: ClassVar[JobStatusString] = cast(JobStatusString, "failed")
+    STATUS_JOB_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "error")  # evaluation failed
+    STATUS_JOB_HOST_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "host-error")  # evaluation failed
+    STATUS_JOB_SUCCESS: ClassVar[JobStatusString] = cast(JobStatusString, "success")
+    STATUS_JOB_ABORTED: ClassVar[JobStatusString] = cast(JobStatusString, "aborted")
 
     ALLOWED_JOB_STATUS = [
         STATUS_JOB_EVALUATION,

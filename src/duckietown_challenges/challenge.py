@@ -1,16 +1,16 @@
 # coding=utf-8
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, cast, Dict, List, Optional, Tuple
 
 import yaml
 from networkx import ancestors, DiGraph
 
 from zuper_ipce import ipce_from_object, object_from_ipce
-from . import dclogger
-from .challenges_constants import ChallengesConstants
+from .challenges_constants import ChallengesConstants, StepName, JobStatusString
 from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
+
 from .utils import check_isinstance, indent, safe_yaml_dump, wrap_config_reader2
 
 
@@ -387,8 +387,8 @@ class ChallengeTransitions:
         return res
 
     def get_next_steps(
-        self, status: Dict[str, str], step2age=None
-    ) -> Tuple[bool, Optional[str], List[str]]:
+        self, status: Dict[StepName, JobStatusString], step2age=None
+    ) -> Tuple[bool, Optional[str], List[StepName]]:
         """ status is a dictionary from step name to status.
 
             It contains at the beginning
@@ -442,7 +442,7 @@ class ChallengeTransitions:
                     return False
             return True
 
-        to_activate = []
+        to_activate = cast(List[StepName], [])
         for t in self.transitions:
             if (
                 t.first in status
@@ -597,6 +597,7 @@ class Scoring:
     #     return dict(scores=scores)
 
     def __repr__(self):
+        # noinspection PyTypeChecker
         return nice_repr(self)
 
     @classmethod
