@@ -40,6 +40,7 @@ class ChallengesConstants:
         take_submission = "/api/take-submission"
         auth = "/api/auth"
         reset_submission = "/api/reset-submission"
+        bless_submission = "/api/bless-submission"
         change_user_priority = "/api/change-user-priority"
         change_admin_priority = "/api/change-admin-priority"
         reset_job = "/api/reset-job"
