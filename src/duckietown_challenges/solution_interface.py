@@ -1,5 +1,6 @@
 # coding=utf-8
 from abc import ABCMeta, abstractmethod
+from typing import List, Dict
 
 
 class ChallengeInterfaceSolution(metaclass=ABCMeta):
@@ -107,7 +108,7 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
     # Multi-step-API
 
     @abstractmethod
-    def get_current_step(self):
+    def get_current_step(self) -> str:
         """
             Returns the name of the current step.
 
@@ -115,7 +116,7 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_completed_steps(self):
+    def get_completed_steps(self) -> List[str]:
         """
             Returns the previous steps as a list of string.
 
@@ -123,7 +124,7 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_completed_step_solution_files(self, step_name: str):
+    def get_completed_step_solution_files(self, step_name: str) -> List[str]:
         """
 
             Returns a list of names for the files completed in a previous step.
@@ -167,22 +168,22 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
     # Methods for the
 
     @abstractmethod
-    def get_current_step(self):
+    def get_current_step(self) -> str:
         """ Returns the current step. """
 
     @abstractmethod
-    def get_completed_steps(self):
+    def get_completed_steps(self) -> List[str]:
         """ Returns the previous steps as a list of string """
 
     @abstractmethod
-    def get_completed_step_evaluation_files(self, step_name):
+    def get_completed_step_evaluation_files(self, step_name: str) -> List[str]:
         """ Returns a list of names for the files completed in a previous step. """
 
     @abstractmethod
-    def get_completed_step_evaluation_file(self, step_name, basename):
+    def get_completed_step_evaluation_file(self, step_name: str, basename: str):
         """ Returns a filename for one of the files completed in a previous step."""
 
-    def get_completed_step_evaluation_file_contents(self, step_name, basename) -> bytes:
+    def get_completed_step_evaluation_file_contents(self, step_name: str, basename: str) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
         with open(fn, "rb") as f:
             return f.read()
@@ -208,18 +209,18 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_solution_output_file(self, basename):
+    def get_solution_output_file(self, basename: str):
         pass
 
     @abstractmethod
-    def get_solution_output_files(self):
+    def get_solution_output_files(self) -> List[str]:
         pass
 
     @abstractmethod
-    def set_score(self, name, value, description=None):
+    def set_score(self, name: str, value, description: str=None) -> None:
         pass
 
-    def set_scores(self, d):
+    def set_scores(self, d: Dict[str, float]):
         for k, v in d.items():
             self.set_score(k, v)
 

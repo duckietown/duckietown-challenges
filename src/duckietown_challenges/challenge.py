@@ -6,6 +6,7 @@ from typing import Any, cast, Dict, List, Optional, Tuple
 import yaml
 from networkx import ancestors, DiGraph
 
+from duckietown_challenges import dclogger
 from zuper_ipce import ipce_from_object, object_from_ipce
 from .challenges_constants import ChallengesConstants, StepName, JobStatusString
 from .cmd_submit_build import parse_complete_tag
@@ -374,13 +375,13 @@ class ChallengeTransitions:
         _G = self.get_graph()  # XXX
         return list(self.steps)
 
-    def get_graph(self):
+    def get_graph(self)->DiGraph:
         G = DiGraph()
         for t in self.transitions:
             G.add_edge(t.first, t.second)
         return G
 
-    def get_precs(self, x):
+    def get_precs(self, x: str) -> List[str]:
         G = self.get_graph()
         res = list(ancestors(G, x))
         # print('precs of %s: %s' % (x, res))
@@ -429,7 +430,7 @@ class ChallengeTransitions:
 
         # make sure that the steps in which they depend are ok
 
-        def predecessors_success(_):
+        def predecessors_success(_: str) -> bool:
             precs = self.get_precs(_)
             its_age = step2age.get(_, -1) if step2age else 0
             for k2 in precs:
@@ -443,6 +444,7 @@ class ChallengeTransitions:
             return True
 
         to_activate = cast(List[StepName], [])
+        outcomes = set()
         for t in self.transitions:
             if (
                 t.first in status
@@ -462,13 +464,19 @@ class ChallengeTransitions:
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
                         # dclogger.debug('Finishing here')
-                        return True, t.second.lower(), []
+                        outcomes.add(t.second.lower())
+                        # return True, t.second.lower(), []
                     else:
-
                         to_activate.append(t.second)
+        if outcomes:
+            outcome = list(outcomes)[0]
+            complete = True
+        else:
+            complete = False
+            outcome = None
 
         # dclogger.debug('Incomplete; need to do: %s' % to_activate)
-        return False, None, to_activate
+        return complete, outcome, to_activate
 
 
 def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
@@ -487,7 +495,7 @@ def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]) -
         assert first == STATE_START or first in steps, first
         assert (
             second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps
-        ), second
+        ), (second, steps)
         assert condition in ALLOWED_CONDITION_TRIGGERS, condition
         transitions.append(Transition(first, condition, second))
     return ChallengeTransitions(steps, transitions)
