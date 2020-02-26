@@ -10,4 +10,5 @@ six
 future
 networkx>=2.2
 dataclasses
+zuper-typing-z5>=5.1.6
 zuper-ipce-z5>=5.1.2
