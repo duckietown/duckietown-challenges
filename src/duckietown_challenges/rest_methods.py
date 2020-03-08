@@ -23,7 +23,9 @@ def add_impersonate_info(data, impersonate):
         data["impersonate"] = impersonate
 
 
-def dtserver_challenge_define(token: str, yaml, force_invalidate: bool, impersonate: int=None):
+def dtserver_challenge_define(
+    token: str, yaml, force_invalidate: bool, impersonate: int = None
+):
     endpoint = Endpoints.challenge_define
     method = "POST"
     data = {"yaml": yaml, "force-invalidate": force_invalidate}
@@ -32,7 +34,7 @@ def dtserver_challenge_define(token: str, yaml, force_invalidate: bool, imperson
     return make_server_request(token, endpoint, data=data, method=method, timeout=15)
 
 
-def get_registry_info(token: str, impersonate: int=None) -> RegistryInfo:
+def get_registry_info(token: str, impersonate: int = None) -> RegistryInfo:
     endpoint = Endpoints.registry_info
     method = "GET"
     data = {}
@@ -362,7 +364,7 @@ def dtserver_get_compatible_challenges(
     for challenge_id, challenge in challenges.items():
         if challenge.closure:
             others = ", ".join(map(q, challenge.closure))
-            msg = f'* Submitting to {q(challenge.name)} will also submit to: {others}.'
+            msg = f"* Submitting to {q(challenge.name)} will also submit to: {others}."
             print(msg)
     print("")
     return CompatibleChallenges(res, compatible)

@@ -9,6 +9,5 @@ comptests==1.4.34
 six
 future
 networkx>=2.2
-dataclasses
 zuper-typing-z6>=6
 zuper-ipce-z6>=6

@@ -183,7 +183,9 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
     def get_completed_step_evaluation_file(self, step_name: str, basename: str):
         """ Returns a filename for one of the files completed in a previous step."""
 
-    def get_completed_step_evaluation_file_contents(self, step_name: str, basename: str) -> bytes:
+    def get_completed_step_evaluation_file_contents(
+        self, step_name: str, basename: str
+    ) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
         with open(fn, "rb") as f:
             return f.read()
@@ -217,7 +219,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_score(self, name: str, value, description: str=None) -> None:
+    def set_score(self, name: str, value, description: str = None) -> None:
         pass
 
     def set_scores(self, d: Dict[str, float]):

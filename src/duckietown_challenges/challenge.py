@@ -375,7 +375,7 @@ class ChallengeTransitions:
         _G = self.get_graph()  # XXX
         return list(self.steps)
 
-    def get_graph(self)->DiGraph:
+    def get_graph(self) -> DiGraph:
         G = DiGraph()
         for t in self.transitions:
             G.add_edge(t.first, t.second)
@@ -489,7 +489,9 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
     return steps
 
 
-def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]) -> ChallengeTransitions:
+def from_steps_transitions(
+    steps: List[str], transitions_str: List[List[str]]
+) -> ChallengeTransitions:
     transitions = []
     for first, condition, second in transitions_str:
         assert first == STATE_START or first in steps, first
@@ -732,9 +734,7 @@ class ChallengeDescription:
         closure = data.pop("closure", [])
         dependencies_ = data.pop("dependencies", {})
         dependencies = object_from_ipce(dependencies_, Dict[str, ChallengeDependency])
-        ct = from_steps_transitions(
-            list(Steps), transitions
-        )
+        ct = from_steps_transitions(list(Steps), transitions)
 
         return ChallengeDescription(
             name=name,
@@ -772,7 +772,9 @@ class ChallengeDescription:
         data["closure"] = self.closure
         data["tags"] = self.tags
         data["scoring"] = Scoring_as_dict(self.scoring)
-        data["dependencies"] = ipce_from_object(self.dependencies, Dict[str, ChallengeDependency])
+        data["dependencies"] = ipce_from_object(
+            self.dependencies, Dict[str, ChallengeDependency]
+        )
         return data
 
     def as_yaml(self):

@@ -50,9 +50,9 @@ def parse_complete_tag(x: str) -> BuildResult:
         msg = "Could not parse complete tag: %s" % x
         raise ValueError(msg)
 
-    nsha = rest.count('@')
+    nsha = rest.count("@")
     if nsha:
-        rest, digest = rest.split('@')
+        rest, digest = rest.split("@")
         if not digest.startswith("sha256"):
             msg = "Unknown digest format: %s for %s" % (digest, x)
             raise ValueError(msg)
