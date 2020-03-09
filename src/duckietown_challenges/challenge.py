@@ -523,7 +523,7 @@ class Score:
     name: str
     description: str
     discretization: Optional[float]
-    short: str
+    short: Optional[str]
 
     def __post_init__(self):
         if self.order not in Score.ALLOWED:
