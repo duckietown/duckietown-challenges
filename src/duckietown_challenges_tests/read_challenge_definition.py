@@ -102,15 +102,15 @@ transitions:
 def read_challenge_1():
     d = yaml.load(data)
 
-    c0 = ChallengeDescription.from_yaml(d)
+    c0: ChallengeDescription = ChallengeDescription.from_yaml(d)
 
     y = c0.as_yaml()
     d2 = yaml.load(y)
     print(y)
-    c = ChallengeDescription.from_yaml(d2)
+    c: ChallengeDescription = ChallengeDescription.from_yaml(d2)
 
     assert c.title
-    assert len(c.get_steps()) == 2
+    assert len(c.steps) == 2
 
     status = {"START": "success"}
     complete, _, steps = c.get_next_steps(status)
