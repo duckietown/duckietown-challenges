@@ -26,7 +26,8 @@ def write_data_to_file(data, filename):
     d8n_make_sure_dir_exists(filename)
 
     if os.path.exists(filename):
-        current = open(filename).read()
+        with open(filename) as _:
+            current = _.read()
         if current == data:
             if not "assets/" in filename:
                 dclogger.debug("already up to date %s" % filename)
