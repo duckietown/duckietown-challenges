@@ -1,18 +1,18 @@
 # coding=utf-8
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, cast, Dict, List, Optional, Tuple
+from typing import Any, cast, Dict, List, Optional, Tuple, Union
 
 import yaml
+from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
 
-from duckietown_challenges import dclogger
 from zuper_ipce import ipce_from_object, object_from_ipce
-from .challenges_constants import ChallengesConstants, StepName, JobStatusString
+from . import dclogger
+from .challenges_constants import ChallengesConstants, JobStatusString, StepName
 from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
-
-from .utils import check_isinstance, indent, safe_yaml_dump, wrap_config_reader2
+from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
 
 class InvalidChallengeDescription(Exception):
@@ -686,8 +686,15 @@ class ChallengeDescription:
     closure: Optional[List[str]] = field(default_factory=list)
 
     def __post_init__(self):
-        check_isinstance(self.date_open, datetime)
-        check_isinstance(self.date_close, datetime)
+
+        # check_isinstance(self.date_open, datetime)
+        # check_isinstance(self.date_close, datetime)
+        # dclogger.info(f'received {self.date_open.tzinfo} {id(self.date_open)}   {self.date_close.tzinfo}'
+        #               f' {id(self.date_close)}  ')
+        if self.date_open.tzinfo is None:
+            raise ValueError(self.date_open)
+        if self.date_close.tzinfo is None:
+            raise ValueError(self.date_close)
 
     #
     # def get_steps(self):
@@ -705,9 +712,13 @@ class ChallengeDescription:
         title = data.pop("title")
         description = data.pop("description")
         protocol = data.pop("protocol")
-        date_open = interpret_date(data.pop("date-open"))
-        date_close = interpret_date(data.pop("date-close"))
 
+        date_open = (add_timezone(data.pop("date-open")))
+        date_close = (add_timezone(data.pop("date-close")))
+        dclogger.info(f'data: {data} date_open {date_open} {date_close}')
+
+        assert date_close.tzinfo is not None, (date_close, date_open)
+        assert date_open.tzinfo is not None, (date_close, date_open)
         data.pop("roles", None)
 
         steps = data.pop("steps")
@@ -736,7 +747,8 @@ class ChallengeDescription:
         dependencies = object_from_ipce(dependencies_, Dict[str, ChallengeDependency])
         ct = from_steps_transitions(list(Steps), transitions)
 
-        return ChallengeDescription(
+        assert date_open.tzinfo is not None and date_close.tzinfo is not None
+        res = ChallengeDescription(
             name=name,
             title=title,
             description=description,
@@ -751,6 +763,13 @@ class ChallengeDescription:
             ct=ct,
             closure=closure,
         )
+        res.date_open = date_open
+        res.date_close = date_close
+        assert (res.date_open.tzinfo is not None) and (res.date_close.tzinfo is not None), (date_open.tzinfo,
+                                                                                            date_close.tzinfo,
+                                                                                            res.date_open.tzinfo,
+                                                                                            res.date_close.tzinfo)
+        return res
 
     def as_dict(self):
         data = {}
@@ -784,19 +803,44 @@ class ChallengeDescription:
         return nice_repr(self)
 
 
-def interpret_date(d):
+#
+# def makesure_timezone(d: Optional[datetime]) -> Optional[datetime]:
+#     if d is None:
+#         return d
+#     else:
+#         secs = time.mktime(d.timetuple())
+#         return time.gmtime(secs)
+
+
+def interpret_date(d: Optional[Union[datetime, date, str]]) -> Optional[datetime]:
     if d is None:
         return d
     if isinstance(d, datetime):
-        return d
+        return d.astimezone(tzutc())
+
     if isinstance(d, date):
-        return datetime.combine(d, datetime.min.time())
+        d = datetime.combine(d, datetime.min.time())
+        return d.astimezone(tzutc())
 
     if isinstance(d, str):
         from dateutil import parser
+        res = parser.parse(d)
+        return res.astimezone(tzutc())
 
-        return parser.parse(d)
     raise ValueError(d.__repr__())
+
+
+from dateutil import parser
+
+
+def add_timezone(d: Union[str, datetime]) -> datetime:
+    if isinstance(d, str):
+        d = parser.parse(d)
+    if d.tzinfo is not None:
+        return d
+    res = d.astimezone(tzutc())
+    assert res.tzinfo is not None
+    return res
 
 
 @dataclass(repr=False)
