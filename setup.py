@@ -28,7 +28,6 @@ install_requires = [
     "numpy",
     "six",
     "future",
-    "networkx>=2.2",
     "zuper-ipce-z6>=6",
 ]
 
