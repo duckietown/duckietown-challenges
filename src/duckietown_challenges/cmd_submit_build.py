@@ -10,6 +10,8 @@ from duckietown_challenges.utils import tag_from_date
 
 __all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag"]
 
+from zuper_commons.timing import now_utc
+
 
 @dataclass
 class BuildResult:
@@ -104,7 +106,7 @@ def get_complete_tag(br: BuildResult):
 def submission_build(
     username: str, registry: Optional[str], no_cache: bool = False
 ) -> BuildResult:
-    tag = tag_from_date(datetime.datetime.now())
+    tag = tag_from_date(now_utc())
     df = "Dockerfile"
     organization = username.lower()
     repository = "aido-submissions"

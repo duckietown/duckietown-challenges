@@ -715,7 +715,7 @@ class ChallengeDescription:
 
         date_open = (add_timezone(data.pop("date-open")))
         date_close = (add_timezone(data.pop("date-close")))
-        dclogger.info(f'data: {data} date_open {date_open} {date_close}')
+
 
         assert date_close.tzinfo is not None, (date_close, date_open)
         assert date_open.tzinfo is not None, (date_close, date_open)

@@ -8,6 +8,7 @@ import termcolor
 from duckietown_challenges import ChallengesConstants
 from duckietown_challenges.challenge import ChallengeDescription
 from duckietown_challenges.utils import pad_to_screen_length
+from zuper_commons.timing import now_utc
 from .rest import make_server_request
 
 Endpoints = ChallengesConstants.Endpoints
@@ -340,7 +341,7 @@ def dtserver_get_compatible_challenges(
     for challenge_id in S:
         cd = challenges[challenge_id]
         challenge_name = cd.name
-        is_open = cd.date_open < datetime.now() < cd.date_close
+        is_open = cd.date_open < now_utc() < cd.date_close
         if not is_open:
             continue
 
