@@ -117,6 +117,7 @@ def make_server_request(
                 msg = "Cannot find the specified object"
                 msg += f"\n\n{err_msg}"
                 raise NotFound(msg) from None
+
             msg = "Cannot read answer from server."
             msg += "\n\n" + indent(err_msg, "  > ")
             raise ConnectionError(msg) from e
@@ -125,6 +126,12 @@ def make_server_request(
             msg = "Cannot read answer from server."
             msg += "\n\n" + indent(err_msg, "  > ")
             raise ConnectionError(msg) from e
+
+
+        if e.code == 400:
+            msg = "Invalid request to server."
+            msg += f"\n\n{received_msg}"
+            raise RequestFailed(msg) from None
 
         if e.code == 401:
             msg = "Not authorized to perform operation."
