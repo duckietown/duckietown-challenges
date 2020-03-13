@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import yaml
 
 import decorator
 
@@ -145,7 +146,6 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
 
 
 def safe_yaml_dump(x, **args):
-    import yaml
 
     s = yaml.safe_dump(x, encoding="utf-8", indent=4, allow_unicode=True, **args)
     return s
