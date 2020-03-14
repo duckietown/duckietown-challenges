@@ -1,6 +1,9 @@
 # coding=utf-8
+import os
 from abc import ABCMeta, abstractmethod
-from typing import List, Dict
+from typing import Dict, List
+
+__all__ = ['ChallengeInterfaceEvaluator', 'ChallengeInterfaceSolution']
 
 
 class ChallengeInterfaceSolution(metaclass=ABCMeta):
@@ -231,7 +234,6 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     def set_evaluation_dir(self, basename, realdir):
-        import os
 
         for bn in os.listdir(realdir):
             fn = os.path.join(realdir, bn)
