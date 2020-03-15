@@ -65,7 +65,7 @@ class Build:
 
 @dataclass
 class PortDefinition:
-    external: int
+    external: Optional[int]
     internal: int
 
 
@@ -157,11 +157,18 @@ class ServiceDefinition:
         ports_ = d0.pop("ports", [])
         ports = []
         for s in ports_:
-            if not ":" in s:
-                raise InvalidConfiguration(s)
-            tokens = s.split(":")
-            external = int(tokens[0])
-            internal = int(tokens[1])
+            if isinstance(s, int):
+                internal = s
+                external = None
+            else:
+                if not ":" in s:
+                    # raise InvalidConfiguration(s)
+                    internal = int(s)
+                    external = None
+                else:
+                    tokens = s.split(":")
+                    external = int(tokens[0])
+                    internal = int(tokens[1])
             ports.append(PortDefinition(external=external, internal=internal))
         return ServiceDefinition(
             image=image, environment=environment, build=build, ports=ports
@@ -173,7 +180,10 @@ class ServiceDefinition:
 
         ports = []
         for p in self.ports:
-            ports.append("%s:%s" % (p.external, p.internal))
+            if p.external is not None:
+                ports.append(f"{p.external}:{p.internal}")
+            else:
+                ports.append(f'{p.internal}')
 
         if ports:
             res["ports"] = ports
