@@ -5,13 +5,13 @@ import sys
 from dataclasses import dataclass
 from typing import Optional
 
+from zuper_commons.timing import now_utc
+
+
 from duckietown_challenges import dclogger
 from duckietown_challenges.utils import tag_from_date
 
 __all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag"]
-
-from zuper_commons.timing import now_utc
-
 
 @dataclass
 class BuildResult:
@@ -72,14 +72,7 @@ def parse_complete_tag(x: str) -> BuildResult:
         raise ValueError((x, rest, org_repo))
 
     organization, repository = org_repo.split("/")
-    #
-    # if tag is not None and "@" in tag:
-    #     tag, digest = tag.split("@")
-    #     if not digest.startswith("sha256"):
-    #         msg = "Unknown digest format: %s for %s" % (digest, x)
-    #         raise ValueError(msg)
-    # else:
-    #     digest = None
+
     try:
         return BuildResult(
             registry=registry,
@@ -121,10 +114,17 @@ def submission_build(
         msg = 'I expected to find the file "%s".' % df
         raise Exception(msg)
 
-    cmd = ["docker", "build", "--pull", "-t", complete_image, "-f", df, "."]
+    cmd = ["docker", "build", "--pull", "-t", complete_image, "-f", df]
 
+    vname = 'AIDO_REGISTRY'
+    with open(df) as _:
+        df_contents = _.read()
+    if vname in df_contents:
+        value = os.environ.get('AIDO_REGISTRY')
+        cmd.extend(['--build-arg', f'{vname}={value}'])
     if no_cache:
         cmd.append("--no-cache")
+    cmd.append('.')
     dclogger.info("Running: %s" % " ".join(cmd))
     p = subprocess.Popen(cmd)
     p.communicate()
