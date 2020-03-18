@@ -646,7 +646,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     setup_logging_color()
 
-    def declare(status, message, scores: Dict, ipfs_hashes: Dict[str, str]):
+    def declare(status, message: Optional[str], scores: Optional[dict], ipfs_hashes: Dict[str, str]):
         # write files
         d = os.path.join(root, CHALLENGE_EVALUATION_OUTPUT_DIR)
         cie.evaluation_files.write(d)
@@ -662,33 +662,36 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         )
         declare_challenge_results(root, cr)
         retcode = 0 if status == ChallengesConstants.STATUS_JOB_SUCCESS else 1
+        dclogger.info(f'exiting with code {retcode}')
         sys.exit(retcode)
 
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
     def read_scores():
-        scores = {}
+        _scores = {}
         for k, v in cie.scores.items():
-            scores[k] = v.value
-        return scores
+            _scores[k] = v.value
+        return _scores
 
+    scores = read_scores()
     try:
         yield cie
 
+        cie.debug('yield cie ok, now declaring')
         declare(
-            ChallengesConstants.STATUS_JOB_SUCCESS, None, read_scores(), cie.ipfs_hashes
+            ChallengesConstants.STATUS_JOB_SUCCESS, None, scores, cie.ipfs_hashes
         )
     # failure
     except InvalidSubmission:
         msg = "InvalidSubmission:\n%s" % traceback.format_exc()
         declare(
-            ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
+            ChallengesConstants.STATUS_JOB_FAILED, msg, scores, cie.ipfs_hashes
         )
 
     except InvalidEvaluator:
         msg = "InvalidEvaluator:\n%s" % traceback.format_exc()
         declare(
-            ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes
+            ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes
         )
 
     except InvalidEnvironment:
@@ -696,21 +699,21 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         declare(
             ChallengesConstants.STATUS_JOB_HOST_ERROR,
             msg,
-            read_scores(),
+            scores,
             cie.ipfs_hashes,
         )
 
     except SystemExit:
-        msg = "SystemExit:\n%s" % traceback.format_exc()
-        declare(
-            ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
-        )
+        # msg = "SystemExit:\n%s" % traceback.format_exc()
+        # declare(
+        #     ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
+        # )
         raise
 
     except BaseException:
         msg = "Unexpected exception:\n%s" % traceback.format_exc()
         declare(
-            ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes
+            ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes
         )
 
 

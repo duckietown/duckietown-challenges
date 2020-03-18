@@ -14,13 +14,13 @@ __all__ = ['ChallengeResults', 'declare_challenge_results', 'read_challenge_resu
 
 class ChallengeResults:
     ipfs_hashes: Dict[str, str]
-    msg: str
+    msg: Optional[str]
     status: JobStatusString
 
     def __init__(
         self,
         status: JobStatusString,
-        msg: str,
+        msg: Optional[str],
         scores,
         stats: Optional[dict] = None,
         ipfs_hashes: Optional[Dict[str, str]] = None,
