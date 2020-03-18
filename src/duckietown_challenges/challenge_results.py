@@ -1,23 +1,28 @@
 # coding=utf-8
 import os
 from collections import OrderedDict
+from typing import Dict, Optional
 
-from .challenges_constants import ChallengesConstants
+from . import dclogger
+from .challenges_constants import ChallengesConstants, JobStatusString
 from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
-from .yaml_utils import write_yaml, read_yaml_file
-from typing import Optional, Dict
+from .yaml_utils import read_yaml_file, write_yaml
+
+__all__ = ['ChallengeResults', 'declare_challenge_results', 'read_challenge_results']
 
 
 class ChallengeResults:
     ipfs_hashes: Dict[str, str]
+    msg: str
+    status: JobStatusString
 
     def __init__(
         self,
-        status,
-        msg,
+        status: JobStatusString,
+        msg: str,
         scores,
-        stats=None,
+        stats: Optional[dict] = None,
         ipfs_hashes: Optional[Dict[str, str]] = None,
     ):
         assert status in ChallengesConstants.ALLOWED_JOB_STATUS, (
@@ -70,6 +75,8 @@ def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
     data = cr.to_yaml()
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)
+    msg = f'Just wrote challenge result to {fn}'
+    dclogger.info(msg)
 
 
 class NoResultsFound(Exception):
@@ -81,15 +88,6 @@ def read_challenge_results(root: str) -> ChallengeResults:
     if not os.path.exists(fn):
         msg = "File %r does not exist." % fn
         raise NoResultsFound(msg)
-    #
-    # with open(fn) as f:
-    #     contents = f.read()
-    #
-    # if '!!omap' in contents:
-    #     contents = contents.replace('!!omap', '')
-    #
-    # data = yaml.load(contents, Loader=yaml.Loader)
-
     data = read_yaml_file(fn)
 
     return ChallengeResults.from_yaml(data)

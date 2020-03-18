@@ -701,6 +701,10 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         )
 
     except SystemExit:
+        msg = "SystemExit:\n%s" % traceback.format_exc()
+        declare(
+            ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
+        )
         raise
 
     except BaseException:
