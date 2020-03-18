@@ -74,7 +74,7 @@ class FS:
 
     def write(self, dest):
         rfs = list(self.files.values())
-        dclogger.info(f"writing files {rfs}")
+        dclogger.info(f"writing {len(rfs)} files")
         for rf in rfs:
 
             out = os.path.join(dest, rf.basename)
@@ -86,6 +86,7 @@ class FS:
                 with open(out, "wb") as f:
                     f.write(rf.contents)
 
+        dclogger.info(f"writing {len(rfs)} files done")
 
 class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
     def __init__(self, root):
@@ -681,6 +682,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         declare(
             ChallengesConstants.STATUS_JOB_SUCCESS, None, scores, cie.ipfs_hashes
         )
+        cie.debug('declaring done')
     # failure
     except InvalidSubmission:
         msg = "InvalidSubmission:\n%s" % traceback.format_exc()
