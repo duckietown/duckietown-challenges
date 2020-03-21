@@ -118,7 +118,7 @@ def make_server_request(
                 msg += f"\n\n{err_msg}"
                 raise NotFound(msg) from None
 
-            msg = "Cannot read answer from server."
+            msg = f"Cannot read answer from server {url}"
             msg += "\n\n" + indent(err_msg, "  > ")
             raise ConnectionError(msg) from e
 
