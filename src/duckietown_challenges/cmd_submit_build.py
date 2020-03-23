@@ -116,12 +116,20 @@ def submission_build(
 
     cmd = ["docker", "build", "--pull", "-t", complete_image, "-f", df]
 
-    vname = 'AIDO_REGISTRY'
+
     with open(df) as _:
         df_contents = _.read()
-    if vname in df_contents:
-        value = os.environ.get('AIDO_REGISTRY')
-        cmd.extend(['--build-arg', f'{vname}={value}'])
+
+    vnames = {
+        'AIDO_REGISTRY': 'docker.io',
+        'PIP_INDEX_URL': 'https://pypi.org/simple',
+    }
+
+    for vname, default_value in vnames.items():
+        if vname in df_contents:
+            value = os.environ.get(vname, default_value)
+            cmd.extend(['--build-arg', f'{vname}={value}'])
+
     if no_cache:
         cmd.append("--no-cache")
     cmd.append('.')
