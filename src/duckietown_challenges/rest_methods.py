@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, NewType, Optional
 
 import dateutil.parser
 import termcolor
@@ -13,6 +12,8 @@ from .rest import make_server_request
 
 Endpoints = ChallengesConstants.Endpoints
 
+SubmissionID = NewType('SubmissionID', int)
+UserID = NewType('UserID', int)
 
 @dataclass
 class RegistryInfo:
@@ -25,7 +26,7 @@ def add_impersonate_info(data, impersonate):
 
 
 def dtserver_challenge_define(
-    token: str, yaml, force_invalidate: bool, impersonate: int = None
+    token: str, yaml, force_invalidate: bool, impersonate: Optional[UserID] = None
 ):
     endpoint = Endpoints.challenge_define
     method = "POST"
@@ -35,7 +36,7 @@ def dtserver_challenge_define(
     return make_server_request(token, endpoint, data=data, method=method, timeout=15)
 
 
-def get_registry_info(token: str, impersonate: int = None) -> RegistryInfo:
+def get_registry_info(token: str, impersonate: Optional[UserID] = None) -> RegistryInfo:
     endpoint = Endpoints.registry_info
     method = "GET"
     data = {}
@@ -47,7 +48,7 @@ def get_registry_info(token: str, impersonate: int = None) -> RegistryInfo:
     return ri
 
 
-def dtserver_auth(token, cmd, impersonate=None):
+def dtserver_auth(token, cmd, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.auth
     method = "GET"
     data = {"query": cmd}
@@ -57,7 +58,7 @@ def dtserver_auth(token, cmd, impersonate=None):
     return res
 
 
-def get_dtserver_user_info(token, impersonate=None):
+def get_dtserver_user_info(token, impersonate: Optional[UserID] = None):
     """ Returns a dictionary with information about the user """
     endpoint = Endpoints.user_info
     method = "GET"
@@ -76,7 +77,7 @@ def get_dtserver_user_info(token, impersonate=None):
 #     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_retire(token, submission_id, impersonate=None):
+def dtserver_retire(token, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.submissions
     method = "DELETE"
     data = {"submission_id": submission_id}
@@ -85,7 +86,16 @@ def dtserver_retire(token, submission_id, impersonate=None):
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_get_user_submissions(token, impersonate=None):
+def dtserver_retire_same_label(token, label: str, impersonate: Optional[UserID] = None):
+    endpoint = Endpoints.submissions
+    method = "DELETE"
+    data = {"label": label}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    return make_server_request(token, endpoint, data=data, method=method)
+
+
+def dtserver_get_user_submissions(token, impersonate: Optional[UserID] = None):
     """ Returns a dictionary with information about the user submissions """
     endpoint = Endpoints.submissions
     method = "GET"
@@ -100,7 +110,7 @@ def dtserver_get_user_submissions(token, impersonate=None):
     return submissions
 
 
-def dtserver_submit2(*, token, challenges: List[str], data, impersonate=None):
+def dtserver_submit2(*, token, challenges: List[str], data, impersonate: Optional[UserID] = None):
     if not isinstance(challenges, list):
         msg = "Expected a list of strings, got %s" % challenges
         raise ValueError(msg)
@@ -112,7 +122,7 @@ def dtserver_submit2(*, token, challenges: List[str], data, impersonate=None):
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_get_info(token, submission_id, impersonate=None):
+def dtserver_get_info(token, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.submission_single + "/%s" % submission_id
     method = "GET"
     data = {}
@@ -123,7 +133,7 @@ def dtserver_get_info(token, submission_id, impersonate=None):
     )
 
 
-def dtserver_reset_submission(token, submission_id, step_name, impersonate=None):
+def dtserver_reset_submission(token, submission_id: SubmissionID, step_name, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.reset_submission
     method = "POST"
     data = {"submission_id": submission_id, "step_name": step_name}
@@ -132,7 +142,7 @@ def dtserver_reset_submission(token, submission_id, step_name, impersonate=None)
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_reset_job(token, job_id, impersonate=None):
+def dtserver_reset_job(token, job_id, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.reset_job
     method = "POST"
     data = {"job_id": job_id}
@@ -152,7 +162,7 @@ def dtserver_report_job(
     uploaded,  # <- uploaded via S3
     timeout,  # <- how long to wait for the server
     ipfs_hashes: Dict[str, str],  # <- IPFS files
-    impersonate=None,
+    impersonate: Optional[UserID] = None,
 ):
     """
 
@@ -195,7 +205,7 @@ def dtserver_work_submission(
     features,
     reset,
     timeout,
-    impersonate=None,
+    impersonate: Optional[UserID] = None,
 ):
     """
 
@@ -262,7 +272,7 @@ def dtserver_work_submission(
 
 
 def get_challenge_description(
-    token, challenge_name: str, impersonate=None
+    token, challenge_name: str, impersonate: Optional[UserID] = None
 ) -> ChallengeDescription:
     if not isinstance(challenge_name, str):
         msg = "Expected a string for the challenge name, I got %s" % challenge_name
@@ -277,7 +287,7 @@ def get_challenge_description(
     return cd
 
 
-def dtserver_get_challenges(token, impersonate=None) -> Dict[int, ChallengeDescription]:
+def dtserver_get_challenges(token, impersonate: Optional[UserID] = None) -> Dict[int, ChallengeDescription]:
     endpoint = Endpoints.challenges
     method = "GET"
     data = {}
