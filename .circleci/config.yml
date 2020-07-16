@@ -5,8 +5,6 @@ workflows:
     jobs:
       - test-3.7
       - test-3.6
-      - test-3.5
-      - test-2.7
 jobs:
   test-3.6: &test-template
     docker:
@@ -45,14 +43,6 @@ jobs:
           path: artifacts
           destination: artifacts
 
-  test-3.5:
-    <<: *test-template
-    docker:
-      - image: python:3.5
-  test-2.7:
-    <<: *test-template
-    docker:
-    - image: python:2.7
   test-3.7:
     <<: *test-template
     docker:
