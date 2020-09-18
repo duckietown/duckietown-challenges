@@ -36,7 +36,7 @@ if system_version < (3, 7):
     install_requires.append("dataclasses")
 
 version = get_version(filename="src/duckietown_challenges/__init__.py")
-line = "daffy-aido4"
+line = "daffy"
 setup(
     name=f"duckietown-challenges-{line}",
     version=version,
