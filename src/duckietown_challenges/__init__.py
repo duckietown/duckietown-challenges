@@ -1,17 +1,16 @@
 # coding=utf-8
 __version__ = "6.0.2"
-import logging
 
-logging.basicConfig()
-dclogger = logging.getLogger("duckietown-challenges")
-dclogger.setLevel(logging.DEBUG)
-dclogger.info("duckietown-challenges %s" % __version__)
+from zuper_commons.logs import ZLogger
+
+dclogger = logger = ZLogger(__name__)
+logger.info(f'version: {__version__}')
 
 from .challenges_constants import ChallengesConstants
 from .solution_interface import *
 from .constants import *
 from .exceptions import *
-
+from .challenge import *
 from .challenge_evaluator import *
 from .challenge_solution import *
 from .challenge_results import *

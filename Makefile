@@ -16,6 +16,8 @@ upload:
 	python setup.py sdist
 	twine upload dist/*
 
+test:
+	$(MAKE) tests-clean tests
 
 tests-clean:
 	rm -rf out-comptests

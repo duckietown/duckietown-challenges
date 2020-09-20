@@ -1,4 +1,3 @@
-import datetime
 import os
 import subprocess
 import sys
@@ -7,11 +6,11 @@ from typing import Optional
 
 from zuper_commons.timing import now_utc
 
+from . import dclogger
+from .utils import tag_from_date
 
-from duckietown_challenges import dclogger
-from duckietown_challenges.utils import tag_from_date
+__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag", 'submission_read']
 
-__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag"]
 
 @dataclass
 class BuildResult:
@@ -115,7 +114,6 @@ def submission_build(
         raise Exception(msg)
 
     cmd = ["docker", "build", "--pull", "-t", complete_image, "-f", df]
-
 
     with open(df) as _:
         df_contents = _.read()

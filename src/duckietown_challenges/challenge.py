@@ -8,12 +8,13 @@ from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
 
 from zuper_ipce import ipce_from_object, object_from_ipce
-from . import dclogger
+from . import logger
 from .challenges_constants import ChallengesConstants, JobStatusString, StepName
 from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
+__all__ = ['ChallengeDescription']
 
 class InvalidChallengeDescription(Exception):
     pass
