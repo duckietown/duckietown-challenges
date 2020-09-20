@@ -6,15 +6,15 @@ from typing import Any, cast, Dict, List, Optional, Tuple, Union
 import yaml
 from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
-
 from zuper_ipce import ipce_from_object, object_from_ipce
-from . import logger
+
 from .challenges_constants import ChallengesConstants, JobStatusString, StepName
 from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
 __all__ = ['ChallengeDescription']
+
 
 class InvalidChallengeDescription(Exception):
     pass
@@ -726,7 +726,6 @@ class ChallengeDescription:
 
         date_open = (add_timezone(data.pop("date-open")))
         date_close = (add_timezone(data.pop("date-close")))
-
 
         assert date_close.tzinfo is not None, (date_close, date_open)
         assert date_open.tzinfo is not None, (date_close, date_open)

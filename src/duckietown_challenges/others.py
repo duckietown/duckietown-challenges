@@ -8,7 +8,7 @@ import yaml
 from docker import DockerClient
 from zuper_ipce import IESO, ipce_from_object
 
-from dt_shell import get_dockerhub_username
+from dt_shell.env_checks import get_dockerhub_username
 from . import logger
 from .challenge import ChallengeDescription, ChallengesConstants
 from .cmd_submit_build import (
