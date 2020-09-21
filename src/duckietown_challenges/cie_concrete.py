@@ -655,36 +655,34 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
 
+    # NOTE you have to call after yielding
     def read_scores():
         _scores = {}
         for k, v in cie.scores.items():
             _scores[k] = v.value
         return _scores
 
-    scores = read_scores()
-    dclogger.info(read_scores=scores)
     try:
         yield cie
-
         status = ChallengesConstants.STATUS_JOB_SUCCESS
-        dclogger.debug("yield cie ok, now declaring", status=status, scores=scores)
-        declare(status, None, scores, cie.ipfs_hashes)
+        dclogger.debug("yield cie ok, now declaring success", status=status, scores=read_scores())
+        declare(status, None, read_scores(), cie.ipfs_hashes)
         dclogger.debug("declaring done")
     # failure
     except InvalidSubmission:
         msg = "InvalidSubmission:\n%s" % traceback.format_exc()
         status = ChallengesConstants.STATUS_JOB_FAILED
-        declare(status, msg, scores, cie.ipfs_hashes)
+        declare(status, msg, read_scores(), cie.ipfs_hashes)
 
     except InvalidEvaluator:
         msg = "InvalidEvaluator:\n%s" % traceback.format_exc()
         status = ChallengesConstants.STATUS_JOB_ERROR
-        declare(status, msg, scores, cie.ipfs_hashes)
+        declare(status, msg, read_scores(), cie.ipfs_hashes)
 
     except InvalidEnvironment:
         msg = "InvalidEnvironment:\n%s" % traceback.format_exc()
         status = ChallengesConstants.STATUS_JOB_HOST_ERROR
-        declare(status, msg, scores, cie.ipfs_hashes)
+        declare(status, msg, read_scores(), cie.ipfs_hashes)
 
     except SystemExit:
         # msg = "SystemExit:\n%s" % traceback.format_exc()
@@ -695,7 +693,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     except BaseException:
         msg = "Unexpected exception:\n%s" % traceback.format_exc()
-        declare(ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes)
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes)
 
 
 def wrap_solution(solution, root=DEFAULT_ROOT):
