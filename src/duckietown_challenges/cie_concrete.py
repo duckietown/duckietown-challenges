@@ -15,6 +15,7 @@ from typing import ContextManager, Dict, Optional
 
 from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
+from .challenges_constants import JobStatusString
 from .constants import (
     CHALLENGE_DESCRIPTION_DIR,
     CHALLENGE_DESCRIPTION_YAML,
@@ -661,13 +662,14 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         return _scores
 
     scores = read_scores()
+    dclogger.info(scores=scores)
     try:
         yield cie
 
-        cie.debug("yield cie ok, now declaring")
         status = ChallengesConstants.STATUS_JOB_SUCCESS
+        dclogger.debug("yield cie ok, now declaring", status=status, scores=scores)
         declare(status, None, scores, cie.ipfs_hashes)
-        cie.debug("declaring done")
+        dclogger.debug("declaring done")
     # failure
     except InvalidSubmission:
         msg = "InvalidSubmission:\n%s" % traceback.format_exc()
@@ -681,7 +683,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     except InvalidEnvironment:
         msg = "InvalidEnvironment:\n%s" % traceback.format_exc()
-        status = (ChallengesConstants.STATUS_JOB_HOST_ERROR,)
+        status = ChallengesConstants.STATUS_JOB_HOST_ERROR
         declare(
             status, msg, scores, cie.ipfs_hashes,
         )
