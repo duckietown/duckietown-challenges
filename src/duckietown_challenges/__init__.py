@@ -1,10 +1,10 @@
 # coding=utf-8
-__version__ = "6.0.7"
+__version__ = "6.0.8"
 
 from zuper_commons.logs import ZLogger
 
 dclogger = logger = ZLogger(__name__)
-logger.info(f'version: {__version__}')
+logger.info(f"version: {__version__}")
 
 from .challenges_constants import ChallengesConstants
 from .solution_interface import *
