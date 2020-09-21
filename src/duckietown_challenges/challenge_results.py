@@ -9,7 +9,7 @@ from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import read_yaml_file, write_yaml
 
-__all__ = ['ChallengeResults', 'declare_challenge_results', 'read_challenge_results', 'NoResultsFound']
+__all__ = ["ChallengeResults", "declare_challenge_results", "read_challenge_results", "NoResultsFound"]
 
 
 class ChallengeResults:
@@ -75,8 +75,8 @@ def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
     data = cr.to_yaml()
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)
-    msg = f'Just wrote challenge result to {fn}'
-    dclogger.info(msg)
+    msg = f"Just wrote challenge result to {fn}"
+    dclogger.info(msg, data=data)
 
 
 class NoResultsFound(Exception):

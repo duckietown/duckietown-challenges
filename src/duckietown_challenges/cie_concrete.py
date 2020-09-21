@@ -11,7 +11,7 @@ import traceback
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Optional, Dict, ContextManager
+from typing import ContextManager, Dict, Optional
 
 from duckietown_challenges import ChallengesConstants
 from . import dclogger, ENV_CHALLENGE_STEP_NAME
@@ -88,6 +88,7 @@ class FS:
 
         dclogger.info(f"writing {len(rfs)} files done")
 
+
 class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
     def __init__(self, root):
         self.root = root
@@ -133,9 +134,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
             msg = "Invalid set_solution_output_file()"
             raise InvalidSubmission(msg) from e
 
-    def set_solution_output_file_from_data(
-        self, basename: str, contents: bytes, description=None
-    ):
+    def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
         try:
             self.solution_output_files.add_from_data(basename, contents, description)
         except ValueError as e:
@@ -232,13 +231,7 @@ def get_completed_step_solution_file(root, step_name, basename):
     #     msg = 'No file %r' % basename
     #     raise KeyError(msg)
 
-    fn = os.path.join(
-        root,
-        CHALLENGE_PREVIOUS_STEPS_DIR,
-        step_name,
-        CHALLENGE_SOLUTION_OUTPUT_DIR,
-        basename,
-    )
+    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename,)
     if not os.path.exists(fn):
         msg = "Cannot find %s; know %s" % (fn, available)
         raise KeyError(msg)
@@ -258,8 +251,7 @@ def wait_for_file(fn, timeout, wait):
         to_wait = timeout - passed
         if i % interval_notice == 0:
             dclogger.debug(
-                "Output %s not ready yet (%s secs passed, will wait %s secs more)"
-                % (fn, passed, to_wait)
+                "Output %s not ready yet (%s secs passed, will wait %s secs more)" % (fn, passed, to_wait)
             )
         if time.time() > t0 + timeout:
             msg = "Timeout of %s while waiting for %s." % (timeout, fn)
@@ -332,12 +324,10 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         return fns
 
     def set_score(self, name, value, description=None):
+        dclogger.info("setting score", name=name, value=value, description=description)
         if isinstance(value, float):
             if math.isnan(value) or math.isinf(value):
-                msg = (
-                    "Invalid value %r for score %r: we do not allow infinity or NaN."
-                    % (value, name)
-                )
+                msg = "Invalid value %r for score %r: we do not allow infinity or NaN." % (value, name)
                 raise ValueError(msg)
 
         import numpy as np
@@ -346,10 +336,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             value = float(value)
 
         if isinstance(value, np.ndarray):
-            msg = (
-                "Please use regular floats and not numpy array. Invalid value for %s: %s"
-                % (name, value)
-            )
+            msg = "Please use regular floats and not numpy array. Invalid value for %s: %s" % (name, value)
             raise Exception(msg)
 
         # dclogger.info('found %s %s' % (value, type(value)))
@@ -360,7 +347,6 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.scores[name] = ReportedScore(name, value, description)
 
     def set_evaluation_ipfs_hash(self, rpath: str, ipfs_hash: str):
-
         if not isinstance(ipfs_hash, str):
             raise ValueError(ipfs_hash)
         ipfs_hash = ipfs_hash.strip()
@@ -452,7 +438,8 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         return get_completed_step_evaluation_files(self.root, step_name)
         # # XXX
-        # d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
+        # d = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name,
+        # CHALLENGE_EVALUATION_OUTPUT_DIR)
         # return list(os.listdir(d))
 
     def get_completed_step_evaluation_file(self, step_name, basename):
@@ -460,7 +447,8 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         # if basename not in self.get_completed_step_evaluation_files(step_name):
         #     msg = 'No file %r' % basename
         #     raise KeyError(msg)
-        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR,
+        # fn = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name,
+        # CHALLENGE_EVALUATION_OUTPUT_DIR,
         # basename)
         # return fn
 
@@ -500,9 +488,7 @@ def get_completed_step_evaluation_file(root, step_name, basename):
     #     msg = 'No file %r' % basename
     #     raise KeyError(msg)
 
-    step_dir = os.path.join(
-        root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR
-    )
+    step_dir = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
     fn = os.path.join(step_dir, basename)
     if not os.path.exists(fn):
         msg = "File %s -> %s does not exist " % (basename, fn)
@@ -647,7 +633,9 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     setup_logging_color()
 
-    def declare(status, message: Optional[str], scores: Optional[dict], ipfs_hashes: Dict[str, str]):
+    def declare(
+        status: JobStatusString, message: Optional[str], scores: Optional[dict], ipfs_hashes: Dict[str, str]
+    ):
         # write files
         d = os.path.join(root, CHALLENGE_EVALUATION_OUTPUT_DIR)
         cie.evaluation_files.write(d)
@@ -656,14 +644,12 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
             msg = "declare %s:\n%s" % (status, message)
             dclogger.error(msg)
         else:
-            dclogger.info("Completed.")
+            dclogger.info("Completed.", message=message, scores=scores)
         stats = {}
-        cr = ChallengeResults(
-            status, message, scores=scores, stats=stats, ipfs_hashes=ipfs_hashes
-        )
+        cr = ChallengeResults(status, message, scores=scores, stats=stats, ipfs_hashes=ipfs_hashes)
         declare_challenge_results(root, cr)
         retcode = 0 if status == ChallengesConstants.STATUS_JOB_SUCCESS else 1
-        dclogger.info(f'exiting with code {retcode}')
+        dclogger.info(f"exiting with code {retcode}")
         sys.exit(retcode)
 
     cie = ChallengeInterfaceEvaluatorConcrete(root=root)
@@ -678,31 +664,26 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
     try:
         yield cie
 
-        cie.debug('yield cie ok, now declaring')
-        declare(
-            ChallengesConstants.STATUS_JOB_SUCCESS, None, scores, cie.ipfs_hashes
-        )
-        cie.debug('declaring done')
+        cie.debug("yield cie ok, now declaring")
+        status = ChallengesConstants.STATUS_JOB_SUCCESS
+        declare(status, None, scores, cie.ipfs_hashes)
+        cie.debug("declaring done")
     # failure
     except InvalidSubmission:
         msg = "InvalidSubmission:\n%s" % traceback.format_exc()
-        declare(
-            ChallengesConstants.STATUS_JOB_FAILED, msg, scores, cie.ipfs_hashes
-        )
+        status = ChallengesConstants.STATUS_JOB_FAILED
+        declare(status, msg, scores, cie.ipfs_hashes)
 
     except InvalidEvaluator:
         msg = "InvalidEvaluator:\n%s" % traceback.format_exc()
-        declare(
-            ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes
-        )
+        status = ChallengesConstants.STATUS_JOB_ERROR
+        declare(status, msg, scores, cie.ipfs_hashes)
 
     except InvalidEnvironment:
         msg = "InvalidEnvironment:\n%s" % traceback.format_exc()
+        status = (ChallengesConstants.STATUS_JOB_HOST_ERROR,)
         declare(
-            ChallengesConstants.STATUS_JOB_HOST_ERROR,
-            msg,
-            scores,
-            cie.ipfs_hashes,
+            status, msg, scores, cie.ipfs_hashes,
         )
 
     except SystemExit:
@@ -714,9 +695,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     except BaseException:
         msg = "Unexpected exception:\n%s" % traceback.format_exc()
-        declare(
-            ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes
-        )
+        declare(ChallengesConstants.STATUS_JOB_ERROR, msg, scores, cie.ipfs_hashes)
 
 
 def wrap_solution(solution, root=DEFAULT_ROOT):
@@ -744,10 +723,7 @@ def wrap_solution(solution, root=DEFAULT_ROOT):
 
         parameters = cis.get_challenge_parameters()
         if SPECIAL_ABORT in parameters:
-            msg = (
-                "I will not run solution because evaluator has aborted: \n%s"
-                % parameters[SPECIAL_ABORT]
-            )
+            msg = "I will not run solution because evaluator has aborted: \n%s" % parameters[SPECIAL_ABORT]
             raise InvalidEvaluator(msg)
 
         try:
