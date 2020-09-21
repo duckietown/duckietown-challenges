@@ -197,8 +197,8 @@ def dtserver_report_job(
 
 
 def dtserver_work_submission(
-    token,
-    submission_id,
+    token: str,
+    submission_id: Optional[SubmissionID],
     machine_id,
     process_id,
     evaluator_version,

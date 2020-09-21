@@ -80,7 +80,7 @@ def make_server_request(
 
     server = get_duckietown_server_url()
     url = server + endpoint
-
+    dclogger.debug(url=url)
     headers = {}
     if token is not None:
         headers["X-Messaging-Token"] = token

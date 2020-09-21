@@ -9,7 +9,7 @@ from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import read_yaml_file, write_yaml
 
-__all__ = ['ChallengeResults', 'declare_challenge_results', 'read_challenge_results']
+__all__ = ['ChallengeResults', 'declare_challenge_results', 'read_challenge_results', 'NoResultsFound']
 
 
 class ChallengeResults:
