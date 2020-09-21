@@ -59,12 +59,7 @@ class RequestFailed(RequestException):
 
 
 def make_server_request(
-    token,
-    endpoint,
-    data=None,
-    method: str = "GET",
-    timeout: int = None,
-    suppress_user_msg: bool = False,
+    token, endpoint, data=None, method: str = "GET", timeout: int = None, suppress_user_msg: bool = False,
 ):
     """
         Raise RequestFailed or ConnectionError.
@@ -126,7 +121,6 @@ def make_server_request(
             msg = "Cannot read answer from server."
             msg += "\n\n" + indent(err_msg, "  > ")
             raise ConnectionError(msg) from e
-
 
         if e.code == 400:
             msg = "Invalid request to server."

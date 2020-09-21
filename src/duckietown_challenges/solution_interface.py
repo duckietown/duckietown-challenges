@@ -3,7 +3,7 @@ import os
 from abc import ABCMeta, abstractmethod
 from typing import Dict, List
 
-__all__ = ['ChallengeInterfaceEvaluator', 'ChallengeInterfaceSolution']
+__all__ = ["ChallengeInterfaceEvaluator", "ChallengeInterfaceSolution"]
 
 
 class ChallengeInterfaceSolution(metaclass=ABCMeta):
@@ -96,9 +96,7 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def set_solution_output_file_from_data(
-        self, basename: str, contents: bytes, description=None
-    ):
+    def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
         """
             Same as before, but the contents is passed as a string.
 
@@ -149,9 +147,7 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
 
         """
 
-    def get_completed_step_solution_file_contents(
-        self, step_name: str, basename: str
-    ) -> bytes:
+    def get_completed_step_solution_file_contents(self, step_name: str, basename: str) -> bytes:
         """
             Same as `get_completed_step_solution_file` but returns the contents
             directly.
@@ -186,9 +182,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
     def get_completed_step_evaluation_file(self, step_name: str, basename: str):
         """ Returns a filename for one of the files completed in a previous step."""
 
-    def get_completed_step_evaluation_file_contents(
-        self, step_name: str, basename: str
-    ) -> bytes:
+    def get_completed_step_evaluation_file_contents(self, step_name: str, basename: str) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
         with open(fn, "rb") as f:
             return f.read()
@@ -247,9 +241,7 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_evaluation_file_from_data(
-        self, basename, contents: bytes, description=None
-    ):
+    def set_evaluation_file_from_data(self, basename, contents: bytes, description=None):
         pass
 
     @abstractmethod

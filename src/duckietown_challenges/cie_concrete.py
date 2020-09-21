@@ -643,7 +643,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
             msg = "declare %s:\n%s" % (status, message)
-            dclogger.error(msg)
+            dclogger.error(msg, status=status, message=message, scores=scores)
         else:
             dclogger.info("Completed.", message=message, scores=scores)
         stats = {}
@@ -662,7 +662,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         return _scores
 
     scores = read_scores()
-    dclogger.info(scores=scores)
+    dclogger.info(read_scores=scores)
     try:
         yield cie
 
@@ -684,9 +684,7 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
     except InvalidEnvironment:
         msg = "InvalidEnvironment:\n%s" % traceback.format_exc()
         status = ChallengesConstants.STATUS_JOB_HOST_ERROR
-        declare(
-            status, msg, scores, cie.ipfs_hashes,
-        )
+        declare(status, msg, scores, cie.ipfs_hashes)
 
     except SystemExit:
         # msg = "SystemExit:\n%s" % traceback.format_exc()

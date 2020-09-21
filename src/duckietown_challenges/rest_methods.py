@@ -12,8 +12,9 @@ from .rest import make_server_request
 
 Endpoints = ChallengesConstants.Endpoints
 
-SubmissionID = NewType('SubmissionID', int)
-UserID = NewType('UserID', int)
+SubmissionID = NewType("SubmissionID", int)
+UserID = NewType("UserID", int)
+
 
 @dataclass
 class RegistryInfo:
@@ -25,9 +26,7 @@ def add_impersonate_info(data, impersonate):
         data["impersonate"] = impersonate
 
 
-def dtserver_challenge_define(
-    token: str, yaml, force_invalidate: bool, impersonate: Optional[UserID] = None
-):
+def dtserver_challenge_define(token: str, yaml, force_invalidate: bool, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.challenge_define
     method = "POST"
     data = {"yaml": yaml, "force-invalidate": force_invalidate}
@@ -128,12 +127,12 @@ def dtserver_get_info(token, submission_id: SubmissionID, impersonate: Optional[
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(
-        token, endpoint, data=data, method=method, suppress_user_msg=True
-    )
+    return make_server_request(token, endpoint, data=data, method=method, suppress_user_msg=True)
 
 
-def dtserver_reset_submission(token, submission_id: SubmissionID, step_name, impersonate: Optional[UserID] = None):
+def dtserver_reset_submission(
+    token, submission_id: SubmissionID, step_name, impersonate: Optional[UserID] = None
+):
     endpoint = Endpoints.reset_submission
     method = "POST"
     data = {"submission_id": submission_id, "step_name": step_name}
@@ -187,12 +186,7 @@ def dtserver_report_job(
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(
-        token,
-        endpoint,
-        data=data,
-        method=method,
-        timeout=timeout,
-        suppress_user_msg=True,
+        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
     )
 
 
@@ -262,12 +256,7 @@ def dtserver_work_submission(
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(
-        token,
-        endpoint,
-        data=data,
-        method=method,
-        timeout=timeout,
-        suppress_user_msg=True,
+        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
     )
 
 

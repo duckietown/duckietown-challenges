@@ -23,12 +23,12 @@ from .rest_methods import (
 )
 from .utils import tag_from_date
 
-__all__ = ['dts_define']
+__all__ = ["dts_define"]
 
 
 def fix_none(br: BuildResult) -> BuildResult:
     if br.registry is None:
-        return replace(br, registry='docker.io')
+        return replace(br, registry="docker.io")
     else:
         return br
 
@@ -46,26 +46,26 @@ def get_compatible_br(client, complete, registry) -> BuildResult:
 
     repo_tags = list(reversed(sorted(image.attrs.get("RepoTags", []))))
     repo_digests = list(reversed(sorted(image.attrs.get("RepoDigests", []))))
-    logger.info(f'repo_tags: {repo_tags}')
-    logger.info(f'repo_digests: {repo_digests}')
+    logger.info(f"repo_tags: {repo_tags}")
+    logger.info(f"repo_digests: {repo_digests}")
     compatible_digests = compatible_br(repo_digests, registry)
     compatible_tags = compatible_br(repo_tags, registry)
 
     if compatible_digests and compatible_tags:
-        logger.info(f'compatible: {compatible_digests} {compatible_tags}')
+        logger.info(f"compatible: {compatible_digests} {compatible_tags}")
         br = compatible_tags[0]
         br.digest = compatible_digests[0].digest
-        logger.info(f'choosing: {br}\n{get_complete_tag(br)}')
+        logger.info(f"choosing: {br}\n{get_complete_tag(br)}")
         return br
     else:
         raise KeyError()
 
 
-def dts_define(token: str, impersonate: Optional[int], parsed, challenge, base,
-               client: DockerClient,
-               no_cache: bool):
+def dts_define(
+    token: str, impersonate: Optional[int], parsed, challenge, base, client: DockerClient, no_cache: bool
+):
     ri = get_registry_info(token=token, impersonate=impersonate)
-    logger.info(f'impersonate {impersonate}')
+    logger.info(f"impersonate {impersonate}")
     if parsed.steps:
         use_steps = parsed.steps.split(",")
     else:
@@ -107,7 +107,7 @@ def dts_define(token: str, impersonate: Optional[int], parsed, challenge, base,
                     no_cache,
                     registry_info=ri,
                     dopull=parsed.pull,
-                    username=username
+                    username=username,
                 )
                 complete = get_complete_tag(br)
                 service.image = complete
@@ -118,12 +118,12 @@ def dts_define(token: str, impersonate: Optional[int], parsed, challenge, base,
                 if service.image == ChallengesConstants.SUBMISSION_CONTAINER_TAG:
                     pass
                 else:
-                    vname = 'AIDO_REGISTRY'
-                    vref = '${%s}' % vname
+                    vname = "AIDO_REGISTRY"
+                    vref = "${%s}" % vname
                     if vref in service.image:
                         value = os.environ.get(vname)
                         service.image = service.image.replace(vref, value)
-                    logger.info(f'service = {service}')
+                    logger.info(f"service = {service}")
                     br = parse_complete_tag(service.image)
                     if br.digest is None:
                         msg = "Finding digest for image %s" % service.image
@@ -145,16 +145,13 @@ def dts_define(token: str, impersonate: Optional[int], parsed, challenge, base,
     assert challenge.date_open.tzinfo is not None, (challenge.date_close, challenge.date_open)
     ipce = ipce_from_object(challenge, ChallengeDescription, ieso=ieso)
     data2 = yaml.dump(ipce)
-    res = dtserver_challenge_define(
-        token, data2, parsed.force_invalidate_subs, impersonate=impersonate
-    )
+    res = dtserver_challenge_define(token, data2, parsed.force_invalidate_subs, impersonate=impersonate)
     challenge_id = res["challenge_id"]
     steps_updated = res["steps_updated"]
 
     if steps_updated:
         logger.info("Updated challenge %s" % challenge_id)
-        logger.info("The following steps were updated and will be invalidated.",
-                    steps_updated=steps_updated)
+        logger.info("The following steps were updated and will be invalidated.", steps_updated=steps_updated)
         # for step_name, reason in steps_updated.items():
         #     logger.info("\n\n" + indent(reason, " ", step_name + "   "))
     else:
@@ -199,14 +196,14 @@ def build_image(
 
     cmd.extend(["-t", complete, "-f", filename])
 
-    env_vars = ['AIDO_REGISTRY', 'PIP_INDEX_URL']
+    env_vars = ["AIDO_REGISTRY", "PIP_INDEX_URL"]
     for v in env_vars:
         if v not in dockerfile:
             continue
         val = os.getenv(v)
         if val is not None:
-            cmd.append('--build-arg')
-            cmd.append(f'{v}={val}')
+            cmd.append("--build-arg")
+            cmd.append(f"{v}={val}")
 
     if no_cache:
         cmd.append("--no-cache")
@@ -243,5 +240,5 @@ def build_image(
     br = parse_complete_tag(complete)
     br.digest = br0.digest
 
-    logger.info(f'using: {br}')
+    logger.info(f"using: {br}")
     return br

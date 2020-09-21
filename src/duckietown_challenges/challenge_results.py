@@ -75,7 +75,7 @@ def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
     data = cr.to_yaml()
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)
-    msg = f"Just wrote challenge result to {fn}"
+    msg = f"Just wrote the challenge result to {fn}"
     dclogger.info(msg, data=data)
 
 

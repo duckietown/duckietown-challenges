@@ -40,8 +40,7 @@ line = "daffy"
 setup(
     name=f"duckietown-challenges-{line}",
     version=version,
-    download_url="http://github.com/duckietown/duckietown-challenges/tarball/%s"
-    % version,
+    download_url="http://github.com/duckietown/duckietown-challenges/tarball/%s" % version,
     package_dir={"": "src"},
     packages=find_packages("src"),
     install_requires=install_requires,

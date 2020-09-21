@@ -9,7 +9,8 @@ from .rest import ServerIsDown
 from .rest_methods import dtserver_get_info
 
 
-__all__ = ['follow_submission']
+__all__ = ["follow_submission"]
+
 
 def follow_submission(shell, token, submission_id):
     step2job_seen = {}

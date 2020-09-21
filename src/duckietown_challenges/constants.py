@@ -26,12 +26,8 @@ CHALLENGE_PREVIOUS_STEPS_DIR = "previous-steps"
 
 # File to be created by the solution, which also signals
 # the termination of the run
-CHALLENGE_SOLUTION_OUTPUT_YAML = os.path.join(
-    CHALLENGE_SOLUTION_OUTPUT_DIR, "output-solution.yaml"
-)
-CHALLENGE_EVALUATION_OUTPUT_YAML = os.path.join(
-    CHALLENGE_EVALUATION_OUTPUT_DIR, "output-evaluation.yaml"
-)
+CHALLENGE_SOLUTION_OUTPUT_YAML = os.path.join(CHALLENGE_SOLUTION_OUTPUT_DIR, "output-solution.yaml")
+CHALLENGE_EVALUATION_OUTPUT_YAML = os.path.join(CHALLENGE_EVALUATION_OUTPUT_DIR, "output-evaluation.yaml")
 CHALLENGE_SOLUTION_DIR = "challenge-solution"
 CHALLENGE_EVALUATION_DIR = "challenge-evaluation"
 CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, "description.yaml")

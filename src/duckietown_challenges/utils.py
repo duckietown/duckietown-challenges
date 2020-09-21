@@ -114,25 +114,16 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
     try:
         res = f(cls, data2, *args, **kwargs)
     except KeyError as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (
-            cls.__name__,
-            f.__name__,
-        )
+        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
         msg += '\nMissing configuration "%s". Specified: %s' % (e.args, list(data))
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         raise InvalidConfiguration(msg) from e
     except InvalidConfiguration as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (
-            cls.__name__,
-            f.__name__,
-        )
+        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         raise InvalidConfiguration(msg) from e
     except BaseException as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (
-            cls.__name__,
-            f.__name__,
-        )
+        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         # raise_wrapped(InvalidConfiguration, e, msg, compact=False)
         raise InvalidConfiguration(msg) from e
@@ -287,9 +278,7 @@ def get_length_on_screen(s):
     return len(remove_escapes(s))
 
 
-def pad_to_screen_length(
-    s, desired_screen_length, pad=" ", last=None, align_right=False
-):
+def pad_to_screen_length(s, desired_screen_length, pad=" ", last=None, align_right=False):
     """
         Pads a string so that it will appear of the given size
         on the terminal.

@@ -24,20 +24,21 @@ def set_step(sname):
     os.environ[ENV_CHALLENGE_NAME] = "dummy"
     os.environ[ENV_CHALLENGE_STEP_NAME] = sname
 
+
 def step1_evaluator(root1):
     set_step(step1_name)
     wrap_evaluator(E1, root=root1)
+
 
 def step1_solution(root1):
     set_step(step1_name)
     wrap_solution(S1, root=root1)
 
+
 def run_interaction_two_steps(step1_name, S1, E1, step2_name, S2, E2):
     root1 = tempfile.mkdtemp()
     os.makedirs(os.path.join(root1, CHALLENGE_PREVIOUS_STEPS_DIR))
     print("Root: %s" % root1)
-
-
 
     p_e = Process(target=step1_evaluator, args=(root1,))
     p_e.start()
@@ -140,9 +141,7 @@ class S2(ChallengeSolution):
         assert [step1_name] == cis.get_completed_steps()
 
         cis.info("see: %s" % cis.get_completed_step_solution_files(step1_name))
-        assert {S1fn, "output-solution.yaml"} == set(
-            cis.get_completed_step_solution_files(step1_name)
-        )
+        assert {S1fn, "output-solution.yaml"} == set(cis.get_completed_step_solution_files(step1_name))
 
         cis.set_solution_output_dict({})
 

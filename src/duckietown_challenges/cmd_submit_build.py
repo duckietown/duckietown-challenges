@@ -9,7 +9,7 @@ from zuper_commons.timing import now_utc
 from . import dclogger
 from .utils import tag_from_date
 
-__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag", 'submission_read']
+__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag", "submission_read"]
 
 
 @dataclass
@@ -74,11 +74,7 @@ def parse_complete_tag(x: str) -> BuildResult:
 
     try:
         return BuildResult(
-            registry=registry,
-            organization=organization,
-            repository=repository,
-            tag=tag,
-            digest=digest,
+            registry=registry, organization=organization, repository=repository, tag=tag, digest=digest,
         )
     except ValueError as e:
         raise ValueError(x) from e
@@ -95,9 +91,7 @@ def get_complete_tag(br: BuildResult):
     return complete
 
 
-def submission_build(
-    username: str, registry: Optional[str], no_cache: bool = False
-) -> BuildResult:
+def submission_build(username: str, registry: Optional[str], no_cache: bool = False) -> BuildResult:
     tag = tag_from_date(now_utc())
     df = "Dockerfile"
     organization = username.lower()
@@ -119,18 +113,18 @@ def submission_build(
         df_contents = _.read()
 
     vnames = {
-        'AIDO_REGISTRY': 'docker.io',
-        'PIP_INDEX_URL': 'https://pypi.org/simple',
+        "AIDO_REGISTRY": "docker.io",
+        "PIP_INDEX_URL": "https://pypi.org/simple",
     }
 
     for vname, default_value in vnames.items():
         if vname in df_contents:
             value = os.environ.get(vname, default_value)
-            cmd.extend(['--build-arg', f'{vname}={value}'])
+            cmd.extend(["--build-arg", f"{vname}={value}"])
 
     if no_cache:
         cmd.append("--no-cache")
-    cmd.append('.')
+    cmd.append(".")
     dclogger.info("Running: %s" % " ".join(cmd))
     p = subprocess.Popen(cmd)
     p.communicate()
@@ -178,9 +172,5 @@ def submission_build(
         raise Exception(msg)
 
     return BuildResult(
-        registry=registry,
-        organization=organization,
-        repository=repository,
-        digest=digest,
-        tag=tag,
+        registry=registry, organization=organization, repository=repository, digest=digest, tag=tag,
     )

@@ -41,7 +41,7 @@ scoring:
     scores:
         - name: score1
           description: description
-          
+
 steps:
 
   step1:
@@ -55,7 +55,7 @@ steps:
                 image: Image/name
             solution:
                 image: SUBMISSION_CONTAINER
-            
+
     timeout: 100
     features_required:
       arm: true
@@ -72,13 +72,13 @@ steps:
                 image: Image/name
                 environment: {}
             solution:
-                image: SUBMISSION_CONTAINER            
+                image: SUBMISSION_CONTAINER
     features_required:
       arm: true
       ram_mb: 8000
     timeout: 100
-        
-        
+
+
 transitions:
   # We start with the state START triggering step1
   - [START, success, step1]
@@ -87,12 +87,12 @@ transitions:
   # # If step1 fails, then we finish
   - [step1, failed, FAILED]
   - [step1, error, ERROR]
-  # if Step2 finishes, all good 
+  # if Step2 finishes, all good
   - [step2, success, SUCCESS]
   # Otherwise error
   - [step2, failed, FAILED]
   - [step2, error, ERROR]
-  
+
 
 
 """
@@ -193,9 +193,7 @@ version: '3'
 services:
 
 """
-    assert_raises_s(
-        InvalidConfiguration, "Expected dict", test_reading_evaluation_parameters, data
-    )
+    assert_raises_s(InvalidConfiguration, "Expected dict", test_reading_evaluation_parameters, data)
 
 
 @comptest
@@ -206,10 +204,7 @@ services: {}
 
 """
     assert_raises_s(
-        InvalidConfiguration,
-        "No services described",
-        test_reading_evaluation_parameters,
-        data,
+        InvalidConfiguration, "No services described", test_reading_evaluation_parameters, data,
     )
 
 
@@ -220,9 +215,7 @@ version: '3'
 
 
 """
-    assert_raises_s(
-        InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data
-    )
+    assert_raises_s(InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data)
 
 
 @comptest
@@ -236,9 +229,7 @@ services:
         image: SUBMISSION_CONTAINER
 another:
 """
-    assert_raises_s(
-        InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data
-    )
+    assert_raises_s(InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data)
 
 
 def assert_raises_s(E, contained, f, *args):

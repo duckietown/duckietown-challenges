@@ -13,7 +13,7 @@ from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
-__all__ = ['ChallengeDescription']
+__all__ = ["ChallengeDescription"]
 
 
 class InvalidChallengeDescription(Exception):
@@ -91,10 +91,7 @@ class ServiceDefinition:
                 raise NotEquivalent(msg) from e
 
             if br1.digest is None or br2.digest is None:
-                msg = (
-                    "No digest information, assuming different.\nself: %s\nother: %s"
-                    % (br1, br2)
-                )
+                msg = "No digest information, assuming different.\nself: %s\nother: %s" % (br1, br2)
                 raise NotEquivalent(msg)
             if br1.digest != br2.digest:
                 msg = "Different digests:\n\n  %s\n\n  %s" % (br1, br2)
@@ -104,10 +101,7 @@ class ServiceDefinition:
                 raise NotEquivalent(msg)
 
         if self.environment != other.environment:
-            msg = "Different environments:\n\n %s\n\n  %s" % (
-                self.environment,
-                other.environment,
-            )
+            msg = "Different environments:\n\n %s\n\n  %s" % (self.environment, other.environment,)
             raise NotEquivalent(msg)
 
     # noinspection PyArgumentList
@@ -136,9 +130,7 @@ class ServiceDefinition:
 
         for k, v in list(environment.items()):
             if "-" in k:
-                msg = (
-                    'Invalid environment variable "%s" should not contain a space.' % k
-                )
+                msg = 'Invalid environment variable "%s" should not contain a space.' % k
                 raise InvalidConfiguration(msg)
 
             if isinstance(v, (int, float)):
@@ -150,10 +142,7 @@ class ServiceDefinition:
                 s = yaml.safe_dump(v)
                 environment[k] = s
             else:
-                msg = 'The type %s is not allowed for environment variable "%s".' % (
-                    type(v).__name__,
-                    k,
-                )
+                msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k,)
                 raise InvalidConfiguration(msg)
         ports_ = d0.pop("ports", [])
         ports = []
@@ -171,9 +160,7 @@ class ServiceDefinition:
                     external = int(tokens[0])
                     internal = int(tokens[1])
             ports.append(PortDefinition(external=external, internal=internal))
-        return ServiceDefinition(
-            image=image, environment=environment, build=build, ports=ports
-        )
+        return ServiceDefinition(image=image, environment=environment, build=build, ports=ports)
 
     def as_dict(self):
 
@@ -184,7 +171,7 @@ class ServiceDefinition:
             if p.external is not None:
                 ports.append(f"{p.external}:{p.internal}")
             else:
-                ports.append(f'{p.internal}')
+                ports.append(f"{p.internal}")
 
         if ports:
             res["ports"] = ports
@@ -302,9 +289,7 @@ class ChallengeStep:
     def from_yaml(cls, data, name):
         title = data.pop("title")
         description = data.pop("description")
-        evaluation_parameters = EvaluationParameters.from_yaml(
-            data.pop("evaluation_parameters")
-        )
+        evaluation_parameters = EvaluationParameters.from_yaml(data.pop("evaluation_parameters"))
         features_required = data.pop("features_required", {})
         timeout = data.pop("timeout")
         uptodate_token = data.pop("uptodate_token", None)
@@ -457,11 +442,7 @@ class ChallengeTransitions:
         to_activate = cast(List[StepName], [])
         outcomes = set()
         for t in self.transitions:
-            if (
-                t.first in status
-                and status[t.first] == t.condition
-                and predecessors_success(t.first)
-            ):
+            if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
                 # dclogger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_JOB_ABORTED]
@@ -500,15 +481,11 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
     return steps
 
 
-def from_steps_transitions(
-    steps: List[str], transitions_str: List[List[str]]
-) -> ChallengeTransitions:
+def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]) -> ChallengeTransitions:
     transitions = []
     for first, condition, second in transitions_str:
         assert first == STATE_START or first in steps, first
-        assert (
-            second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps
-        ), (second, steps)
+        assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps, (second, steps)
         assert condition in ALLOWED_CONDITION_TRIGGERS, condition
         transitions.append(Transition(first, condition, second))
     return ChallengeTransitions(steps, transitions)
@@ -587,11 +564,7 @@ class Score:
                 raise InvalidChallengeDescription(msg)
 
             return Score(
-                name=name,
-                description=description,
-                order=order,
-                discretization=discretization,
-                short=short,
+                name=name, description=description, order=order, discretization=discretization, short=short,
             )
         except KeyError as e:
             msg = "Missing config %s" % e
@@ -724,8 +697,8 @@ class ChallengeDescription:
         description = data.pop("description")
         protocol = data.pop("protocol")
 
-        date_open = (add_timezone(data.pop("date-open")))
-        date_close = (add_timezone(data.pop("date-close")))
+        date_open = add_timezone(data.pop("date-open"))
+        date_close = add_timezone(data.pop("date-close"))
 
         assert date_close.tzinfo is not None, (date_close, date_open)
         assert date_open.tzinfo is not None, (date_close, date_open)
@@ -775,10 +748,12 @@ class ChallengeDescription:
         )
         res.date_open = date_open
         res.date_close = date_close
-        assert (res.date_open.tzinfo is not None) and (res.date_close.tzinfo is not None), (date_open.tzinfo,
-                                                                                            date_close.tzinfo,
-                                                                                            res.date_open.tzinfo,
-                                                                                            res.date_close.tzinfo)
+        assert (res.date_open.tzinfo is not None) and (res.date_close.tzinfo is not None), (
+            date_open.tzinfo,
+            date_close.tzinfo,
+            res.date_open.tzinfo,
+            res.date_close.tzinfo,
+        )
         return res
 
     def as_dict(self):
@@ -801,9 +776,7 @@ class ChallengeDescription:
         data["closure"] = self.closure
         data["tags"] = self.tags
         data["scoring"] = Scoring_as_dict(self.scoring)
-        data["dependencies"] = ipce_from_object(
-            self.dependencies, Dict[str, ChallengeDependency]
-        )
+        data["dependencies"] = ipce_from_object(self.dependencies, Dict[str, ChallengeDependency])
         return data
 
     def as_yaml(self):
@@ -834,6 +807,7 @@ def interpret_date(d: Optional[Union[datetime, date, str]]) -> Optional[datetime
 
     if isinstance(d, str):
         from dateutil import parser
+
         res = parser.parse(d)
         return res.astimezone(tzutc())
 
@@ -864,16 +838,10 @@ class SubmissionDescription:
     def __post_init_(self):
         if self.challenge_names is not None:
             if not isinstance(self.challenge_names, list):
-                msg = (
-                    "Expected a list of strings for challenge names, got %s"
-                    % self.challenge_names
-                )
+                msg = "Expected a list of strings for challenge names, got %s" % self.challenge_names
                 raise ValueError(msg)
         if not isinstance(self.protocols, list):
-            msg = (
-                "Expected a list of strings for protocols names, got %s"
-                % self.protocols
-            )
+            msg = "Expected a list of strings for protocols names, got %s" % self.protocols
             raise ValueError(msg)
 
     def __repr__(self):
