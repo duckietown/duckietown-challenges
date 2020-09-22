@@ -19,6 +19,8 @@ def get_version(filename):
     return version
 
 
+line = "daffy"
+
 install_requires = [
     "termcolor",
     "decorator",
@@ -30,6 +32,8 @@ install_requires = [
     "future",
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
+    "pur",  # not needed for code but for aido
+    f"aido-utils-{line}",  # not needed for code but for aido
 ]
 
 system_version = tuple(sys.version_info)[:3]
@@ -37,7 +41,7 @@ if system_version < (3, 7):
     install_requires.append("dataclasses")
 
 version = get_version(filename="src/duckietown_challenges/__init__.py")
-line = "daffy"
+
 setup(
     name=f"duckietown-challenges-{line}",
     version=version,
