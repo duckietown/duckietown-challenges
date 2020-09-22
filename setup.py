@@ -29,6 +29,7 @@ install_requires = [
     "six",
     "future",
     "zuper-ipce-z6>=6",
+    "networkx>=2.2",
 ]
 
 system_version = tuple(sys.version_info)[:3]
