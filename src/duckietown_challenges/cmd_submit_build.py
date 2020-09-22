@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from zuper_commons.timing import now_utc
+from zuper_commons.types import ZException
 
 from . import dclogger
 from .utils import tag_from_date
@@ -127,20 +128,20 @@ def submission_build(username: str, registry: Optional[str], no_cache: bool = Fa
     cmd.append(".")
     dclogger.info("Running: %s" % " ".join(cmd))
     p = subprocess.Popen(cmd)
-    p.communicate()
+    (p_stdout, p_stderr) = p.communicate()
     if p.returncode != 0:
         msg = "Could not run docker build."
-        raise Exception(msg)
+        raise ZException(msg, command=" ".join(cmd), retcode=p.returncode, stdout=p_stdout, stderr=p_stderr)
 
     cmd = ["docker", "push", complete_image]
     dclogger.info("Pushing the image: %s" % " ".join(cmd))
 
     p = subprocess.Popen(cmd)
-    p.communicate()
+    (p_stdout, p_stderr) = p.communicate()
     if p.returncode != 0:
         msg = "Could not run docker push. Exit code %s." % p.returncode
         msg += "\n\nThis is likely to be because you have not logged in to dockerhub using `docker login`."
-        raise Exception(msg)
+        raise ZException(msg, command=" ".join(cmd), retcode=p.returncode, stdout=p_stdout, stderr=p_stderr)
 
     dclogger.info("After pushing; please wait...")
 
@@ -156,7 +157,7 @@ def submission_build(username: str, registry: Optional[str], no_cache: bool = Fa
         msg += '\n\nEither the username is wrong or you need to login using "docker login".'
 
         msg += "\n\nTo change the username use\n\n    dts challenges config --docker-username USERNAME"
-        raise Exception(msg) from e
+        raise ZException(msg) from e
 
     dclogger.info("Decoding output")
     data = stdout.decode("utf-8")
