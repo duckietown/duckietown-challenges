@@ -196,14 +196,17 @@ def build_image(
 
     cmd.extend(["-t", complete, "-f", filename])
 
-    env_vars = ["AIDO_REGISTRY", "PIP_INDEX_URL"]
-    for v in env_vars:
+    vnames = {
+        "AIDO_REGISTRY": "docker.io",
+        "PIP_INDEX_URL": "https://pypi.org/simple",
+    }
+    for v, default in vnames.items():
         if v not in dockerfile:
             continue
-        val = os.getenv(v)
-        if val is not None:
-            cmd.append("--build-arg")
-            cmd.append(f"{v}={val}")
+        val = os.getenv(v, default)
+
+        cmd.append("--build-arg")
+        cmd.append(f"{v}={val}")
 
     if no_cache:
         cmd.append("--no-cache")
