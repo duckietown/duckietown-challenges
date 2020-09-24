@@ -5,6 +5,7 @@ from dataclasses import replace
 from typing import List, Optional
 
 import yaml
+import docker
 from docker import DockerClient
 from zuper_ipce import IESO, ipce_from_object
 
@@ -123,7 +124,7 @@ def dts_define(
                     vname = "AIDO_REGISTRY"
                     vref = "${%s}" % vname
                     if vref in service.image:
-                        value = os.environ.get(vname)
+                        value = os.environ.get(vname, "docker.io")
                         service.image = service.image.replace(vref, value)
                     logger.info(f"service = {service}")
                     br = parse_complete_tag(service.image)
@@ -134,7 +135,11 @@ def dts_define(
                         # noinspection PyTypeChecker
                         br_no_registry = replace(br, tag=None)
                         image_name = get_complete_tag(br_no_registry)
-                        image = client.images.pull(image_name, tag=br.tag)
+                        try:
+                            image = client.images.pull(image_name, tag=br.tag)
+                        except docker.errors.NotFound as e:
+                            msg = "Cannot pull image"
+                            raise ZException(msg, image_name=image_name, tag=br.tag) from e
 
                         # service.image_digest = image.id
                         br.digest = image.id
@@ -225,7 +230,7 @@ def build_image(
             msg, cmd=cmd, path_abs=os.path.abspath(path), stderr=e.stderr, stdout=e.stdout
         ) from e
 
-    use_repo_digests = False
+    use_repo_digests = True
 
     if use_repo_digests:
         try:
