@@ -10,14 +10,17 @@ bump: # v2
 	git push --tags
 	git push
 
-
-upload: # v2
+upload: # v3
 	aido-check-not-dirty
 	aido-check-tagged
+	aido-check-need-upload --package aido-agents-daffy make upload-do
+
+upload-do:
 	rm -f dist/*
 	rm -rf src/*.egg-info
 	python setup.py sdist
 	twine upload --skip-existing --verbose dist/*
+
 
 test:
 	$(MAKE) tests-clean tests
