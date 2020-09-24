@@ -16,6 +16,8 @@ from .cmd_submit_build import (
     get_complete_tag,
     parse_complete_tag,
 )
+from zuper_commons.types import ZException
+from subprocess import CalledProcessError
 from .rest_methods import (
     dtserver_challenge_define,
     get_registry_info,
@@ -213,7 +215,15 @@ def build_image(
 
     cmd.append(path)
     logger.debug("$ %s" % " ".join(cmd))
-    subprocess.check_call(cmd)
+    try:
+
+        subprocess.check_call(cmd)
+    except CalledProcessError as e:
+        msg = "Command failed"
+
+        raise ZException(
+            msg, cmd=cmd, path_abs=os.path.abspath(path), stderr=e.stderr, stdout=e.stdout
+        ) from e
 
     use_repo_digests = False
 
@@ -228,7 +238,15 @@ def build_image(
 
     cmd = ["docker", "push", complete]
     logger.debug("$ %s" % " ".join(cmd))
-    subprocess.check_call(cmd)
+    try:
+
+        subprocess.check_call(cmd)
+    except CalledProcessError as e:
+        msg = "Command failed"
+
+        raise ZException(
+            msg, cmd=cmd, path_abs=os.path.abspath(path), stderr=e.stderr, stdout=e.stdout
+        ) from e
 
     image = client.images.get(complete)
     logger.info("image id: %s" % image.id)
