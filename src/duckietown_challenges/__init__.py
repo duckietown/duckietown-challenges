@@ -6,7 +6,7 @@ import sys
 
 
 def check_no_incompatible():
-    cmd = ["pip", "list"]
+    cmd = ["pip3", "list"]
     try:
         res = check_output(cmd)
     except CalledProcessError:
