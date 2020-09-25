@@ -9,6 +9,9 @@ def check_no_incompatible():
     cmd = ["pip3", "list"]
     try:
         res = check_output(cmd)
+    except FileNotFoundError:
+        msg = f"Cannot execute the command {cmd}"
+        sys.stderr.write(msg)
     except CalledProcessError:
         tb = traceback.format_exc()
         msg = f"Cannot get list of installed packages:\n\n{tb}"
