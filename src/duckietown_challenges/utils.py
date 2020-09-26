@@ -7,7 +7,8 @@ import yaml
 
 import decorator
 
-from . import dclogger, InvalidConfiguration
+from . import logger
+from .exceptions import InvalidConfiguration
 
 
 def write_data_to_file(data, filename):
@@ -31,14 +32,14 @@ def write_data_to_file(data, filename):
             current = _.read()
         if current == data:
             if not "assets/" in filename:
-                dclogger.debug("already up to date %s" % filename)
+                logger.debug("already up to date %s" % filename)
             return
 
     tmp = filename + ".tmp"
     with open(tmp, "w") as f:
         f.write(data)
     os.rename(tmp, filename)
-    dclogger.debug("Written to: %s" % filename)
+    logger.debug("Written to: %s" % filename)
 
 
 def expand_all(filename):

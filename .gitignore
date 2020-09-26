@@ -3,6 +3,7 @@ docker-compose.yaml.tm
 output-evaluation
 src/duckietown_challenges.egg-info/
 dist
-*pyc 
-out-comptests 
+*pyc
+out-comptests
 .idea/ *egg-info
+requirements.resolved

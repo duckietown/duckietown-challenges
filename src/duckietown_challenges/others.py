@@ -9,7 +9,6 @@ import docker
 from docker import DockerClient
 from zuper_ipce import IESO, ipce_from_object
 
-from dt_shell.env_checks import get_dockerhub_username
 from . import logger
 from .challenge import ChallengeDescription, ChallengesConstants
 from .cmd_submit_build import (
@@ -17,6 +16,7 @@ from .cmd_submit_build import (
     get_complete_tag,
     parse_complete_tag,
 )
+from .constants import IMPORTANT_ENVS
 from zuper_commons.types import ZException
 from subprocess import CalledProcessError
 from .rest_methods import (
@@ -121,11 +121,9 @@ def dts_define(
                 if service.image == ChallengesConstants.SUBMISSION_CONTAINER_TAG:
                     pass
                 else:
-                    vname = "AIDO_REGISTRY"
-                    vref = "${%s}" % vname
-                    if vref in service.image:
-                        value = os.environ.get(vname, "docker.io")
-                        service.image = service.image.replace(vref, value)
+
+                    service.image = replace_important_env_vars(service.image)
+
                     logger.info(f"service = {service}")
                     br = parse_complete_tag(service.image)
                     if br.digest is None:
@@ -164,6 +162,15 @@ def dts_define(
     else:
         msg = "No update needed - the container digests did not change."
         logger.info(msg)
+
+
+def replace_important_env_vars(s: str) -> str:
+    for vname, vdefault in IMPORTANT_ENVS.items():
+        vref = "${%s}" % vname
+        if vref in s:
+            value = os.environ.get(vname, vdefault)
+            s = s.replace(vref, value)
+    return s
 
 
 def build_image(

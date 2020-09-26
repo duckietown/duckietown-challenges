@@ -5,8 +5,8 @@ from json import JSONDecodeError
 
 import termcolor
 
-from duckietown_challenges import ChallengesConstants
 from . import dclogger
+from .challenges_constants import ChallengesConstants
 from .utils import indent
 
 
@@ -176,9 +176,8 @@ def make_server_request(
                 p = prefix if i == 0 else p2
                 # l = termcolor.colored(l, 'blue')
                 s.append(termcolor.colored(p, attrs=["dark"]) + l)
-            from dt_shell.cli import dts_print
 
-            dts_print("\n".join(s))
+            print("\n".join(s))
 
     if result["ok"]:
         if "result" not in result:

@@ -60,6 +60,7 @@ setup(
         "console_scripts": [
             "dt-challenges-make-readme-definitions  = duckietown_challenges:make_readmes_main",
             "dt-challenges-make-readme-templates  = duckietown_challenges:make_readmes_templates_main",
+            "dt-challenges-cli = duckietown_challenges:dt_challenges_cli_main",
         ]
     },
 )

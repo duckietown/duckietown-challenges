@@ -3,7 +3,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from typing import Optional
-
+from .constants import IMPORTANT_ENVS
 from zuper_commons.timing import now_utc
 from zuper_commons.types import ZException
 
@@ -113,12 +113,7 @@ def submission_build(username: str, registry: Optional[str], no_cache: bool = Fa
     with open(df) as _:
         df_contents = _.read()
 
-    vnames = {
-        "AIDO_REGISTRY": "docker.io",
-        "PIP_INDEX_URL": "https://pypi.org/simple",
-    }
-
-    for vname, default_value in vnames.items():
+    for vname, default_value in IMPORTANT_ENVS.items():
         if vname in df_contents:
             value = os.environ.get(vname, default_value)
             cmd.extend(["--build-arg", f"{vname}={value}"])

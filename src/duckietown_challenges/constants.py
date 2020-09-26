@@ -48,6 +48,7 @@ ENV_CHALLENGE_STEP_NAME = "challenge_step_name"
 #     # XXX: to merge
 
 
+DTSERVER_ENV = "DTSERVER"
 DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
 
 
@@ -56,10 +57,8 @@ class Storage(object):
 
 
 def get_duckietown_server_url():
-    V = "DTSERVER"
-
-    if V in os.environ:
-        use = os.environ[V]
+    if DTSERVER_ENV in os.environ:
+        use = os.environ[DTSERVER_ENV]
         if not Storage.done:
             if use != DEFAULT_DTSERVER:
                 msg = "Using server %s instead of default %s" % (use, DEFAULT_DTSERVER)
@@ -70,3 +69,10 @@ def get_duckietown_server_url():
         return use
     else:
         return DEFAULT_DTSERVER
+
+
+IMPORTANT_ENVS = {
+    "AIDO_REGISTRY": "docker.io",
+    "PIP_INDEX_URL": "https://pypi.org/simple",
+    DTSERVER_ENV: DEFAULT_DTSERVER,
+}

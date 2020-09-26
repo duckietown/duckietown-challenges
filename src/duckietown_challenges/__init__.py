@@ -2,7 +2,6 @@
 __version__ = "6.0.24"
 
 from subprocess import CalledProcessError, check_output
-import sys
 
 
 def check_no_incompatible():
@@ -38,12 +37,12 @@ def check_no_incompatible():
 
 check_no_incompatible()
 
-
 from zuper_commons.logs import ZLogger
 
 dclogger = logger = ZLogger(__name__)
 logger.info(f"version: {__version__}")
 
+from .cli import dt_challenges_cli_main
 from .challenges_constants import ChallengesConstants
 from .solution_interface import *
 from .constants import *
