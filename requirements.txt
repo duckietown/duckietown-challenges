@@ -14,3 +14,4 @@ zuper-ipce-z6>=6
 pur
 pipdeptree
 aido-utils-daffy
+docker

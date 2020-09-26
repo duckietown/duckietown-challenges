@@ -56,11 +56,5 @@ setup(
     zip_safe=False,
     # without this, the stuff is included but not installed
     include_package_data=True,
-    entry_points={
-        "console_scripts": [
-            "dt-challenges-make-readme-definitions  = duckietown_challenges:make_readmes_main",
-            "dt-challenges-make-readme-templates  = duckietown_challenges:make_readmes_templates_main",
-            "dt-challenges-cli = duckietown_challenges:dt_challenges_cli_main",
-        ]
-    },
+    entry_points={"console_scripts": []},
 )
