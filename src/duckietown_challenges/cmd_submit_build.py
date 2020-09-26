@@ -135,7 +135,7 @@ def submission_build(username: str, registry: Optional[str], no_cache: bool = Fa
     (p_stdout, p_stderr) = p.communicate()
     if p.returncode != 0:
         msg = "Could not run docker push. Exit code %s." % p.returncode
-        msg += "\n\nThis is likely to be because you have not logged in to dockerhub using `docker login`."
+        # msg += "\n\nThis is likely to be because you have not logged in to dockerhub using `docker login`."
         raise ZException(msg, command=" ".join(cmd), retcode=p.returncode, stdout=p_stdout, stderr=p_stderr)
 
     dclogger.info("After pushing; please wait...")

@@ -8,7 +8,16 @@ import termcolor
 
 from . import logger
 from .cli_common import ChallengeEnvironment, wrap_server_operations
+from .cmd_submit_build import submission_build
+from .constants import get_duckietown_server_url
 from .exceptions import InvalidConfiguration
+from .rest_methods import (
+    dtserver_get_compatible_challenges,
+    dtserver_retire_same_label,
+    dtserver_submit2,
+    get_registry_info,
+)
+from .submission_read import read_submission_info
 
 __all__ = ["dt_challenges_cli_submit"]
 
@@ -85,19 +94,10 @@ def dt_challenges_cli_submit(args: List[str], environment: ChallengeEnvironment)
         msg = "Expected a submission.yaml file in %s." % (os.path.realpath(os.getcwd()))
         raise InvalidConfiguration(msg)
 
-    from duckietown_challenges import get_duckietown_server_url
-    from duckietown_challenges.cmd_submit_build import submission_build
-    from duckietown_challenges.rest_methods import (
-        dtserver_get_compatible_challenges,
-        dtserver_retire_same_label,
-        dtserver_submit2,
-        get_registry_info,
-    )
-    from duckietown_challenges.submission_read import read_submission_info
-
     sub_info = read_submission_info(".")
 
     token = environment.token
+    logger.info(f"token: {token}")
 
     with wrap_server_operations():
         ri = get_registry_info(token=token, impersonate=impersonate)
@@ -137,7 +137,7 @@ def dt_challenges_cli_submit(args: List[str], environment: ChallengeEnvironment)
             if not c in compat.compatible:
                 msg = 'The challenge "%s" is not compatible with protocols %s .' % (c, sub_info.protocols,)
                 raise InvalidConfiguration(msg)
-        username = "andreacensi"  # XXX
+        username = environment.docker_username
 
         print("")
         print("")
@@ -212,19 +212,20 @@ def dt_challenges_cli_submit(args: List[str], environment: ChallengeEnvironment)
         For more information, see the manual at {manual}
         """
 
-        logger.info(msg)
+        print(msg)
 
     extra = set(submissions) - set(submit_to_challenges)
-
-    def cute_list(x):
-        return ", ".join(x)
 
     if extra:
         msg = f"""
     Note that the additional {len(extra)} challenges ({cute_list(extra)}) are required checks
     before running the code on the challenges you chose ({cute_list(submit_to_challenges)}).
     """
-        logger.info(msg)
+        print(msg)
+
+
+def cute_list(x):
+    return ", ".join(x)
 
 
 def bright(x):

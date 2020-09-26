@@ -11,7 +11,7 @@ __all__ = ["ChallengeEnvironment", "wrap_server_operations"]
 class ChallengeEnvironment:
     token: str
     docker_username: str
-    docker_secret: str
+    docker_password: str
 
 
 @contextmanager

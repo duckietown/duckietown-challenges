@@ -3,12 +3,12 @@ from typing import Dict, List, NewType, Optional
 
 import dateutil.parser
 import termcolor
-
-from duckietown_challenges import ChallengesConstants
-from duckietown_challenges.challenge import ChallengeDescription
-from duckietown_challenges.utils import pad_to_screen_length
 from zuper_commons.timing import now_utc
+
+from .challenge import ChallengeDescription
+from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
+from .utils import pad_to_screen_length
 
 Endpoints = ChallengesConstants.Endpoints
 
