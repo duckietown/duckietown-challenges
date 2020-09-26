@@ -1,6 +1,8 @@
 # coding=utf-8
 import os
 
+from typing import List
+
 DEFAULT_ROOT = "/challenges"
 
 # In the end, the evaluator must create this file
@@ -76,3 +78,12 @@ IMPORTANT_ENVS = {
     "PIP_INDEX_URL": "https://pypi.org/simple",
     DTSERVER_ENV: DEFAULT_DTSERVER,
 }
+
+
+def get_important_env_build_args(dockerfile_content: str) -> List[str]:
+    args = []
+    for vname, default_value in IMPORTANT_ENVS.items():
+        if vname in dockerfile_content:
+            value = os.environ.get(vname, default_value)
+            args.extend(["--build-arg", f"{vname}={value}"])
+    return args

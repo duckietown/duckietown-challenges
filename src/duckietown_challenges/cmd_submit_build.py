@@ -3,7 +3,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from typing import Optional
-from .constants import IMPORTANT_ENVS
+from .constants import get_important_env_build_args, IMPORTANT_ENVS
 from zuper_commons.timing import now_utc
 from zuper_commons.types import ZException
 
@@ -113,10 +113,7 @@ def submission_build(username: str, registry: Optional[str], no_cache: bool = Fa
     with open(df) as _:
         df_contents = _.read()
 
-    for vname, default_value in IMPORTANT_ENVS.items():
-        if vname in df_contents:
-            value = os.environ.get(vname, default_value)
-            cmd.extend(["--build-arg", f"{vname}={value}"])
+    cmd.extend(get_important_env_build_args(df_contents))
 
     if no_cache:
         cmd.append("--no-cache")
