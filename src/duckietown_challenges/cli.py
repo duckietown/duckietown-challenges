@@ -69,4 +69,3 @@ def dt_challenges_cli_main_():
         f(rest, environment)
     else:
         logger.error(f"Cannot find command {first}", args=args)
-    sys.exit(2)
