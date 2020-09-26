@@ -35,7 +35,7 @@ COPY  . .
 
 RUN echo PATH = $PATH
 
-RUN python3 setup.py install --no-deps
+RUN python3 setup.py install
 
 RUN python3 -c "import duckietown_challenges; print(duckietown_challenges.__file__)"
 RUN dt-challenges-cli -h || true
