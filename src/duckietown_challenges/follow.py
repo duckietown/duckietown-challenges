@@ -2,7 +2,7 @@ import datetime
 import sys
 import time
 from collections import defaultdict
-
+from . import logger
 import termcolor
 
 from .rest import ServerIsDown
@@ -21,11 +21,11 @@ def follow_submission(shell, token, submission_id):
         try:
             data = dtserver_get_info(token, submission_id)
         except ServerIsDown:
-            shell.sprint("Server is down - please wait.", "red")
+            print(termcolor.colored("Server is down - please wait.", "red"))
             time.sleep(5)
             continue
         except BaseException as e:
-            shell.sprint(str(e), "red")
+            print(termcolor.colored(str(e), "red"))
             time.sleep(5)
             continue
         # print json.dumps(data, indent=4)

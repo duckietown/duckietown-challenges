@@ -2,11 +2,13 @@ import datetime
 import os
 import subprocess
 from dataclasses import replace
+from subprocess import CalledProcessError
 from typing import List, Optional
 
 import yaml
-import docker
 from docker import DockerClient
+from docker.errors import NotFound
+from zuper_commons.types import ZException
 from zuper_ipce import IESO, ipce_from_object
 
 from . import logger
@@ -17,8 +19,6 @@ from .cmd_submit_build import (
     parse_complete_tag,
 )
 from .constants import IMPORTANT_ENVS
-from zuper_commons.types import ZException
-from subprocess import CalledProcessError
 from .rest_methods import (
     dtserver_challenge_define,
     get_registry_info,
@@ -65,7 +65,15 @@ def get_compatible_br(client, complete, registry) -> BuildResult:
 
 
 def dts_define(
-    token: str, impersonate: Optional[int], parsed, challenge, base, client: DockerClient, no_cache: bool
+    *,
+    token: str,
+    impersonate: Optional[int],
+    parsed,
+    challenge,
+    base,
+    client: DockerClient,
+    no_cache: bool,
+    username: str,
 ):
     ri = get_registry_info(token=token, impersonate=impersonate)
     logger.info(f"impersonate {impersonate}")
@@ -97,8 +105,6 @@ def dts_define(
                 args = service.build.args
                 if args:
                     logger.warning("arguments not supported yet: %s" % args)
-
-                username = get_dockerhub_username()
 
                 br = build_image(
                     client,
@@ -135,7 +141,7 @@ def dts_define(
                         image_name = get_complete_tag(br_no_registry)
                         try:
                             image = client.images.pull(image_name, tag=br.tag)
-                        except docker.errors.NotFound as e:
+                        except NotFound as e:
                             msg = "Cannot pull image"
                             raise ZException(msg, image_name=image_name, tag=br.tag) from e
 
