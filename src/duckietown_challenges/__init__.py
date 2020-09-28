@@ -2,6 +2,7 @@
 __version__ = "6.0.30"
 
 from subprocess import CalledProcessError, check_output
+import sys
 
 
 def check_no_incompatible():
