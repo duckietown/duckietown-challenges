@@ -5,10 +5,6 @@ PIP_INDEX_URL ?= https://pypi.org/simple
 all:
 
 
-bump-upload:
-	$(MAKE) bump
-	$(MAKE) upload
-
 bump: # v2
 	bumpversion patch
 	git push --tags
