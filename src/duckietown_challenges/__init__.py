@@ -1,5 +1,5 @@
 # coding=utf-8
-__version__ = "6.1.0"
+__version__ = "6.1.1"
 
 from subprocess import CalledProcessError, check_output
 import sys
