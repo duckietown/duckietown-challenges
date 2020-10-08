@@ -5,7 +5,7 @@ import dateutil.parser
 import termcolor
 from zuper_commons.timing import now_utc
 
-from duckietown_challenges_server.types import JobID
+
 from .challenge import ChallengeDescription
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
@@ -15,6 +15,7 @@ Endpoints = ChallengesConstants.Endpoints
 
 SubmissionID = NewType("SubmissionID", int)
 UserID = NewType("UserID", int)
+JobID = NewType("JobID", int)
 
 
 @dataclass
