@@ -5,6 +5,7 @@ import dateutil.parser
 import termcolor
 from zuper_commons.timing import now_utc
 
+from duckietown_challenges_server.types import JobID
 from .challenge import ChallengeDescription
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
@@ -255,6 +256,25 @@ def dtserver_work_submission(
     }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
+    return make_server_request(
+        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
+    )
+
+
+def dtserver_job_heartbeat(
+    token: str, job_id: JobID, machine_id, process_id, impersonate: Optional[UserID] = None,
+):
+
+    endpoint = Endpoints.job_heartbeat
+    method = "GET"
+    data = {
+        "job_id": job_id,
+        "machine_id": machine_id,
+        "process_id": process_id,
+    }
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    timeout = 10
     return make_server_request(
         token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
     )

@@ -42,6 +42,7 @@ class ChallengesConstants:
         components = "/api/components"
         challenges = "/api/challenges"
         take_submission = "/api/take-submission"
+        job_heartbeat = "/api/heartbeat"
         auth = "/api/auth"
         reset_submission = "/api/reset-submission"
         bless_submission = "/api/bless-submission"

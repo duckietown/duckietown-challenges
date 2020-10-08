@@ -55,5 +55,5 @@ build: update-reqs
 build-no-cache: update-reqs
 	docker build --pull -t $(tag)  $(build_options) --no-cache .
 
-push:
+push: build
 	docker push $(tag)
