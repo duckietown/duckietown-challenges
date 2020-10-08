@@ -263,7 +263,12 @@ def dtserver_work_submission(
 
 
 def dtserver_job_heartbeat(
-    token: str, job_id: JobID, machine_id, process_id, impersonate: Optional[UserID] = None,
+    token: str,
+    job_id: JobID,
+    machine_id,
+    process_id,
+    evaluator_version,
+    impersonate: Optional[UserID] = None,
 ):
 
     endpoint = Endpoints.job_heartbeat
@@ -272,6 +277,7 @@ def dtserver_job_heartbeat(
         "job_id": job_id,
         "machine_id": machine_id,
         "process_id": process_id,
+        "evaluator_version": evaluator_version,
     }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
