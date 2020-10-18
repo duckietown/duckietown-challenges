@@ -7,3 +7,4 @@ dist
 out-comptests
 .idea/ *egg-info
 requirements.resolved
+*.egg-info
