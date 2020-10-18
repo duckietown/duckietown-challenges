@@ -1,16 +1,7 @@
-import os
-import subprocess
-import sys
 from dataclasses import dataclass
 from typing import Optional
-from .constants import get_important_env_build_args, IMPORTANT_ENVS
-from zuper_commons.timing import now_utc
-from zuper_commons.types import ZException
 
-from . import dclogger
-from .utils import tag_from_date
-
-__all__ = ["BuildResult", "submission_build", "parse_complete_tag", "get_complete_tag", "submission_read"]
+__all__ = ["BuildResult", "parse_complete_tag", "get_complete_tag", "submission_read"]
 
 
 @dataclass
@@ -90,80 +81,3 @@ def get_complete_tag(br: BuildResult):
     if br.digest is not None:
         complete += f"@{br.digest}"
     return complete
-
-
-def submission_build(username: str, registry: Optional[str], no_cache: bool = False) -> BuildResult:
-    tag = tag_from_date(now_utc())
-    df = "Dockerfile"
-    organization = username.lower()
-    repository = "aido-submissions"
-    image = "%s/%s:%s" % (organization, repository, tag)
-
-    if registry is not None:
-        complete_image = f"{registry}/{image}"
-    else:
-        complete_image = image
-
-    if not os.path.exists(df):
-        msg = 'I expected to find the file "%s".' % df
-        raise Exception(msg)
-
-    cmd = ["docker", "build", "--pull", "-t", complete_image, "-f", df]
-
-    with open(df) as _:
-        df_contents = _.read()
-
-    cmd.extend(get_important_env_build_args(df_contents))
-
-    if no_cache:
-        cmd.append("--no-cache")
-    cmd.append(".")
-    dclogger.info("Running: %s" % " ".join(cmd))
-    p = subprocess.Popen(cmd)
-    (p_stdout, p_stderr) = p.communicate()
-    if p.returncode != 0:
-        msg = "Could not run docker build."
-        raise ZException(msg, command=" ".join(cmd), retcode=p.returncode, stdout=p_stdout, stderr=p_stderr)
-
-    cmd = ["docker", "push", complete_image]
-    dclogger.info("Pushing the image: %s" % " ".join(cmd))
-
-    p = subprocess.Popen(cmd)
-    (p_stdout, p_stderr) = p.communicate()
-    if p.returncode != 0:
-        msg = "Could not run docker push. Exit code %s." % p.returncode
-        # msg += "\n\nThis is likely to be because you have not logged in to dockerhub using `docker login`."
-        raise ZException(msg, command=" ".join(cmd), retcode=p.returncode, stdout=p_stdout, stderr=p_stderr)
-
-    dclogger.info("After pushing; please wait...")
-
-    try:
-        stdout = subprocess.check_output(cmd, stderr=sys.stderr)
-    except subprocess.CalledProcessError as e:
-        msg = "Could not run docker push."
-
-        msg += "\n\nI tried to push the tag\n\n   %s" % image
-
-        msg += '\n\nYou told me your DockerHub username is "%s"' % username
-
-        msg += '\n\nEither the username is wrong or you need to login using "docker login".'
-
-        msg += "\n\nTo change the username use\n\n    dts challenges config --docker-username USERNAME"
-        raise ZException(msg) from e
-
-    dclogger.info("Decoding output")
-    data = stdout.decode("utf-8")
-    tokens = data.split()
-    digest = None
-    for t in tokens:
-        if t.startswith("sha256:"):
-            digest = t
-
-    if digest is None:
-        msg = "Cannot find digest in output of docker push."
-        msg += "\n\n" + data
-        raise Exception(msg)
-
-    return BuildResult(
-        registry=registry, organization=organization, repository=repository, digest=digest, tag=tag,
-    )
