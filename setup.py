@@ -34,7 +34,7 @@ install_requires = [
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
     "pur",  # not needed for code but for aido
-    f"aido-utils-{line}>=6.0.14",  # not needed for code but for aido
+    # f"aido-utils-{line}>=6.0.14",  # not needed for code but for aido
 ]
 
 system_version = tuple(sys.version_info)[:3]

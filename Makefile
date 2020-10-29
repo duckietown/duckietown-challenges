@@ -11,9 +11,9 @@ bump: # v2
 	git push
 
 upload: # v3
-	aido-check-not-dirty
-	aido-check-tagged
-	aido-check-need-upload --package duckietown-challenges-daffy make upload-do
+	dt-check-not-dirty
+	dt-check-tagged
+	dt-check-need-upload --package duckietown-challenges-daffy make upload-do
 
 upload-do:
 	rm -f dist/*
@@ -42,12 +42,12 @@ tag=$(AIDO_REGISTRY)/duckietown/$(repo):$(branch)
 build_options = \
 	--build-arg PIP_INDEX_URL=$(PIP_INDEX_URL) \
 	--build-arg AIDO_REGISTRY=$(AIDO_REGISTRY) \
-	$(shell aido-labels)
+	$(shell dt-labels)
 
 
 update-reqs:
 	pur --index-url $(PIP_INDEX_URL) -r requirements.txt -f -m '*' -o requirements.resolved
-	aido-update-reqs requirements.resolved
+	dt-update-reqs requirements.resolved
 
 build: update-reqs
 	docker build --pull -t $(tag)  $(build_options) .
@@ -56,4 +56,4 @@ build-no-cache: update-reqs
 	docker build --pull -t $(tag)  $(build_options) --no-cache .
 
 push: build
-	docker push $(tag)
+	dt-docker-push $(tag)
