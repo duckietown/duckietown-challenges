@@ -13,7 +13,7 @@ from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
-__all__ = ["ChallengeDescription"]
+__all__ = ["ChallengeDescription", "EvaluationParameters"]
 
 
 class InvalidChallengeDescription(Exception):
