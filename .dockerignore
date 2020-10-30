@@ -1,5 +1,5 @@
 **
 !setup.py
 !src
-!*resolved
+!requir*
 *.egg-info

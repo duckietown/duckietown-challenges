@@ -11,8 +11,8 @@ bump: # v2
 	git push
 
 upload: # v3
-	dt-check-not-dirty
-	dt-check-tagged
+	dts build_utils check-not-dirty
+	dts build_utils check-tagged
 	dt-check-need-upload --package duckietown-challenges-daffy make upload-do
 
 upload-do:
@@ -30,30 +30,3 @@ tests-clean:
 
 tests:
 	comptests --nonose duckietown_challenges_tests
-
-
-
-repo0=$(shell basename -s .git `git config --get remote.origin.url`)
-repo=$(shell echo $(repo0) | tr A-Z a-z)
-branch=$(shell git rev-parse --abbrev-ref HEAD)
-tag=$(AIDO_REGISTRY)/duckietown/$(repo):$(branch)
-
-
-build_options = \
-	--build-arg PIP_INDEX_URL=$(PIP_INDEX_URL) \
-	--build-arg AIDO_REGISTRY=$(AIDO_REGISTRY) \
-	$(shell dt-labels)
-
-
-update-reqs:
-	pur --index-url $(PIP_INDEX_URL) -r requirements.txt -f -m '*' -o requirements.resolved
-	dt-update-reqs requirements.resolved
-
-build: update-reqs
-	docker build --pull -t $(tag)  $(build_options) .
-
-build-no-cache: update-reqs
-	docker build --pull -t $(tag)  $(build_options) --no-cache .
-
-push: build
-	dt-docker-push $(tag)
