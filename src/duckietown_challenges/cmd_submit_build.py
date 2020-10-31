@@ -20,10 +20,10 @@ class BuildResult:
 
         if self.digest is not None:
             if not self.digest.startswith("sha256"):
-                msg = "Unknown digest format: %s " % self.digest
+                msg = f"Unknown digest format: {self.digest} "
                 raise ValueError(msg)
             if self.digest.startswith("sha256:sha256"):
-                msg = "What happened here? %s " % self.digest
+                msg = f"What happened here? {self.digest} "
                 raise ValueError(msg)
 
 
@@ -37,7 +37,7 @@ def parse_complete_tag(x: str) -> BuildResult:
         registry, rest = x.split("/", maxsplit=1)
 
     elif ns == 1:
-        registry = None
+        registry = "docker.io"
         rest = x
     else:
         msg = "Could not parse complete tag: %s" % x
@@ -47,7 +47,7 @@ def parse_complete_tag(x: str) -> BuildResult:
     if nsha:
         rest, digest = rest.split("@")
         if not digest.startswith("sha256"):
-            msg = "Unknown digest format: %s for %s" % (digest, x)
+            msg = f"Unknown digest format: {digest} for {x}"
             raise ValueError(msg)
     else:
         digest = None
@@ -73,11 +73,11 @@ def parse_complete_tag(x: str) -> BuildResult:
 
 
 def get_complete_tag(br: BuildResult):
-    complete = "%s/%s" % (br.organization, br.repository)
-    if br.tag is not None:
+    complete = f"{br.organization}/{br.repository}"
+    if br.tag:
         complete += f":{br.tag}"
     if br.registry:
         complete = f"{br.registry}/{complete}"
-    if br.digest is not None:
+    if br.digest:
         complete += f"@{br.digest}"
     return complete

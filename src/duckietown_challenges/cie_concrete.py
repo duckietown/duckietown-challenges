@@ -11,6 +11,7 @@ import traceback
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import ContextManager, Dict, Optional
 
 from duckietown_challenges import ChallengesConstants
@@ -272,7 +273,9 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     ipfs_hashes: Dict[str, str]
 
     def __init__(self, root=DEFAULT_ROOT):
-        dclogger.info(f"ChallengeInterfaceEvaluatorConcrete root = {root}")
+        path = Path(root)
+        files = list(map(str, path.rglob("*.*")))
+        dclogger.info(f"ChallengeInterfaceEvaluatorConcrete", root=root, files=files)
         self.root = root
 
         self.challenge_files = FS()  # -> ChallengeFile
