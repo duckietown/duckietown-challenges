@@ -276,6 +276,9 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         path = Path(root)
         files = list(map(str, path.rglob("*.*")))
         dclogger.info(f"ChallengeInterfaceEvaluatorConcrete", root=root, files=files)
+        if not files:
+            msg = "Invalid environment: challenges directory is empty. Not mounted correctly?"
+            raise InvalidEnvironment(msg=msg, root=root, files=files)
         self.root = root
 
         self.challenge_files = FS()  # -> ChallengeFile

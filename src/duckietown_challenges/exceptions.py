@@ -1,5 +1,8 @@
 # coding=utf-8
-class ChallengeException(Exception):
+from zuper_commons.types import ZException
+
+
+class ChallengeException(ZException):
     pass
 
 
@@ -11,19 +14,19 @@ class InvalidConfiguration(ChallengeException):
     pass
 
 
-class InvalidSubmission(Exception):
+class InvalidSubmission(ZException):
     """ Can be raised by evaluator """
 
     pass
 
 
-class InvalidEvaluator(Exception):
+class InvalidEvaluator(ZException):
     pass
 
 
-class InvalidEnvironment(Exception):
+class InvalidEnvironment(ZException):
     pass
 
 
-class AbortedByUser(Exception):
+class AbortedByUser(ZException):
     pass
