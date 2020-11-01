@@ -696,9 +696,10 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         status = ChallengesConstants.STATUS_JOB_HOST_ERROR
         declare(status, msg, read_scores(), cie.ipfs_hashes)
 
-    except SystemExit:
-        msg = "SystemExit:\n%s" % traceback.format_exc()
-        dclogger.error(msg)
+    except SystemExit as e:
+        if e.code:
+            msg = "SystemExit:\n%s" % traceback.format_exc()
+            dclogger.error(msg)
         # declare(
         #     ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
         # )
