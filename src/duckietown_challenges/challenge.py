@@ -162,7 +162,10 @@ class ServiceDefinition:
             if isinstance(s, int):
                 internal = s
                 external = None
-            else:
+            elif isinstance(s, dict):
+                internal = s.get("internal", None)
+                external = s.get("internal", None)
+            elif isinstance(s, str):
                 if not ":" in s:
                     # raise InvalidConfiguration(s)
                     internal = int(s)
@@ -171,6 +174,8 @@ class ServiceDefinition:
                     tokens = s.split(":")
                     external = int(tokens[0])
                     internal = int(tokens[1])
+            else:
+                raise ValueError(repr(ports_))
             ports.append(PortDefinition(external=external, internal=internal))
         return ServiceDefinition(image=image, environment=environment, build=build, ports=ports)
 
