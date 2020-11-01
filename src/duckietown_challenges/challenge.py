@@ -13,7 +13,19 @@ from .cmd_submit_build import parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
-__all__ = ["ChallengeDescription", "EvaluationParameters", "ChallengesConstants"]
+__all__ = [
+    "ChallengeDescription",
+    "EvaluationParameters",
+    "ChallengesConstants",
+    "ChallengeStep",
+    "ChallengeTransitions",
+    "ChallengeDependency",
+    "InvalidChallengeDescription",
+    "Scoring",
+    "Score",
+    "SubmissionDescription",
+    "ServiceDefinition",
+]
 
 
 class InvalidChallengeDescription(Exception):
@@ -142,7 +154,7 @@ class ServiceDefinition:
                 s = yaml.safe_dump(v)
                 environment[k] = s
             else:
-                msg = 'The type %s is not allowed for environment variable "%s".' % (type(v).__name__, k,)
+                msg = f'The type {type(v).__name__} is not allowed for environment variable "{k}".'
                 raise InvalidConfiguration(msg)
         ports_ = d0.pop("ports", [])
         ports = []
@@ -353,17 +365,17 @@ class ChallengeTransitions:
         ts = []
         for t in self.transitions:
             if t.first == STATE_START:
-                ts.append("At the beginning execute step `%s`." % t.second)
+                ts.append(f"At the beginning execute step `{t.second}`.")
             else:
                 if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
                     ts.append(
-                        "If step `%s` finishes with status `%s`, then declare the submission `%s`."
-                        % (t.first, t.condition, t.second)
+                        f"If step `{t.first}` finishes with status `{t.condition}`, then declare the "
+                        f"submission `{t.second}`."
                     )
                 else:
                     ts.append(
-                        "If step `%s` finishes with status `%s`, then execute step `%s`."
-                        % (t.first, t.condition, t.second)
+                        f"If step `{t.first}` finishes with status `{t.condition}`, then execute step `"
+                        f"{t.second}`."
                     )
         return ts
 
@@ -679,10 +691,6 @@ class ChallengeDescription:
             raise ValueError(self.date_open)
         if self.date_close.tzinfo is None:
             raise ValueError(self.date_close)
-
-    #
-    # def get_steps(self):
-    #     return self.steps
 
     def get_next_steps(self, status):
         return self.ct.get_next_steps(status)
