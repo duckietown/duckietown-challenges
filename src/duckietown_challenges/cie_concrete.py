@@ -273,12 +273,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     ipfs_hashes: Dict[str, str]
 
     def __init__(self, root=DEFAULT_ROOT):
-        path = Path(root)
-        files = list(map(str, path.rglob("*.*")))
-        dclogger.info(f"ChallengeInterfaceEvaluatorConcrete", root=root, files=files)
-        if not files:
-            msg = "Invalid environment: challenges directory is empty. Not mounted correctly?"
-            raise InvalidEnvironment(msg=msg, root=root, files=files)
+
         self.root = root
 
         self.challenge_files = FS()  # -> ChallengeFile
@@ -287,6 +282,15 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         self.evaluation_files = FS()  # -> ChallengeFile
         self.ipfs_hashes = {}
         self.scores = {}  # str -> ReportedScore
+
+    def internal_checks(self):
+        root = self.root
+        path = Path(root)
+        files = list(map(str, path.rglob("*.*")))
+        dclogger.info(f"ChallengeInterfaceEvaluatorConcrete", root=root, files=files)
+        if not files:
+            msg = "Invalid environment: challenges directory is empty. Not mounted correctly?"
+            raise InvalidEnvironment(msg=msg, root=root, files=files)
 
     def set_challenge_parameters(self, data):
         assert isinstance(data, dict)
@@ -659,8 +663,6 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         dclogger.info(f"exiting with code {retcode}")
         sys.exit(retcode)
 
-    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
-
     # NOTE you have to call after yielding
     def read_scores():
         _scores = {}
@@ -668,7 +670,11 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
             _scores[k] = v.value
         return _scores
 
+    cie = ChallengeInterfaceEvaluatorConcrete(root=root)
+
     try:
+        cie.internal_checks()
+
         yield cie
         status = ChallengesConstants.STATUS_JOB_SUCCESS
         dclogger.debug("yield cie ok, now declaring success", status=status, scores=read_scores())
