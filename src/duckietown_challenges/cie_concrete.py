@@ -697,7 +697,8 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         declare(status, msg, read_scores(), cie.ipfs_hashes)
 
     except SystemExit:
-        # msg = "SystemExit:\n%s" % traceback.format_exc()
+        msg = "SystemExit:\n%s" % traceback.format_exc()
+        dclogger.error(msg)
         # declare(
         #     ChallengesConstants.STATUS_JOB_FAILED, msg, read_scores(), cie.ipfs_hashes
         # )
@@ -705,7 +706,13 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
 
     except BaseException:
         msg = "Unexpected exception:\n%s" % traceback.format_exc()
+        dclogger.error(msg)
         declare(ChallengesConstants.STATUS_JOB_ERROR, msg, read_scores(), cie.ipfs_hashes)
+
+    finally:
+        cmd = "sync"
+        subprocess.check_call(cmd)
+    cie.info("Graceful termination of scoring_context().")
 
 
 def wrap_solution(solution, root=DEFAULT_ROOT):
