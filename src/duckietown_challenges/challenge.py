@@ -25,6 +25,7 @@ __all__ = [
     "Score",
     "SubmissionDescription",
     "ServiceDefinition",
+    "NotEquivalent",
 ]
 
 
