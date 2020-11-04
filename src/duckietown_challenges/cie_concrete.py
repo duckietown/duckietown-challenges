@@ -323,7 +323,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def get_solution_output_file(self, basename):
         fn = os.path.join(self.root, CHALLENGE_SOLUTION_OUTPUT_DIR, basename)
         if not os.path.exists(fn):
-            msg = "Could not find file %r" % fn
+            msg = f"Could not find file {fn!r}"
             raise InvalidSubmission(msg)
         return fn
 
@@ -335,10 +335,10 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         return fns
 
     def set_score(self, name, value, description=None):
-        dclogger.info("setting score", name=name, value=value, description=description)
+        # dclogger.info("setting score", name=name, value=value, description=description)
         if isinstance(value, float):
             if math.isnan(value) or math.isinf(value):
-                msg = "Invalid value %r for score %r: we do not allow infinity or NaN." % (value, name)
+                msg = f"Invalid value {value!r} for score {name!r}: we do not allow infinity or NaN."
                 raise ValueError(msg)
 
         import numpy as np
@@ -352,7 +352,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 
         # dclogger.info('found %s %s' % (value, type(value)))
         if name in self.scores:
-            msg = "Already know score %r" % name
+            msg = f"Already know score {name!r}"
             raise InvalidEvaluator(msg)
 
         self.scores[name] = ReportedScore(name, value, description)
@@ -381,13 +381,13 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             raise InvalidEvaluator(msg) from e
 
     def info(self, s):
-        dclogger.info("evaluation: %s" % s)
+        dclogger.info(f"evaluation: {s}")
 
     def error(self, s):
-        dclogger.error("evaluation: %s" % s)
+        dclogger.error(f"evaluation: {s}")
 
     def debug(self, s):
-        dclogger.debug("evaluation: %s" % s)
+        dclogger.debug(f"evaluation: {s}")
 
     def after_prepare(self):
         if self.parameters is None:
@@ -436,7 +436,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         """ Returns the previous steps as a list of string """
         p = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
         if not os.path.exists(p):
-            msg = "Directory not found %s" % p
+            msg = f"Directory not found {p}"
             raise InvalidEnvironment(msg)  # XXX invalid runner...
         dirnames = os.listdir(p)
         return list(dirnames)
@@ -444,7 +444,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def get_completed_step_evaluation_files(self, step_name):
         """ Returns a list of names for the files completed in a previous step. """
         if step_name not in self.get_completed_steps():
-            msg = "No step %r" % step_name
+            msg = f"No step {step_name!r}"
             raise KeyError(msg)
 
         return get_completed_step_evaluation_files(self.root, step_name)
@@ -469,12 +469,12 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
 def get_completed_step_evaluation_files(root, step_name):
     d0 = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR)
     if not os.path.exists(d0):
-        msg = "Could not find %s" % d0
+        msg = f"Could not find {d0}"
         raise InvalidEnvironment(msg)
 
     d_step = os.path.join(d0, step_name)
     if not os.path.exists(d_step):
-        msg = 'No step "%s": dir %s does not exist.' % (step_name, d_step)
+        msg = f'No step "{step_name}": dir {d_step} does not exist.'
         raise KeyError(msg)
     #
     # if not os.path.exists(d1):
@@ -485,10 +485,10 @@ def get_completed_step_evaluation_files(root, step_name):
 
     d = os.path.join(d_step, CHALLENGE_EVALUATION_OUTPUT_DIR)
     if not os.path.exists(d):
-        msg = "Could not find dir %s" % d
+        msg = f"Could not find dir {d}"
         raise InvalidEnvironment(msg)
 
-    dclogger.info("step dir is %s" % d)
+    dclogger.info(f"step dir is {d}")
     return list(os.listdir(d))
 
 
@@ -502,7 +502,7 @@ def get_completed_step_evaluation_file(root, step_name, basename):
     step_dir = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_EVALUATION_OUTPUT_DIR)
     fn = os.path.join(step_dir, basename)
     if not os.path.exists(fn):
-        msg = "File %s -> %s does not exist " % (basename, fn)
+        msg = f"File {basename} -> {fn} does not exist "
 
         for x in available:
             msg += f"\n available {x}"
@@ -533,8 +533,8 @@ def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
 
     def declare(status, message):
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
-            msg = "declare %s:\n%s" % (status, message)
-            dclogger.error(msg)
+            msg2 = f"declare {status}:\n{message}"
+            dclogger.error(msg2)
         else:
             dclogger.info("Completed.")
         cr = ChallengeResults(status, message, {})
@@ -600,8 +600,8 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
 
     def declare(status, message):
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
-            msg = "declare %s:\n%s" % (status, message)
-            dclogger.error(msg)
+            msg2 = f"declare {status}:\n{message}"
+            dclogger.error(msg2)
         else:
             dclogger.info("Completed.")
         cr = ChallengeResults(status, message, {})
@@ -652,8 +652,8 @@ def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvalu
         cie.evaluation_files.write(d)
 
         if status != ChallengesConstants.STATUS_JOB_SUCCESS:
-            msg = "declare %s:\n%s" % (status, message)
-            dclogger.error(msg, status=status, message=message, scores=scores)
+            msg2 = f"declare {status}:\n{message}"
+            dclogger.error(msg2, status=status, message=message, scores=scores)
         else:
             dclogger.info("Completed.", message=message, scores=scores)
         stats = {}

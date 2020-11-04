@@ -87,10 +87,13 @@ def dtserver_retire(token, submission_id: SubmissionID, impersonate: Optional[Us
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_retire_same_label(token, label: str, impersonate: Optional[UserID] = None):
+def dtserver_retire_same_label(
+    token, label: str, impersonate: Optional[UserID] = None, challenges: List[str] = None
+):
+    challenges = challenges or []
     endpoint = Endpoints.submissions
     method = "DELETE"
-    data = {"label": label}
+    data = {"label": label, "challenges": challenges}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
@@ -111,7 +114,9 @@ def dtserver_get_user_submissions(token, impersonate: Optional[UserID] = None):
     return submissions
 
 
-def dtserver_submit2(*, token, challenges: List[str], data, impersonate: Optional[UserID] = None):
+def dtserver_submit2(
+    *, token, challenges: List[str], data, impersonate: Optional[UserID] = None,
+):
     if not isinstance(challenges, list):
         msg = "Expected a list of strings, got %s" % challenges
         raise ValueError(msg)
@@ -348,18 +353,23 @@ class CompatibleChallenges:
 
 
 def dtserver_get_compatible_challenges(
-    *, token: str, impersonate: Optional[int], submission_protocols: List[str]
+    *, token: str, impersonate: Optional[int], submission_protocols: List[str], quiet: bool = False
 ) -> CompatibleChallenges:
     """
     Returns the list of compatible challenges for the protocols specified.
     """
     challenges = dtserver_get_challenges(token=token, impersonate=impersonate)
     compatible = []
-    print("Looking for compatible and open challenges: \n")
+
+    def mprint(x):
+        if not quiet:
+            print(x)
+
+    mprint("Looking for compatible and open challenges: \n")
 
     fmt = "  %s  %-32s  %-10s    %s"
-    print(fmt % ("%-32s" % "name", "protocol", "open?", "title"))
-    print(fmt % ("%-32s" % "----", "--------", "-----", "-----"))
+    mprint(fmt % ("%-32s" % "name", "protocol", "open?", "title"))
+    mprint(fmt % ("%-32s" % "----", "--------", "-----", "-----"))
 
     # S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split("_-")))
     S = list(challenges)
@@ -383,15 +393,15 @@ def dtserver_get_compatible_challenges(
 
         challenge_name_s = pad_to_screen_length(challenge_name_s, 32)
         s2 = fmt % (challenge_name_s, cd.protocol, s, cd.title)
-        print(s2)
+        mprint(s2)
 
-    print("")
-    print("")
+    mprint("")
+    mprint("")
     q = lambda x: termcolor.colored(x, "blue")
     for challenge_id, challenge in challenges.items():
         if challenge.closure:
             others = ", ".join(map(q, challenge.closure))
             msg = f"* Submitting to {q(challenge.name)} will also submit to: {others}."
-            print(msg)
-    print("")
+            mprint(msg)
+    mprint("")
     return CompatibleChallenges(res, compatible)

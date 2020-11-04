@@ -8,6 +8,7 @@ import termcolor
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .utils import indent
+import socket
 
 
 class Storage(object):
@@ -15,13 +16,13 @@ class Storage(object):
 
 
 def get_duckietown_server_url():
-    V = "DTSERVER"
+    V = ChallengesConstants.DTSERVER_ENV_NAME
     default = ChallengesConstants.DEFAULT_DTSERVER
     if V in os.environ:
         use = os.environ[V]
         if not Storage.done:
             if use != default:
-                msg = "Using server %s instead of default %s" % (use, default)
+                msg = f"Using server {use} instead of default {default}"
                 dclogger.info(msg)
             Storage.done = True
         return use
@@ -142,10 +143,13 @@ def make_server_request(
         raise ConnectionError(msg) from e
     except urllib.error.URLError as e:
         if "61" in str(e.reason):
-            msg = "Server is temporarily down; cannot open %s" % url
+            msg = f"Server is temporarily down; cannot open url {url}"
             raise ServerIsDown(msg) from None
-        msg = "Cannot connect to server %s:\n%s" % (url, e)
+        msg = f"Cannot connect to server {url}:\n{e}"
         raise ConnectionError(msg) from e
+    except socket.timeout:
+        msg = "Timeout while connecting to server. This is either the server's fault or your fault"
+        raise ConnectionError(msg) from None
 
     # delta = time.time() - t0
     # dtslogger.info('server request took %.1f seconds' % delta)
@@ -186,6 +190,6 @@ def make_server_request(
             raise ConnectionError(msg)
         return result["result"]
     else:
-        msg = result.get("msg", "no error message in %s " % result)
-        msg = "Failed request for %s:\n%s" % (url, msg)
+        msg = result.get("msg", f"no error message in {result} ")
+        msg = f"Failed request for {url}:\n{msg}"
         raise RequestFailed(msg)
