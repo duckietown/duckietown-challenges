@@ -26,6 +26,11 @@ __all__ = [
     "SubmissionDescription",
     "ServiceDefinition",
     "NotEquivalent",
+    "STATE_START",
+    "STATE_ERROR",
+    "STATE_FAILED",
+    "STATE_SUCCESS",
+    "ALLOWED_CONDITION_TRIGGERS",
 ]
 
 
