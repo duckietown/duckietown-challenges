@@ -5,6 +5,8 @@ from subprocess import CalledProcessError, check_output
 
 
 def check_no_incompatible():
+    import traceback, sys
+
     cmd = ["pip3", "list"]
     try:
         res = check_output(cmd)
@@ -35,7 +37,7 @@ def check_no_incompatible():
                 raise ValueError(msg)
 
 
-check_no_incompatible()
+# check_no_incompatible()
 
 from zuper_commons.logs import ZLogger
 

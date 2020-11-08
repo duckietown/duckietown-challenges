@@ -31,6 +31,11 @@ __all__ = [
     "STATE_FAILED",
     "STATE_SUCCESS",
     "ALLOWED_CONDITION_TRIGGERS",
+    "DepBetter",
+    "DepScore",
+    "from_steps_transitions",
+    "Scoring_as_dict",
+    "steps_from_transitions",
 ]
 
 
