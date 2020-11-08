@@ -115,10 +115,12 @@ class ServiceDefinition:
 
     def equivalent(self, other):
         if self.image != ChallengesConstants.SUBMISSION_CONTAINER_TAG:
+            from duckietown_build_utils import parse_complete_tag, DockerCompleteImageName  # FIXME
+
             br2 = parse_complete_tag(other.image)
 
             try:
-                br1 = parse_complete_tag(self.image)
+                br1 = parse_complete_tag(DockerCompleteImageName(self.image))
             except ValueError as e:
                 msg = "Could not even parse mine"
                 raise NotEquivalent(msg) from e
