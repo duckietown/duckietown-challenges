@@ -7,7 +7,7 @@ __all__ = ["setup_logging_color", "setup_logging_format", "setup_logging"]
 
 
 def get_FORMAT_datefmt():
-    pre = "%(asctime)s|%(name)s|%(filename)s:%(lineno)s|%(funcName)s(): "
+    pre = "%(asctime)s|d|%(name)s|%(filename)s:%(lineno)s|%(funcName)s():\n"
     pre = termcolor.colored(pre, attrs=["dark"])
     FORMAT = pre + "%(message)s"
     datefmt = "%H:%M:%S"
