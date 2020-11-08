@@ -1,19 +1,21 @@
 # coding=utf-8
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, cast, Dict, List, Optional, Tuple, Union
+from typing import Any, cast, Dict, List, Optional, Tuple, TypedDict, Union
 
 import yaml
 from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
+from zuper_commons.types import ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
 
-from .challenges_constants import ChallengesConstants, JobStatusString, StepName
-from .cmd_submit_build import parse_complete_tag
+from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
+from .types import ChallengeName, JobStatusString, StepName
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
 __all__ = [
+    "EvaluationParametersDict",
     "ChallengeDescription",
     "EvaluationParameters",
     "ChallengesConstants",
@@ -36,6 +38,7 @@ __all__ = [
     "from_steps_transitions",
     "Scoring_as_dict",
     "steps_from_transitions",
+    "Transition",
 ]
 
 
@@ -93,6 +96,13 @@ class PortDefinition:
     internal: int
 
 
+class ServiceDefinitionDict(TypedDict):
+    image: Optional[str]
+    build: Optional[Build]
+    environment: Dict[str, Any]
+    ports: List[PortDefinition]
+
+
 @dataclass
 class ServiceDefinition:
     image: Optional[str]
@@ -130,7 +140,7 @@ class ServiceDefinition:
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, d0):
+    def from_yaml(cls, d0: ServiceDefinitionDict) -> "ServiceDefinition":
         image = d0.pop("image", None)
         environment = d0.pop("environment", {})
         if environment is None:
@@ -211,6 +221,11 @@ class ServiceDefinition:
         return res
 
 
+class EvaluationParametersDict(TypedDict):
+    version: str
+    services: Dict[str, ServiceDefinitionDict]
+
+
 @dataclass
 class EvaluationParameters:
     """
@@ -240,12 +255,12 @@ class EvaluationParameters:
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, d):
+    def from_yaml(cls, d: EvaluationParametersDict):
 
         services_ = d.pop("services")
         if not isinstance(services_, dict):
-            msg = "Expected dict got %s" % services_.__repr__()
-            raise ValueError(msg)
+            msg = "Expected dict"
+            raise ZValueError(msg, got=services_)
 
         if not services_:
             msg = "No services described."
@@ -680,7 +695,7 @@ class ChallengeDependency:
 
 @dataclass
 class ChallengeDescription:
-    name: str
+    name: ChallengeName
     title: str
     description: str
     protocol: str
@@ -692,10 +707,10 @@ class ChallengeDescription:
     scoring: Scoring
     tags: List[str]
 
-    dependencies: Dict[str, ChallengeDependency]
+    dependencies: Dict[ChallengeName, ChallengeDependency]
 
     ct: ChallengeTransitions
-    closure: Optional[List[str]] = field(default_factory=list)
+    closure: Optional[List[ChallengeName]] = field(default_factory=list)
 
     def __post_init__(self):
 

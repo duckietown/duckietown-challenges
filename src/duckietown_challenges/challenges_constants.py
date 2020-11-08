@@ -1,10 +1,9 @@
 # coding=utf-8
-from typing import cast, ClassVar, NewType
+from typing import cast, ClassVar
 
-__all__ = ["JobStatusString", "StepName", "ChallengesConstants"]
+__all__ = ["ChallengesConstants"]
 
-JobStatusString = NewType("JobStatusString", str)
-StepName = NewType("StepName", str)
+from .types import JobStatusString
 
 
 class ChallengesConstants:

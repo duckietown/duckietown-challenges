@@ -5,6 +5,8 @@ import os
 import re
 import yaml
 
+from zuper_commons.types import ZValueError
+
 import decorator
 
 from . import logger
@@ -97,8 +99,8 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
     """ Decorator for a function that takes a (clsname, dict) """
     # def f2(x, *args, **kwargs):
     if not isinstance(data, dict):
-        msg = "Expected dict, got %s" % data.__repr__()
-        raise ValueError(msg)
+        msg = "Expected dict"
+        raise ZValueError(msg, data=data)
 
     def write(d: dict):
         assert isinstance(d, dict)

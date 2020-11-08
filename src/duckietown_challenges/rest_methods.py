@@ -1,21 +1,18 @@
 from dataclasses import dataclass
-from typing import Dict, List, NewType, Optional
+from typing import Dict, List, Optional, TypedDict, Union
 
 import dateutil.parser
 import termcolor
 from zuper_commons.timing import now_utc
 
-
-from .challenge import ChallengeDescription
+from .types import ChallengeID, ChallengeName, RPath
+from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
+from .types import ChallengeStepID, JobID, StepName, SubmissionID, UserID
 from .utils import pad_to_screen_length
 
 Endpoints = ChallengesConstants.Endpoints
-
-SubmissionID = NewType("SubmissionID", int)
-UserID = NewType("UserID", int)
-JobID = NewType("JobID", int)
 
 
 @dataclass
@@ -49,7 +46,7 @@ def get_registry_info(token: str, impersonate: Optional[UserID] = None) -> Regis
     return ri
 
 
-def dtserver_auth(token, cmd, impersonate: Optional[UserID] = None):
+def dtserver_auth(token: str, cmd: str, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.auth
     method = "GET"
     data = {"query": cmd}
@@ -59,7 +56,7 @@ def dtserver_auth(token, cmd, impersonate: Optional[UserID] = None):
     return res
 
 
-def get_dtserver_user_info(token, impersonate: Optional[UserID] = None):
+def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None):
     """ Returns a dictionary with information about the user """
     endpoint = Endpoints.user_info
     method = "GET"
@@ -78,7 +75,7 @@ def get_dtserver_user_info(token, impersonate: Optional[UserID] = None):
 #     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_retire(token, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
+def dtserver_retire(token: str, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.submissions
     method = "DELETE"
     data = {"submission_id": submission_id}
@@ -88,7 +85,7 @@ def dtserver_retire(token, submission_id: SubmissionID, impersonate: Optional[Us
 
 
 def dtserver_retire_same_label(
-    token, label: str, impersonate: Optional[UserID] = None, challenges: List[str] = None
+    token: str, label: str, impersonate: Optional[UserID] = None, challenges: List[str] = None
 ):
     challenges = challenges or []
     endpoint = Endpoints.submissions
@@ -138,7 +135,7 @@ def dtserver_get_info(token, submission_id: SubmissionID, impersonate: Optional[
 
 
 def dtserver_reset_submission(
-    token, submission_id: SubmissionID, step_name, impersonate: Optional[UserID] = None
+    token: str, submission_id: SubmissionID, step_name: StepName, impersonate: Optional[UserID] = None
 ):
     endpoint = Endpoints.reset_submission
     method = "POST"
@@ -148,7 +145,7 @@ def dtserver_reset_submission(
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_reset_job(token, job_id, impersonate: Optional[UserID] = None):
+def dtserver_reset_job(token: str, job_id: JobID, impersonate: Optional[UserID] = None):
     endpoint = Endpoints.reset_job
     method = "POST"
     data = {"job_id": job_id}
@@ -159,14 +156,14 @@ def dtserver_reset_job(token, job_id, impersonate: Optional[UserID] = None):
 
 def dtserver_report_job(
     token: str,
-    job_id: int,
+    job_id: JobID,
     result: str,  # code
     stats: dict,  # <- data 1
-    machine_id,
-    process_id,
-    evaluator_version,
-    uploaded,  # <- uploaded via S3
-    timeout,  # <- how long to wait for the server
+    machine_id: str,
+    process_id: str,
+    evaluator_version: str,
+    uploaded: "List[ArtefactDict]",  # <- uploaded via S3
+    timeout: Optional[int],  # <- how long to wait for the server
     ipfs_hashes: Dict[str, str],  # <- IPFS files
     impersonate: Optional[UserID] = None,
 ):
@@ -197,17 +194,93 @@ def dtserver_report_job(
     )
 
 
+class AWSConfig(TypedDict):
+    bucket_name: str
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    path_by_value: str
+
+
+class S3ObjectDict(TypedDict):
+    object_key: str
+    bucket_name: str
+    url: str
+
+
+class UploadStorage(TypedDict):
+    s3: S3ObjectDict
+
+
+@dataclass
+class ArtefactDict(TypedDict):
+    size: int
+    mime_type: str
+    rpath: RPath
+    sha256hex: str
+    storage: UploadStorage
+
+
+EvaluatorFeaturesDict = Dict[str, Union[str, int, float, bool]]
+
+
+class WorkSubmissionRequestDict(TypedDict):
+    submission_id: Optional[SubmissionID]
+    machine_id: str
+    process_id: str
+    evaluator_version: str
+    features: EvaluatorFeaturesDict
+    reset: bool
+
+
+class ContainerLocationDict(TypedDict):
+    container_location_id: int
+
+    created_by_user_id: UserID
+    when_created: str  # iso format
+
+    digest: str
+
+    registry: str
+    organization: str
+    repository: str
+    tag: str
+
+
+class WorkSubmissionResultParamsDict(TypedDict):
+    image_digest: str
+    locations: List[ContainerLocationDict]
+
+
+class WorkSubmissionResultDict(TypedDict):
+    step_id: ChallengeStepID
+
+    step_name: StepName
+    submission_id: SubmissionID
+    parameters: WorkSubmissionResultParamsDict
+    job_id: JobID
+
+    challenge_id: ChallengeID
+    challenge_name: ChallengeName
+    challenge_parameters: EvaluationParametersDict
+
+    protocol: str
+    aws_config: Optional[AWSConfig]
+    steps2artefacts: Dict[StepName, Dict[RPath, ArtefactDict]]
+
+    timeout: float
+
+
 def dtserver_work_submission(
     token: str,
     submission_id: Optional[SubmissionID],
-    machine_id,
-    process_id,
-    evaluator_version,
-    features,
-    reset,
-    timeout,
+    machine_id: str,
+    process_id: str,
+    evaluator_version: str,
+    features: EvaluatorFeaturesDict,
+    reset: bool,
+    timeout: Optional[int],
     impersonate: Optional[UserID] = None,
-):
+) -> WorkSubmissionResultDict:
     """
 
         Pipeline:
@@ -252,6 +325,7 @@ def dtserver_work_submission(
     """
     endpoint = Endpoints.take_submission
     method = "GET"
+    data: WorkSubmissionRequestDict
     data = {
         "submission_id": submission_id,
         "machine_id": machine_id,
@@ -267,17 +341,29 @@ def dtserver_work_submission(
     )
 
 
+class HeartbeatRequestDict(TypedDict):
+    job_id: JobID
+    machine_id: str
+    process_id: str
+    evaluator_version: str
+
+
+class HeartbeatResponseDict(TypedDict):
+    abort: bool
+    why: Optional[str]
+
+
 def dtserver_job_heartbeat(
     token: str,
     job_id: JobID,
-    machine_id,
-    process_id,
-    evaluator_version,
+    machine_id: str,
+    process_id: str,
+    evaluator_version: str,
     impersonate: Optional[UserID] = None,
-):
-
+) -> HeartbeatResponseDict:
     endpoint = Endpoints.job_heartbeat
     method = "GET"
+    data: HeartbeatRequestDict
     data = {
         "job_id": job_id,
         "machine_id": machine_id,
@@ -293,12 +379,12 @@ def dtserver_job_heartbeat(
 
 
 def get_challenge_description(
-    token, challenge_name: str, impersonate: Optional[UserID] = None
+    token: str, challenge_name: ChallengeName, impersonate: Optional[UserID] = None
 ) -> ChallengeDescription:
     if not isinstance(challenge_name, str):
         msg = "Expected a string for the challenge name, I got %s" % challenge_name
         raise ValueError(msg)
-    endpoint = Endpoints.challenges + "/%s/description" % challenge_name
+    endpoint = Endpoints.challenges + f"/{challenge_name}/description"
     method = "GET"
     data = {}
     add_version_info(data)
@@ -308,7 +394,9 @@ def get_challenge_description(
     return cd
 
 
-def dtserver_get_challenges(token, impersonate: Optional[UserID] = None) -> Dict[int, ChallengeDescription]:
+def dtserver_get_challenges(
+    token: str, impersonate: Optional[UserID] = None
+) -> Dict[int, ChallengeDescription]:
     endpoint = Endpoints.challenges
     method = "GET"
     data = {}
@@ -330,7 +418,7 @@ def add_version_info(data):
         pass
 
 
-# noinspection PyUnresolvedReferences,PyBroadException
+# noinspection PyUnresolvedReferences,PyBroadException,PyCompatibility,PyProtectedMember
 def get_packages_version():
     try:
         from pip import get_installed_distributions
@@ -348,8 +436,8 @@ def get_packages_version():
 
 @dataclass
 class CompatibleChallenges:
-    available_submit: Dict[str, ChallengeDescription]
-    compatible: List[str]
+    available_submit: Dict[ChallengeName, ChallengeDescription]
+    compatible: List[ChallengeName]
 
 
 def dtserver_get_compatible_challenges(
@@ -373,6 +461,7 @@ def dtserver_get_compatible_challenges(
 
     # S = sorted(challenges, key=lambda _: tuple(challenges[_].name.split("_-")))
     S = list(challenges)
+    res: Dict[ChallengeName, ChallengeDescription]
     res = {}
     for challenge_id in S:
         cd = challenges[challenge_id]

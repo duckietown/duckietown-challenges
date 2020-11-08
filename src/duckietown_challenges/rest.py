@@ -1,6 +1,7 @@
 # coding=utf-8
 import json
 import os
+import socket
 from json import JSONDecodeError
 
 import termcolor
@@ -8,10 +9,9 @@ import termcolor
 from . import dclogger
 from .challenges_constants import ChallengesConstants
 from .utils import indent
-import socket
 
 
-class Storage(object):
+class Storage:
     done = False
 
 

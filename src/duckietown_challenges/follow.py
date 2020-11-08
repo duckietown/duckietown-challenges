@@ -2,17 +2,20 @@ import datetime
 import sys
 import time
 from collections import defaultdict
-from . import logger
+
 import termcolor
 
 from .rest import ServerIsDown
 from .rest_methods import dtserver_get_info
 
 
+from .types import SubmissionID
+
+
 __all__ = ["follow_submission"]
 
 
-def follow_submission(shell, token, submission_id):
+def follow_submission(shell, token: str, submission_id: SubmissionID):
     step2job_seen = {}
     step2status_seen = defaultdict(lambda: "")
 

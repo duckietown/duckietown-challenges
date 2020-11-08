@@ -3,7 +3,7 @@ import traceback
 import yaml
 from comptests import comptest, run_module_tests
 
-from duckietown_challenges.challenge import (
+from duckietown_challenges import (
     ChallengeDescription,
     ServiceDefinition,
     EvaluationParameters,
