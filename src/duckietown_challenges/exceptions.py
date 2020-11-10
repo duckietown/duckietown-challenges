@@ -14,19 +14,23 @@ class InvalidConfiguration(ChallengeException):
     pass
 
 
-class InvalidSubmission(ZException):
+class InvalidSubmission(ChallengeException):
     """ Can be raised by evaluator """
 
     pass
 
 
-class InvalidEvaluator(ZException):
+class InvalidEvaluator(ChallengeException):
     pass
 
 
-class InvalidEnvironment(ZException):
+class InvalidEnvironment(ChallengeException):
     pass
 
 
-class AbortedByUser(ZException):
+class AbortedByUser(ChallengeException):
+    pass
+
+
+class AbortedByServer(ChallengeException):
     pass
