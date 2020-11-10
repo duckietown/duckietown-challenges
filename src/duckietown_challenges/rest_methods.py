@@ -5,11 +5,10 @@ import dateutil.parser
 import termcolor
 from zuper_commons.timing import now_utc
 
-from .types import ChallengeID, ChallengeName, RPath
 from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
-from .types import ChallengeStepID, JobID, StepName, SubmissionID, UserID
+from .types import ChallengeID, ChallengeName, ChallengeStepID, JobID, RPath, StepName, SubmissionID, UserID
 from .utils import pad_to_screen_length
 
 Endpoints = ChallengesConstants.Endpoints
@@ -346,6 +345,7 @@ class HeartbeatRequestDict(TypedDict):
     machine_id: str
     process_id: str
     evaluator_version: str
+    uploaded: List[ArtefactDict]
 
 
 class HeartbeatResponseDict(TypedDict):
@@ -359,6 +359,7 @@ def dtserver_job_heartbeat(
     machine_id: str,
     process_id: str,
     evaluator_version: str,
+    uploaded: List[ArtefactDict],
     impersonate: Optional[UserID] = None,
 ) -> HeartbeatResponseDict:
     endpoint = Endpoints.job_heartbeat
@@ -369,6 +370,7 @@ def dtserver_job_heartbeat(
         "machine_id": machine_id,
         "process_id": process_id,
         "evaluator_version": evaluator_version,
+        "uploaded": uploaded,
     }
     add_version_info(data)
     add_impersonate_info(data, impersonate)
