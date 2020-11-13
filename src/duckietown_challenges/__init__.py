@@ -4,7 +4,7 @@ __version__ = "6.1.29"
 from zuper_commons.logs import ZLogger
 
 dclogger = logger = ZLogger(__name__)
-logger.info(f"version: {__version__}")
+logger.debug(f"duckietown_challenges version: {__version__}")
 
 from .types import *
 from .rest import *

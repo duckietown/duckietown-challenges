@@ -6,7 +6,7 @@ from typing import Any, cast, Dict, List, Optional, Tuple, TypedDict, Union
 import yaml
 from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
-from zuper_commons.types import ZValueError
+from zuper_commons.types import ZException, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
 
 from .challenges_constants import ChallengesConstants
@@ -107,7 +107,7 @@ class ServiceDefinitionDict(TypedDict):
 class ServiceDefinition:
     image: Optional[str]
     build: Optional[Build]
-    environment: Dict[str, Any]
+    environment: Dict[str, str]
     ports: List[PortDefinition]
 
     def __repr__(self):
@@ -126,18 +126,18 @@ class ServiceDefinition:
                 raise NotEquivalent(msg) from e
 
             if br1.digest is None or br2.digest is None:
-                msg = "No digest information, assuming different.\nself: %s\nother: %s" % (br1, br2)
-                raise NotEquivalent(msg)
+                msg = "No digest information, assuming different."
+                raise NotEquivalent(msg, br1=br1, br2=br2)
             if br1.digest != br2.digest:
-                msg = "Different digests:\n\n  %s\n\n  %s" % (br1, br2)
-                raise NotEquivalent(msg)
+                msg = "Different digests"
+                raise NotEquivalent(msg, br1=br1, br2=br2)
             if self.ports != other.ports:
-                msg = "Different digests:\n\n  %s\n\n  %s" % (br1, br2)
-                raise NotEquivalent(msg)
+                msg = "Different ports"
+                raise NotEquivalent(msg, mine=self.ports, other=self.ports)
 
         if self.environment != other.environment:
-            msg = "Different environments:\n\n %s\n\n  %s" % (self.environment, other.environment,)
-            raise NotEquivalent(msg)
+            msg = "Different environments"
+            raise NotEquivalent(msg, mine=self.environment, other=other.environment)
 
     # noinspection PyArgumentList
     @classmethod
@@ -349,7 +349,7 @@ class ChallengeStep:
         )
 
 
-class NotEquivalent(Exception):
+class NotEquivalent(ZException):
     pass
 
 
