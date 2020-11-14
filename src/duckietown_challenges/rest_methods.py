@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, TypedDict, Union
 import dateutil.parser
 import termcolor
 from zuper_commons.timing import now_utc
+from zuper_commons.types import ZValueError
 
 from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
@@ -24,30 +25,64 @@ def add_impersonate_info(data, impersonate):
         data["impersonate"] = impersonate
 
 
-def dtserver_challenge_define(token: str, yaml, force_invalidate: bool, impersonate: Optional[UserID] = None):
+class ChallengeDefineRequestDict(TypedDict):
+    yaml: str
+    force_invalidate: bool
+
+
+class ChallengeDefineResponseDict(TypedDict):
+    pass
+
+
+def dtserver_challenge_define(
+    token: str,
+    yaml,
+    force_invalidate: bool,
+    impersonate: Optional[UserID] = None,
+    timeout: Optional[float] = 60,
+) -> ChallengeDefineResponseDict:
     endpoint = Endpoints.challenge_define
     method = "POST"
-    data = {"yaml": yaml, "force-invalidate": force_invalidate}
+    data: ChallengeDefineRequestDict
+    data = {"yaml": yaml, "force_invalidate": force_invalidate}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    return make_server_request(token, endpoint, data=data, method=method, timeout=15)
+    return make_server_request(token, endpoint, data=data, method=method, timeout=timeout)
+
+
+class RegistryInfoRequestDict(TypedDict):
+    pass
+
+
+class RegistryInfoResponseDict(TypedDict):
+    pass
 
 
 def get_registry_info(token: str, impersonate: Optional[UserID] = None) -> RegistryInfo:
     endpoint = Endpoints.registry_info
     method = "GET"
+    data: RegistryInfoRequestDict
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    res = make_server_request(token, endpoint, data=data, method=method)
+    res: RegistryInfoResponseDict = make_server_request(token, endpoint, data=data, method=method)
     ri = RegistryInfo(**res)
 
     return ri
 
 
-def dtserver_auth(token: str, cmd: str, impersonate: Optional[UserID] = None):
+class AuthRequestDict(TypedDict):
+    query: str
+
+
+class AuthResponseDict(TypedDict):
+    pass
+
+
+def dtserver_auth(token: str, cmd: str, impersonate: Optional[UserID] = None) -> AuthResponseDict:
     endpoint = Endpoints.auth
     method = "GET"
+    data: AuthRequestDict
     data = {"query": cmd}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
@@ -55,10 +90,19 @@ def dtserver_auth(token: str, cmd: str, impersonate: Optional[UserID] = None):
     return res
 
 
-def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None):
+class UserInfoRequestDict(TypedDict):
+    pass
+
+
+class UserInfoResponseDict(TypedDict):
+    pass
+
+
+def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None) -> UserInfoResponseDict:
     """ Returns a dictionary with information about the user """
     endpoint = Endpoints.user_info
     method = "GET"
+    data: UserInfoRequestDict
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
@@ -74,48 +118,116 @@ def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None):
 #     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_retire(token: str, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
+class RetireRequestDict(TypedDict):
+    submission_id: SubmissionID
+
+
+class RetireResponseDict(TypedDict):
+    pass
+
+
+def dtserver_retire(
+    token: str, submission_id: SubmissionID, impersonate: Optional[UserID] = None
+) -> RetireResponseDict:
     endpoint = Endpoints.submissions
     method = "DELETE"
+    data: RetireRequestDict
     data = {"submission_id": submission_id}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
 
 
+class RetireSameLabelRequestDict(TypedDict):
+    label: str
+    challenges: List[ChallengeName]
+
+
+class RetireSameLabelResponseDict(TypedDict):
+    pass
+
+
 def dtserver_retire_same_label(
-    token: str, label: str, impersonate: Optional[UserID] = None, challenges: List[str] = None
-):
-    challenges = challenges or []
+    token: str, label: str, impersonate: Optional[UserID] = None, challenges: List[ChallengeName] = None
+) -> RetireSameLabelResponseDict:
+    if challenges is None:
+        challenges = []
     endpoint = Endpoints.submissions
     method = "DELETE"
+    data: RetireSameLabelRequestDict
     data = {"label": label, "challenges": challenges}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-def dtserver_get_user_submissions(token, impersonate: Optional[UserID] = None):
+class GetUserSubmissionRequestDict(TypedDict):
+    pass
+
+
+#
+# class  GetUserSubmissionResponseDict(TypedDict):
+#     pass
+
+
+def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = None):
     """ Returns a dictionary with information about the user submissions """
     endpoint = Endpoints.submissions
     method = "GET"
+    data: GetUserSubmissionRequestDict
     data = {}
     add_version_info(data)
     add_impersonate_info(data, impersonate)
-    submissions = make_server_request(token, endpoint, data=data, method=method)
 
+    submissions = make_server_request(token, endpoint, data=data, method=method)
+    # submissions = cast(GetUserSubmissionResponseDict, submissions)
     for v in submissions.values():
         for k in ["date_submitted", "last_status_change"]:
             v[k] = dateutil.parser.parse(v[k])
     return submissions
 
 
+# data = {
+#     "image": dataclasses.asdict(br),
+#     "user_label": sub_info.user_label,
+#     "user_payload": sub_info.user_metadata,
+#     "protocols": sub_info.protocols,
+#     "retire_same_label": retire_same_label,
+#     "user_priority": priority,
+# }
+#
+class SubmitDataDict:
+    image: object
+    user_label: str
+    protocols: List[str]
+    retire_same_label: bool
+    user_priority: int
+
+
+class Submit2RequestDict(TypedDict):
+    challenges: List[ChallengeName]
+    parameters: SubmitDataDict
+
+
+class SubmissionDict(TypedDict):
+    pass
+
+
+class Submit2ResponseDict(TypedDict):
+    component_id: int
+    submissions: Dict[ChallengeName, SubmissionDict]
+
+
 def dtserver_submit2(
-    *, token, challenges: List[str], data, impersonate: Optional[UserID] = None,
-):
+    *,
+    token: str,
+    challenges: List[ChallengeName],
+    data: SubmitDataDict,
+    impersonate: Optional[UserID] = None,
+) -> Submit2ResponseDict:
     if not isinstance(challenges, list):
-        msg = "Expected a list of strings, got %s" % challenges
-        raise ValueError(msg)
+        msg = "Expected a list of strings"
+        raise ZValueError(msg, challenges=challenges)
     endpoint = Endpoints.components
     method = "POST"
     data = {"challenges": challenges, "parameters": data}
@@ -125,7 +237,7 @@ def dtserver_submit2(
 
 
 def dtserver_get_info(token, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
-    endpoint = Endpoints.submission_single + "/%s" % submission_id
+    endpoint = Endpoints.submission_single + f"/{submission_id}"
     method = "GET"
     data = {}
     add_version_info(data)
