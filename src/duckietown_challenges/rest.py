@@ -8,7 +8,9 @@ import termcolor
 
 from . import dclogger
 from .challenges_constants import ChallengesConstants
+from .constants import HEADER_MESSAGING_TOKEN
 from .utils import indent
+from six.moves import urllib
 
 
 class Storage:
@@ -60,7 +62,12 @@ class RequestFailed(RequestException):
 
 
 def make_server_request(
-    token, endpoint, data=None, method: str = "GET", timeout: int = None, suppress_user_msg: bool = False,
+    token: str,
+    endpoint: str,
+    data=None,
+    method: str = "GET",
+    timeout: int = None,
+    suppress_user_msg: bool = False,
 ):
     """
         Raise RequestFailed or ConnectionError.
@@ -70,8 +77,6 @@ def make_server_request(
     if timeout is None:
         timeout = ChallengesConstants.DEFAULT_TIMEOUT
 
-    from six.moves import urllib
-
     # import urllib.request
 
     server = get_duckietown_server_url()
@@ -79,7 +84,7 @@ def make_server_request(
     # dclogger.debug(url=url)
     headers = {}
     if token is not None:
-        headers["X-Messaging-Token"] = token
+        headers[HEADER_MESSAGING_TOKEN] = token
 
     if data is not None:
         data = json.dumps(data)
@@ -143,7 +148,7 @@ def make_server_request(
             msg += f"\n\n{received_msg}"
             raise NotFound(msg) from None
 
-        msg = "Operation failed for %s: %s" % (url, e)
+        msg = f"Operation failed for {url}: {e}"
         msg += f"\n\n{err_msg}"
         raise ConnectionError(msg) from e
     except urllib.error.URLError as e:

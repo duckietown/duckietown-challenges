@@ -36,6 +36,8 @@ CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, "descriptio
 
 ENV_CHALLENGE_NAME = "challenge_name"
 ENV_CHALLENGE_STEP_NAME = "challenge_step_name"
+HEADER_MESSAGING_TOKEN = "X-Messaging-Token"
+HEADER_IMPERSONATE = "X-Impersonate"
 
 #
 # class ChallengeResultsStatus(object):
