@@ -377,6 +377,7 @@ class WorkSubmissionResultDict(TypedDict):
     protocol: str
     aws_config: Optional[AWSConfig]
     steps2artefacts: Dict[StepName, Dict[RPath, ArtefactDict]]
+    steps2scores: Dict[StepName, Dict[str, object]]
 
     timeout: float
 
