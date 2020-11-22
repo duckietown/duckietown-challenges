@@ -56,11 +56,11 @@ DTSERVER_ENV = "DTSERVER"
 DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
 
 
-class Storage(object):
+class Storage:
     done = False
 
 
-def get_duckietown_server_url():
+def get_duckietown_server_url() -> str:
     if DTSERVER_ENV in os.environ:
         use = os.environ[DTSERVER_ENV]
         if not Storage.done:

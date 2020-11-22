@@ -323,6 +323,7 @@ class AWSConfig(TypedDict):
     aws_access_key_id: str
     aws_secret_access_key: str
     path_by_value: str
+    path: str
 
 
 class S3ObjectDict(TypedDict):

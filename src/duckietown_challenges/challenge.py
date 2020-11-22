@@ -703,7 +703,7 @@ class ChallengeDescription:
     protocol: str
     date_open: datetime
     date_close: datetime
-    steps: Dict[str, ChallengeStep]
+    steps: Dict[StepName, ChallengeStep]
     transitions: List[List[str]]  # 3 elements each
 
     scoring: Scoring
