@@ -873,7 +873,7 @@ class SubmissionDescription:
     challenge_names: Optional[List[str]]
     protocols: List[str]
     user_label: Optional[str]
-    user_metadata: dict
+    user_metadata: Dict[str, object]
     description: Optional[str]
 
     def __post_init_(self):

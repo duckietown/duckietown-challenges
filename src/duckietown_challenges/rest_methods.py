@@ -31,7 +31,8 @@ class ChallengeDefineRequestDict(TypedDict):
 
 
 class ChallengeDefineResponseDict(TypedDict):
-    pass
+    challenge_id: ChallengeID
+    steps_updated: Dict[StepName, str]
 
 
 def dtserver_challenge_define(
@@ -76,6 +77,7 @@ class AuthRequestDict(TypedDict):
 
 
 class AuthResponseDict(TypedDict):
+    results: List[dict]
     pass
 
 
@@ -95,7 +97,10 @@ class UserInfoRequestDict(TypedDict):
 
 
 class UserInfoResponseDict(TypedDict):
-    pass
+    uid: int
+    user_login: str
+    profile: str
+    name: str
 
 
 def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None) -> UserInfoResponseDict:
@@ -198,7 +203,8 @@ def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = No
 #
 class SubmitDataDict:
     image: object
-    user_label: str
+    user_label: Optional[str]
+    user_payload: Dict[str, object]
     protocols: List[str]
     retire_same_label: bool
     user_priority: int
@@ -209,8 +215,15 @@ class Submit2RequestDict(TypedDict):
     parameters: SubmitDataDict
 
 
+class ChallengeInfoDict(TypedDict):
+    title: str
+    queue_name: ChallengeName  ## XXX: redundan
+
+
 class SubmissionDict(TypedDict):
-    pass
+    submission_id: SubmissionID
+    existing: bool
+    challenge: ChallengeInfoDict
 
 
 class Submit2ResponseDict(TypedDict):
