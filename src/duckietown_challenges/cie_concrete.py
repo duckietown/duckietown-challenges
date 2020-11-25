@@ -83,7 +83,8 @@ class FS:
             d8n_make_sure_dir_exists(out)
 
             if rf.from_file:
-                shutil.copy(rf.from_file, out)
+                if os.path.realpath(rf.from_file) != os.path.realpath(out):
+                    shutil.copy(rf.from_file, out)
             else:
                 with open(out, "wb") as f:
                     f.write(rf.contents)
