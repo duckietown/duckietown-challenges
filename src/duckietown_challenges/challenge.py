@@ -11,7 +11,7 @@ from zuper_ipce import ipce_from_object, object_from_ipce
 
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
-from .types import ChallengeName, JobStatusString, StepName
+from .types import ChallengeName, JobStatusString, ServiceName, StepName
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
 
 __all__ = [
@@ -42,7 +42,7 @@ __all__ = [
 ]
 
 
-class InvalidChallengeDescription(Exception):
+class InvalidChallengeDescription(ZException):
     pass
 
 
@@ -143,13 +143,13 @@ class ServiceDefinition:
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, d0: ServiceDefinitionDict) -> "ServiceDefinition":
-        image = d0.pop("image", None)
-        environment = d0.pop("environment", {})
+        image = d0["image"]
+        environment = d0.get("environment", {})
         if environment is None:
             environment = {}
 
         if "build" in d0:
-            build = d0.pop("build")
+            build = d0.get("build")
             if build is not None:
                 build = Build.from_yaml(build)
         else:
@@ -179,7 +179,7 @@ class ServiceDefinition:
             else:
                 msg = f'The type {type(v).__name__} is not allowed for environment variable "{k}".'
                 raise InvalidConfiguration(msg)
-        ports_ = d0.pop("ports", [])
+        ports_ = d0.get("ports", [])
         ports = []
         for s in ports_:
             if isinstance(s, int):
@@ -248,7 +248,7 @@ class EvaluationParameters:
     """
 
     version: str
-    services: Dict[str, ServiceDefinition]
+    services: Dict[ServiceName, ServiceDefinition]
 
     def __init__(self, version, services):
         self.version = version
@@ -257,9 +257,9 @@ class EvaluationParameters:
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, d: EvaluationParametersDict):
+    def from_yaml(cls, d: EvaluationParametersDict) -> "EvaluationParameters":
 
-        services_ = d.pop("services")
+        services_ = d.get("services")
         if not isinstance(services_, dict):
             msg = "Expected dict"
             raise ZValueError(msg, got=services_)
@@ -268,7 +268,7 @@ class EvaluationParameters:
             msg = "No services described."
             raise ValueError(msg)
 
-        version = d.pop("version", "3")
+        version = d.get("version", "3")
 
         services = {}
         for k, v in services_.items():
@@ -296,16 +296,18 @@ class EvaluationParameters:
         services = dict([(k, v.as_dict()) for k, v in self.services.items()])
         return dict(version=self.version, services=services)
 
-    def equivalent(self, other):
+    def equivalent(self, other: "EvaluationParameters"):
         if set(other.services) != set(self.services):
             msg = "Different set of services."
             raise NotEquivalent(msg)
         for s in other.services:
+            mine = self.services[s]
+            its = other.services[s]
             try:
-                self.services[s].equivalent(other.services[s])
+                mine.equivalent(its)
             except NotEquivalent as e:
-                msg = "Service %r differs:\n\n%s" % (s, indent(e, "  "))
-                raise NotEquivalent(msg)
+                msg = f"Service {s} differs"
+                raise NotEquivalent(msg, mine=mine, its=its) from e
 
 
 @dataclass
@@ -331,7 +333,7 @@ class ChallengeStep:
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, data, name):
+    def from_yaml(cls, data, name) -> "ChallengeStep":
         title = data.pop("title")
         description = data.pop("description")
         evaluation_parameters = EvaluationParameters.from_yaml(data.pop("evaluation_parameters"))
@@ -366,24 +368,14 @@ class Transition:
     second: str
 
 
-class InvalidSteps(Exception):
+class InvalidSteps(ZException):
     pass
 
 
 @dataclass(repr=False)
 class ChallengeTransitions:
-    steps: List[str]
+    steps: List[StepName]
     transitions: List[Transition]
-
-    #
-    # def __init__(self, transitions, steps):
-    #     self.transitions = []
-    #     self.steps = steps
-    #     for first, condition, second in self.transitions:
-    #         assert first == STATE_START or first in self.steps, first
-    #         assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in self.steps, second
-    #         assert condition in ALLOWED_CONDITION_TRIGGERS, condition
-    #         self.transitions.append(Transition(first, condition, second))
 
     def as_list(self):
         res = []
@@ -447,6 +439,7 @@ class ChallengeTransitions:
         # dclogger.info('Received status = %s' % status)
         assert isinstance(status, dict)
         assert STATE_START in status
+        # noinspection PyTypeChecker
         assert status[STATE_START] == CS.STATUS_JOB_SUCCESS
         status = dict(**status)
         for k, ks in list(status.items()):
@@ -526,7 +519,7 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
     return steps
 
 
-def from_steps_transitions(steps: List[str], transitions_str: List[List[str]]) -> ChallengeTransitions:
+def from_steps_transitions(steps: List[StepName], transitions_str: List[List[str]]) -> ChallengeTransitions:
     transitions = []
     for first, condition, second in transitions_str:
         assert first == STATE_START or first in steps, first
@@ -560,14 +553,14 @@ class Score:
 
     def __post_init__(self):
         if self.order not in Score.ALLOWED:
-            msg = "Invalid value %s" % self.order
-            raise ValueError(msg)
+            msg = "Invalid value"
+            raise ZValueError(msg, order=self.order, allowed=Score.ALLOWED)
 
         if self.discretization is not None:
             discretization = float(self.discretization)
             if discretization <= 0:
-                msg = "Need a strictly positive discretization: %s" % discretization
-                raise ValueError(msg)
+                msg = "Need a strictly positive discretization"
+                raise ZValueError(msg, discretization=discretization)
 
     def __repr__(self):
         return nice_repr(self)
