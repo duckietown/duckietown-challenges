@@ -1,10 +1,14 @@
 # coding=utf-8
-__version__ = "7.0.0"
+__version__ = "6.2.0"
 
 from zuper_commons.logs import ZLogger
 
 dclogger = logger = ZLogger(__name__)
-logger.debug(f"duckietown_challenges version: {__version__}")
+import os
+
+path = os.path.dirname(os.path.dirname(__file__))
+
+logger.debug(f"duckietown_challenges version {__version__} path {path}")
 
 from .types import *
 from .rest import *
