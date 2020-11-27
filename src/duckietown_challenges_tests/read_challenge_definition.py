@@ -100,12 +100,12 @@ transitions:
 
 @comptest
 def read_challenge_1():
-    d = yaml.load(data)
+    d = yaml.load(data, Loader=yaml.Loader)
 
     c0: ChallengeDescription = ChallengeDescription.from_yaml(d)
 
     y = c0.as_yaml()
-    d2 = yaml.load(y)
+    d2 = yaml.load(y, Loader=yaml.Loader)
     print(y)
     c: ChallengeDescription = ChallengeDescription.from_yaml(d2)
 
