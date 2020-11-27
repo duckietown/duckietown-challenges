@@ -639,7 +639,7 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
 
 @contextmanager
 def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvaluator]:
-    dclogger.info("Environment variables:\n\n" + json.dumps(dict(os.environ), indent=2))
+    dclogger.info("Environment variables", environment=dict(os.environ))
 
     from .col_logging import setup_logging_color
 

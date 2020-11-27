@@ -35,6 +35,8 @@ CHALLENGE_EVALUATION_DIR = "challenge-evaluation"
 CHALLENGE_DESCRIPTION_YAML = os.path.join(CHALLENGE_DESCRIPTION_DIR, "description.yaml")
 
 ENV_CHALLENGE_NAME = "challenge_name"
+ENV_SUBMISSION_ID = "submission_id"
+ENV_SUBMITTER_NAME = "submitter_name"
 ENV_CHALLENGE_STEP_NAME = "challenge_step_name"
 HEADER_MESSAGING_TOKEN = "X-Messaging-Token"
 HEADER_IMPERSONATE = "X-Impersonate"

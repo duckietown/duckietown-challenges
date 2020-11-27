@@ -395,6 +395,8 @@ class WorkSubmissionResultDict(TypedDict):
 
     timeout: float
 
+    submitter_name: str
+
 
 def dtserver_work_submission(
     token: str,
