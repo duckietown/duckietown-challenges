@@ -130,11 +130,11 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         # raise_wrapped(InvalidConfiguration, e, msg, compact=False)
         raise InvalidConfiguration(msg) from e
-
-    if data2:
-        msg = "Unused fields %s " % list(data2)
-        msg += "\n\n" + indent(write(data), "  > ")
-        raise InvalidConfiguration(msg)
+    #
+    # if data2:
+    #     msg = "Unused fields %s " % list(data2)
+    #     msg += "\n\n" + indent(write(data), "  > ")
+    #     raise InvalidConfiguration(msg)
 
     return res
 
