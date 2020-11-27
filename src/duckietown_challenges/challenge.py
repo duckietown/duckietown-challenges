@@ -509,7 +509,7 @@ class ChallengeTransitions:
         return complete, outcome, to_activate
 
 
-def steps_from_transitions(transitions: List[List[str]]) -> List[str]:
+def steps_from_transitions(transitions: List[List[str]]) -> List[StepName]:
     steps = []
     for first, _, second in transitions:
         if first not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
