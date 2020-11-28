@@ -148,20 +148,17 @@ class ServiceDefinition:
         if environment is None:
             environment = {}
 
-        if "build" in d0:
-            build = d0.get("build")
-            if build is not None:
-                build = Build.from_yaml(build)
-        else:
-            build = None
+        build = d0.get("build", None)
+        if build is not None:
+            build = Build.from_yaml(build)
 
         if build and image:
             msg = 'Cannot specify both "build" and "image".'
             raise ValueError(msg)
 
-        image_digest = d0.pop("image_digest", None)
-        if image_digest:
-            image = f"{image}@{image_digest}"
+        # image_digest = d0.get("image_digest", None)
+        # if image_digest:
+        #     image = f"{image}@{image_digest}"
 
         for k, v in list(environment.items()):
             if "-" in k:
