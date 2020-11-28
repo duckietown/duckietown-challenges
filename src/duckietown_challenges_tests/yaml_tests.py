@@ -1,4 +1,4 @@
-from comptests import comptest, run_module_tests
+from comptests import run_module_tests
 
 # from duckietown_challenges.yaml_utils import interpret_yaml_string
 #

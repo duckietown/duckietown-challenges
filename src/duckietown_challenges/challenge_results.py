@@ -3,8 +3,9 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional
 
-from . import dclogger
-from .challenges_constants import ChallengesConstants, JobStatusString
+from . import logger
+from .types import JobStatusString
+from .challenges_constants import ChallengesConstants
 from .constants import CHALLENGE_RESULTS_YAML, DEFAULT_ROOT
 from .utils import wrap_config_reader2
 from .yaml_utils import read_yaml_file, write_yaml
@@ -76,7 +77,7 @@ def declare_challenge_results(root: Optional[str], cr: ChallengeResults):
     fn = os.path.join(root, CHALLENGE_RESULTS_YAML)
     write_yaml(data, fn)
     msg = f"Just wrote the challenge result to {fn}"
-    dclogger.info(msg, data=data)
+    logger.info(msg, data=data)
 
 
 class NoResultsFound(Exception):

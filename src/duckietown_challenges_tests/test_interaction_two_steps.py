@@ -36,6 +36,7 @@ def step1_solution(root1):
 
 
 def run_interaction_two_steps(step1_name, S1, E1, step2_name, S2, E2):
+    _ = S1, E1  # XXX
     root1 = tempfile.mkdtemp()
     os.makedirs(os.path.join(root1, CHALLENGE_PREVIOUS_STEPS_DIR))
     print("Root: %s" % root1)

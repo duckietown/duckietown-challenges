@@ -363,9 +363,9 @@ def nice_repr(x):
 # Transition = namedtuple("Transition", "first condition second")
 @dataclass
 class Transition:
-    first: str
+    first: StepName
     condition: str
-    second: str
+    second: StepName
 
 
 class InvalidSteps(ZException):
@@ -414,7 +414,7 @@ class ChallengeTransitions:
             G.add_edge(t.first, t.second)
         return G
 
-    def get_precs(self, x: str) -> List[str]:
+    def get_precs(self, x: StepName) -> List[StepName]:
         G = self.get_graph()
         res = list(ancestors(G, x))
         # print('precs of %s: %s' % (x, res))
@@ -436,7 +436,7 @@ class ChallengeTransitions:
 
         """
         CS = ChallengesConstants
-        # dclogger.info('Received status = %s' % status)
+        # logger.info('Received status = %s' % status)
         assert isinstance(status, dict)
         assert STATE_START in status
         # noinspection PyTypeChecker
@@ -445,12 +445,12 @@ class ChallengeTransitions:
         for k, ks in list(status.items()):
             if k != STATE_START and k not in self.steps:
                 # msg = "Ignoring invalid step %s -> %s" % (k, ks)
-                # dclogger.error(msg)
+                # logger.error(msg)
                 status.pop(k)
 
             if ks not in ChallengesConstants.ALLOWED_JOB_STATUS:
                 # msg = f"Ignoring invalid step {k} -> {ks!r}"
-                # dclogger.error(msg)
+                # logger.error(msg)
                 status.pop(k)
 
             # timeout or aborted or host error = like it never happened
@@ -464,14 +464,14 @@ class ChallengeTransitions:
 
         # make sure that the steps in which they depend are ok
 
-        def predecessors_success(_: str) -> bool:
+        def predecessors_success(_: StepName) -> bool:
             precs = self.get_precs(_)
             its_age = step2age.get(_, -1) if step2age else 0
             for k2 in precs:
                 pred_age = step2age.get(k2, -1) if step2age else 0
-                # dclogger.debug('%s %s %s %s' % (_, its_age, k2, pred_age))
+                # logger.debug('%s %s %s %s' % (_, its_age, k2, pred_age))
                 if pred_age > its_age:
-                    # dclogger.debug('Its depedency is younger')
+                    # logger.debug('Its depedency is younger')
                     return False
                 if k2 not in status or status[k2] != CS.STATUS_JOB_SUCCESS:
                     return False
@@ -481,7 +481,7 @@ class ChallengeTransitions:
         outcomes = set()
         for t in self.transitions:
             if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
-                # dclogger.debug('Transition %s is activated' % str(t))
+                # logger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_JOB_ABORTED]
                 if (
@@ -489,11 +489,11 @@ class ChallengeTransitions:
                     and status[t.second] not in like_it_does_not_exist
                     and predecessors_success(t.second)
                 ):
-                    # dclogger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
+                    # logger.debug('Second %s already activated (and in %s)' % (t.second, status[t.second]))
                     pass
                 else:
                     if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                        # dclogger.debug('Finishing here')
+                        # logger.debug('Finishing here')
                         outcomes.add(t.second.lower())
                         # return True, t.second.lower(), []
                     else:
@@ -505,7 +505,7 @@ class ChallengeTransitions:
             complete = False
             outcome = None
 
-        # dclogger.debug('Incomplete; need to do: %s' % to_activate)
+        # logger.debug('Incomplete; need to do: %s' % to_activate)
         return complete, outcome, to_activate
 
 
@@ -711,7 +711,7 @@ class ChallengeDescription:
 
         # check_isinstance(self.date_open, datetime)
         # check_isinstance(self.date_close, datetime)
-        # dclogger.info(f'received {self.date_open.tzinfo} {id(self.date_open)}   {self.date_close.tzinfo}'
+        # logger.info(f'received {self.date_open.tzinfo} {id(self.date_open)}   {self.date_close.tzinfo}'
         #               f' {id(self.date_close)}  ')
         if self.date_open.tzinfo is None:
             raise ValueError(self.date_open)
@@ -802,6 +802,7 @@ class ChallengeDescription:
         data["transitions"] = []
         for t in self.ct.transitions:
             tt = [t.first, t.condition, t.second]
+            # noinspection PyTypeChecker
             data["transitions"].append(tt)
         steps = {}
         for k, v in self.steps.items():

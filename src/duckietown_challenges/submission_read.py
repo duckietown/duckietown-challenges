@@ -1,9 +1,14 @@
-from .yaml_utils import read_yaml_file
-from .challenge import SubmissionDescription
 import os
 
+from zuper_commons.types import ZException
 
-class CouldNotReadSubInfo(Exception):
+from .challenge import SubmissionDescription
+from .yaml_utils import read_yaml_file
+
+__all__ = ["CouldNotReadSubInfo", "read_submission_info"]
+
+
+class CouldNotReadSubInfo(ZException):
     pass
 
 

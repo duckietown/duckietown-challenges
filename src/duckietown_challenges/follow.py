@@ -15,7 +15,7 @@ from .types import SubmissionID
 __all__ = ["follow_submission"]
 
 
-def follow_submission(shell, token: str, submission_id: SubmissionID):
+def follow_submission(token: str, submission_id: SubmissionID):
     step2job_seen = {}
     step2status_seen = defaultdict(lambda: "")
 
@@ -39,7 +39,7 @@ def follow_submission(shell, token: str, submission_id: SubmissionID):
         else:
 
             complete = status_details["complete"]
-            result = status_details["result"]
+            # result = status_details["result"]
             step2status = status_details["step2status"]
             step2status.pop("START", None)
 
@@ -48,13 +48,13 @@ def follow_submission(shell, token: str, submission_id: SubmissionID):
                 if k not in step2job_seen or step2job_seen[k] != v:
                     step2job_seen[k] = v
 
-                    write_status_line('Job "%s" created for step %s' % (v, k))
+                    write_status_line(f'Job "{v}" created for step {k}')
 
             for k, v in step2status.items():
                 if k not in step2status_seen or step2status_seen[k] != v:
                     step2status_seen[k] = v
 
-                    write_status_line('Step "%s" is in state %s' % (k, v))
+                    write_status_line(f'Step "{k}" is in state {v}')
 
             next_steps = status_details["next_steps"]
 
@@ -69,15 +69,15 @@ def follow_submission(shell, token: str, submission_id: SubmissionID):
             else:
                 cs.append("please wait")
 
-            cs.append("status: %s" % color_status(status_details["result"]))
+            cs.append(f"status: {color_status(status_details['result'])}")
 
             if step2status:
 
                 for step_name, step_state in step2status.items():
-                    cs.append("%s: %s" % (step_name, color_status(step_state)))
+                    cs.append(f"{step_name}: {color_status(step_state)}")
 
             if next_steps:
-                cs.append("  In queue: %s" % " ".join(map(str, next_steps)))
+                cs.append(f"  In queue: {' '.join(map(str, next_steps))}")
 
             s = "  ".join(cs)
             write_status_line(s)

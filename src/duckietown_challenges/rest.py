@@ -5,12 +5,15 @@ import socket
 from json import JSONDecodeError
 
 import termcolor
+from six.moves import urllib
+from zuper_commons.types import ZException
 
-from . import dclogger
+from . import logger
 from .challenges_constants import ChallengesConstants
 from .constants import HEADER_MESSAGING_TOKEN
-from .utils import indent
-from six.moves import urllib
+
+
+# from .utils import indent
 
 
 class Storage:
@@ -25,14 +28,14 @@ def get_duckietown_server_url():
         if not Storage.done:
             if use != default:
                 msg = f"Using server {use} instead of default {default}"
-                dclogger.info(msg)
+                logger.info(msg)
             Storage.done = True
         return use
     else:
         return default
 
 
-class RequestException(Exception):
+class RequestException(ZException):
     pass
 
 
@@ -40,7 +43,7 @@ class ServerIsDown(RequestException):
     pass
 
 
-class ConnectionError(RequestException):
+class ServerConnectionError(RequestException):
     """ The server could not be reached or completed request or
         provided an invalid or not well-formatted answer. """
 
@@ -70,7 +73,7 @@ def make_server_request(
     suppress_user_msg: bool = False,
 ):
     """
-        Raise RequestFailed or ConnectionError.
+        Raise RequestFailed or ServerConnectionError.
 
         Returns the result in 'result'.
     """
@@ -81,7 +84,7 @@ def make_server_request(
 
     server = get_duckietown_server_url()
     url = server + endpoint
-    # dclogger.debug(url=url)
+    # logger.debug(url=url)
     headers = {}
     if token is not None:
         headers[HEADER_MESSAGING_TOKEN] = token
@@ -125,13 +128,13 @@ def make_server_request(
                 raise NotFound(msg) from None
 
             msg = f"Cannot read answer from server {url}"
-            msg += "\n\n" + indent(err_msg, "  > ")
-            raise ConnectionError(msg) from e
+            # msg += "\n\n" + indent(err_msg, "  > ")
+            raise ServerConnectionError(msg, err_msg=err_msg) from e
 
         except (ValueError, KeyError) as e:
             msg = "Cannot read answer from server."
-            msg += "\n\n" + indent(err_msg, "  > ")
-            raise ConnectionError(msg) from e
+            # msg += "\n\n" + indent(err_msg, "  > ")
+            raise ServerConnectionError(msg, err_msg=err_msg) from e
 
         if e.code == 400:
             msg = "Invalid request to server."
@@ -150,16 +153,16 @@ def make_server_request(
 
         msg = f"Operation failed for {url}: {e}"
         msg += f"\n\n{err_msg}"
-        raise ConnectionError(msg) from e
+        raise ServerConnectionError(msg) from e
     except urllib.error.URLError as e:
         if "61" in str(e.reason):
             msg = f"Server is temporarily down; cannot open url {url}"
             raise ServerIsDown(msg) from None
         msg = f"Cannot connect to server {url}:\n{e}"
-        raise ConnectionError(msg) from e
+        raise ServerConnectionError(msg) from e
     except socket.timeout:
         msg = "Timeout while connecting to server. This is either the server's fault or your fault"
-        raise ConnectionError(msg) from None
+        raise ServerConnectionError(msg) from None
 
     # delta = time.time() - t0
     # dtslogger.info('server request took %.1f seconds' % delta)
@@ -169,13 +172,13 @@ def make_server_request(
         result = json.loads(data_s)
     except ValueError as e:
         msg = "Cannot read answer from server."
-        msg += "\n\n" + indent(data_s, "  > ")
-        raise ConnectionError(msg) from e
+        # msg += "\n\n" + indent(data_s, "  > ")
+        raise ServerConnectionError(msg, data_s=data_s) from e
 
     if not isinstance(result, dict) or "ok" not in result:
         msg = 'Server provided invalid JSON response. Expected a dict with "ok" in it.'
-        msg += "\n\n" + indent(data, "  > ")
-        raise ConnectionError(msg)
+        # msg += "\n\n" + indent(str(data), "  > ")
+        raise ServerConnectionError(msg, data=data)
 
     if "user_msg" in result and not suppress_user_msg:
         user_msg = result["user_msg"]
@@ -196,8 +199,8 @@ def make_server_request(
     if result["ok"]:
         if "result" not in result:
             msg = 'Server provided invalid JSON response. Expected a field "result".'
-            msg += "\n\n" + indent(result, "  > ")
-            raise ConnectionError(msg)
+            # msg += "\n\n" + indent(result, "  > ")
+            raise ServerConnectionError(msg, result=result)
         return result["result"]
     else:
         msg = result.get("msg", f"no error message in {result} ")

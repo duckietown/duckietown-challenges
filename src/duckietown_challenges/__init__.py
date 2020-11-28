@@ -3,7 +3,7 @@ __version__ = "6.2.6"
 
 from zuper_commons.logs import ZLogger
 
-dclogger = logger = ZLogger(__name__)
+logger = ZLogger(__name__)
 import os
 
 path = os.path.dirname(os.path.dirname(__file__))
@@ -23,3 +23,4 @@ from .challenge_results import *
 from .cie_concrete import *
 from .follow import *
 from .rest_methods import *
+from .submission_read import *

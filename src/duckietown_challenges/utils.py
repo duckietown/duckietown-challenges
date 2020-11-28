@@ -3,11 +3,11 @@ import json
 import math
 import os
 import re
-import yaml
-
-from zuper_commons.types import ZValueError
 
 import decorator
+import yaml
+from zuper_commons.text import indent
+from zuper_commons.types import ZValueError
 
 from . import logger
 from .exceptions import InvalidConfiguration
@@ -104,6 +104,7 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
 
     def write(d: dict):
         assert isinstance(d, dict)
+        # noinspection PyBroadException
         try:
             return json.dumps(d, indent=4)
         except:
@@ -140,7 +141,6 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
 
 
 def safe_yaml_dump(x, **args):
-
     s = yaml.safe_dump(x, encoding="utf-8", indent=4, allow_unicode=True, **args)
     return s
 
@@ -183,25 +183,26 @@ def friendly_size2(b):
     return "%.2f GB" % gbs
 
 
-def indent(s, prefix: str, first=None):
-    s = str(s)
-
-    lines = s.split("\n")
-    if not lines:
-        return ""
-
-    if first is None:
-        first = prefix
-
-    m = max(len(prefix), len(first))
-
-    prefix = " " * (m - len(prefix)) + prefix
-    first = " " * (m - len(first)) + first
-
-    # differnet first prefix
-    res = ["%s%s" % (prefix, line.rstrip()) for line in lines]
-    res[0] = "%s%s" % (first, lines[0].rstrip())
-    return "\n".join(res)
+#
+# def indent(s, prefix: str, first=None):
+#     s = str(s)
+#
+#     lines = s.split("\n")
+#     if not lines:
+#         return ""
+#
+#     if first is None:
+#         first = prefix
+#
+#     m = max(len(prefix), len(first))
+#
+#     prefix = " " * (m - len(prefix)) + prefix
+#     first = " " * (m - len(first)) + first
+#
+#     # differnet first prefix
+#     res = ["%s%s" % (prefix, line.rstrip()) for line in lines]
+#     res[0] = "%s%s" % (first, lines[0].rstrip())
+#     return "\n".join(res)
 
 
 #
@@ -244,20 +245,20 @@ def indent(s, prefix: str, first=None):
 #
 #     return etype(s)
 
-
-def check_isinstance(ob, expected, **kwargs):
-    if not isinstance(ob, expected):
-        kwargs["object"] = ob
-        raise_type_mismatch(ob, expected, **kwargs)
-
-
-def raise_type_mismatch(ob, expected, **kwargs):
-    """ Raises an exception concerning ob having the wrong type. """
-    e = "Object not of expected type:"
-    e += "\n  expected: %s" % str(expected)
-    e += "\n  obtained: %s" % str(type(ob))
-    # e += '\n' + indent(format_obs(kwargs), ' ')
-    raise ValueError(e)
+#
+# def check_isinstance(ob, expected, **kwargs):
+#     if not isinstance(ob, expected):
+#         kwargs["object"] = ob
+#         raise_type_mismatch(ob, expected, **kwargs)
+#
+#
+# def raise_type_mismatch(ob, expected, **kwargs):
+#     """ Raises an exception concerning ob having the wrong type. """
+#     e = "Object not of expected type:"
+#     e += "\n  expected: %s" % str(expected)
+#     e += "\n  obtained: %s" % str(type(ob))
+#     # e += '\n' + indent(format_obs(kwargs), ' ')
+#     raise ValueError(e)
 
 
 def tag_from_date(d):
