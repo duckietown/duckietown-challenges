@@ -143,7 +143,7 @@ class ServiceDefinition:
     @classmethod
     @wrap_config_reader2
     def from_yaml(cls, d0: ServiceDefinitionDict) -> "ServiceDefinition":
-        image = d0["image"]
+        image = d0.get("image", None)
         environment = d0.get("environment", {})
         if environment is None:
             environment = {}
