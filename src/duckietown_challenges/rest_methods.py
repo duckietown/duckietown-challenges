@@ -15,6 +15,11 @@ from .utils import pad_to_screen_length
 Endpoints = ChallengesConstants.Endpoints
 
 
+class VersionInfo(TypedDict):
+    version: str
+    location: str
+
+
 @dataclass
 class RegistryInfo:
     registry: str
@@ -353,8 +358,10 @@ class WorkSubmissionRequestDict(TypedDict):
     machine_id: str
     process_id: str
     evaluator_version: str
-    features: EvaluatorFeaturesDict
+
     reset: bool
+
+    features: EvaluatorFeaturesDict
 
 
 class ContainerLocationDict(TypedDict):
@@ -476,6 +483,9 @@ class HeartbeatRequestDict(TypedDict):
     evaluator_version: str
     uploaded: List[ArtefactDict]
 
+    versions: Dict[str, VersionInfo]
+    features: EvaluatorFeaturesDict
+
 
 class HeartbeatResponseDict(TypedDict):
     abort: bool
@@ -489,19 +499,22 @@ def dtserver_job_heartbeat(
     process_id: str,
     evaluator_version: str,
     uploaded: List[ArtefactDict],
+    features: EvaluatorFeaturesDict,
     impersonate: Optional[UserID] = None,
 ) -> HeartbeatResponseDict:
     endpoint = Endpoints.job_heartbeat
     method = "GET"
     data: HeartbeatRequestDict
     data = {
-        "job_id": job_id,
         "machine_id": machine_id,
         "process_id": process_id,
         "evaluator_version": evaluator_version,
+        "features": features,
+        "versions": get_packages_version(),
+        "job_id": job_id,
         "uploaded": uploaded,
     }
-    add_version_info(data)
+    # add_version_info(data)
     add_impersonate_info(data, impersonate)
     timeout = 10
     return make_server_request(
@@ -550,7 +563,7 @@ def add_version_info(data):
 
 
 # noinspection PyUnresolvedReferences,PyBroadException,PyCompatibility,PyProtectedMember
-def get_packages_version():
+def get_packages_version() -> Dict[str, VersionInfo]:
     try:
         from pip import get_installed_distributions
     except:
