@@ -29,7 +29,7 @@ class ChallengesConstants:
     # JOB_TIMEOUT_MINUTES = 30
     DTSERVER_ENV_NAME = "DTSERVER"
     DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
-    DEFAULT_TIMEOUT = 5
+    DEFAULT_TIMEOUT = 30
 
     class Endpoints:
         challenge_define = "/challenge-define"
