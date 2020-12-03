@@ -71,6 +71,7 @@ def make_server_request(
     method: str = "GET",
     timeout: int = None,
     suppress_user_msg: bool = False,
+    query_string: str = None,
 ):
     """
         Raise RequestFailed or ServerConnectionError.
@@ -97,6 +98,8 @@ def make_server_request(
         data_sent = None
     # t0 = time.time()
     # dtslogger.info('server request with timeout %s' % timeout)
+    if query_string is not None:
+        url += "?" + query_string
     req = urllib.request.Request(url, headers=headers, data=data_sent)
     req.get_method = lambda: method
 

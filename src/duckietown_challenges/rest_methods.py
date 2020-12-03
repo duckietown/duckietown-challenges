@@ -501,6 +501,7 @@ def dtserver_job_heartbeat(
     uploaded: List[ArtefactDict],
     features: EvaluatorFeaturesDict,
     impersonate: Optional[UserID] = None,
+    query_string: str = None,
 ) -> HeartbeatResponseDict:
     endpoint = Endpoints.job_heartbeat
     method = "GET"
@@ -518,7 +519,13 @@ def dtserver_job_heartbeat(
     add_impersonate_info(data, impersonate)
     timeout = 10
     return make_server_request(
-        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
+        query_string=query_string,
     )
 
 
