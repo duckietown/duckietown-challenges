@@ -9,7 +9,17 @@ from zuper_commons.types import ZValueError
 from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
-from .types import ChallengeID, ChallengeName, ChallengeStepID, JobID, RPath, StepName, SubmissionID, UserID
+from .types import (
+    ChallengeID,
+    ChallengeName,
+    ChallengeStepID,
+    ComponentID,
+    JobID,
+    RPath,
+    StepName,
+    SubmissionID,
+    UserID,
+)
 from .utils import pad_to_screen_length
 
 Endpoints = ChallengesConstants.Endpoints
@@ -234,6 +244,12 @@ class SubmissionDict(TypedDict):
 class Submit2ResponseDict(TypedDict):
     component_id: int
     submissions: Dict[ChallengeName, SubmissionDict]
+
+
+class AddSubmissionRequest(TypedDict):
+    component_id: ComponentID
+    challenge_names: List[ChallengeName]
+    user_priority: int
 
 
 def dtserver_submit2(
