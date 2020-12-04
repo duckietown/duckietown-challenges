@@ -15,6 +15,7 @@ from .types import (
     ChallengeStepID,
     ComponentID,
     JobID,
+    JobStatusString,
     RPath,
     StepName,
     SubmissionID,
@@ -299,11 +300,16 @@ def dtserver_reset_job(token: str, job_id: JobID, impersonate: Optional[UserID] 
     return make_server_request(token, endpoint, data=data, method=method)
 
 
+class StatsDict(TypedDict):
+    scores: Dict[str, object]
+    msg: str
+
+
 def dtserver_report_job(
     token: str,
     job_id: JobID,
-    result: str,  # code
-    stats: dict,  # <- data 1
+    result: JobStatusString,  # code
+    stats: StatsDict,  # <- data 1
     machine_id: str,
     process_id: str,
     evaluator_version: str,
@@ -313,12 +319,25 @@ def dtserver_report_job(
     impersonate: Optional[UserID] = None,
 ):
     """
+        result: JobStatusString, one of ChallengesConstants.ALLOWED_JOB_STATUS
+            success, failed, error, aborted, host-error
 
         uploaded: structure returned by upload_files(directory, aws_config)
          which uses S3
 
         ipfs_hashes: the files represented by IPFS
             filename -> IPFS hash
+
+            keep empty
+
+
+        for example :
+            status = 'success'
+            stats = {'msg': 'ok', 'scores': {}}
+
+
+            status = 'failed'
+            stats = {'msg': 'why it failed', 'scores': {}}
     """
     endpoint = Endpoints.take_submission
     method = "POST"
@@ -396,29 +415,51 @@ class ContainerLocationDict(TypedDict):
 
 class WorkSubmissionResultParamsDict(TypedDict):
     image_digest: str
+    """ A hash uniquely defining the submission """
+
     locations: List[ContainerLocationDict]
+    """ one or more locations. Just use first one... """
 
 
 class WorkSubmissionResultDict(TypedDict):
-    step_id: ChallengeStepID
-
-    step_name: StepName
-    submission_id: SubmissionID
-    parameters: WorkSubmissionResultParamsDict
     job_id: JobID
+    """ ONLY important thing to keep, because you need for the report step. """
+
+    step_id: ChallengeStepID
+    """ for internal/book-keeping only """
+    step_name: StepName
+    """ for internal/book-keeping only """
+    submission_id: SubmissionID
+    """ for internal/book-keeping only """
 
     challenge_id: ChallengeID
+    """ for internal/book-keeping only """
     challenge_name: ChallengeName
+    """ for internal/book-keeping only """
+
+    parameters: WorkSubmissionResultParamsDict
+    """ contains the submission's info """
+
     challenge_parameters: EvaluationParametersDict
+    """ Contains the "docker-compose"-like definitions. """
 
     protocol: str
+    """ magic protocol string """
+
     aws_config: Optional[AWSConfig]
+    """ Contains the AWS S3 configuration to upload files. goes straight to upload_files  """
+
     steps2artefacts: Dict[StepName, Dict[RPath, ArtefactDict]]
+    """ if there were previous steps, it contains the output of those steps """
+
     steps2scores: Dict[StepName, Dict[str, object]]
+    """ if there were previous steps, it contains the scores from those steps """
 
     timeout: float
+    """ Timeout for the evaluation process """
 
     submitter_name: str
+    """ nice string with the submitter name """
 
 
 def dtserver_work_submission(
@@ -433,6 +474,28 @@ def dtserver_work_submission(
     impersonate: Optional[UserID] = None,
 ) -> WorkSubmissionResultDict:
     """
+        token: Duckietown token
+
+        submission_id: if None, get any submission. If set, try to get that one.
+        reset: if submission already evaluated, reset the previous jobs.
+
+        features: dictionary of "features - these are well known
+
+        example:
+
+            features:
+                map_aido5_large_loop: 1
+                nduckiebots: 3
+                nduckies: 20
+
+        machine_id, process_id, evaluator_version: identify the identity of the evaluator.
+        machine_id, process_id: free form - valid identifier
+        evaluator_version = duckietown_challenges_runner.__version__
+
+
+        timeout: connection timeout
+        impersonate: ID to impersonate if any
+
 
         Pipeline:
 
@@ -519,6 +582,13 @@ def dtserver_job_heartbeat(
     impersonate: Optional[UserID] = None,
     query_string: str = None,
 ) -> HeartbeatResponseDict:
+    """
+        You just call every 30 seconds.
+
+        Optionally you can already send some uploaded files.
+
+
+    """
     endpoint = Endpoints.job_heartbeat
     method = "GET"
     data: HeartbeatRequestDict

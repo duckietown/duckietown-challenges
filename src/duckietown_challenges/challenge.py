@@ -221,8 +221,11 @@ class ServiceDefinition:
 
 
 class EvaluationParametersDict(TypedDict):
+    """ Extremely similar to docker-compose """
+
     version: str
     services: Dict[str, ServiceDefinitionDict]
+    # "/scenario"
 
 
 @dataclass
