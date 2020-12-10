@@ -647,6 +647,18 @@ def dtserver_get_challenges(
     return r
 
 
+def dtserver_get_job(
+    token: str, job_id: JobID, impersonate: Optional[UserID] = None,
+) -> Dict[int, ChallengeDescription]:
+    endpoint = Endpoints.jobs + f"/{job_id}"
+    method = "GET"
+    data = {}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    res = make_server_request(token, endpoint, data=data, method=method)
+    return res
+
+
 # noinspection PyBroadException
 def add_version_info(data):
     try:

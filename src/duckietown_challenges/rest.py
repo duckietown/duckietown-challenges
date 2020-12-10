@@ -11,16 +11,14 @@ from zuper_commons.types import ZException
 from . import logger
 from .challenges_constants import ChallengesConstants
 from .constants import HEADER_MESSAGING_TOKEN
-
-
-# from .utils import indent
+from .types import RESTResult
 
 
 class Storage:
     done = False
 
 
-def get_duckietown_server_url():
+def get_duckietown_server_url() -> str:
     V = ChallengesConstants.DTSERVER_ENV_NAME
     default = ChallengesConstants.DEFAULT_DTSERVER
     if V in os.environ:
@@ -28,7 +26,7 @@ def get_duckietown_server_url():
         if not Storage.done:
             if use != default:
                 msg = f"Using server {use} instead of default {default}"
-                logger.info(msg)
+                logger.debug(msg)
             Storage.done = True
         return use
     else:
@@ -72,7 +70,7 @@ def make_server_request(
     timeout: int = None,
     suppress_user_msg: bool = False,
     query_string: str = None,
-):
+) -> RESTResult:
     """
         Raise RequestFailed or ServerConnectionError.
 

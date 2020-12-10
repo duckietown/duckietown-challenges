@@ -58,7 +58,7 @@ ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
 @dataclass(repr=False)
 class Build:
     context: str
-    dockerfile: str
+    dockerfile: Optional[str]
     args: Dict[str, Any]
 
     #
@@ -81,7 +81,7 @@ class Build:
         d = dict(**d0)
 
         context = d.pop("context", ".")
-        dockerfile = d.pop("dockerfile", "Dockerfile")
+        dockerfile = d.pop("dockerfile", None)
         args = d.pop("args", {})
 
         if d:

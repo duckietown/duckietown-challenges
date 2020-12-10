@@ -1,5 +1,4 @@
-from typing import NewType
-
+from typing import NewType, TypedDict
 
 RPath = NewType("RPath", str)
 JobStatusString = NewType("JobStatusString", str)
@@ -14,3 +13,10 @@ ChallengeID = NewType("ChallengeID", int)
 ChallengeStepID = NewType("ChallengeStepID", int)
 ServiceName = NewType("ServiceName", str)
 ComponentID = NewType("ComponentID", int)
+
+
+class RESTResult(TypedDict, total=False):
+    result: object
+    ok: bool
+    user_msg: str
+    total: int  # if present, how much more data
