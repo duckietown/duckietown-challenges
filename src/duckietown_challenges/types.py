@@ -19,4 +19,5 @@ class RESTResult(TypedDict, total=False):
     result: object
     ok: bool
     user_msg: str
+    msg: str
     total: int  # if present, how much more data
