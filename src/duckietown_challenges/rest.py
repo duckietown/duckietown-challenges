@@ -3,15 +3,15 @@ import json
 import os
 import socket
 from json import JSONDecodeError
+from typing import Any, Union
 
 import termcolor
 from six.moves import urllib
-from zuper_commons.types import ZException
+from zuper_commons.types import ZException, ZTypeError
 
 from . import logger
 from .challenges_constants import ChallengesConstants
 from .constants import HEADER_MESSAGING_TOKEN
-from .types import RESTResult
 
 
 class Storage:
@@ -62,6 +62,9 @@ class RequestFailed(RequestException):
     """
 
 
+from urllib.parse import urlencode
+
+
 def make_server_request(
     token: str,
     endpoint: str,
@@ -69,8 +72,8 @@ def make_server_request(
     method: str = "GET",
     timeout: int = None,
     suppress_user_msg: bool = False,
-    query_string: str = None,
-) -> RESTResult:
+    query_string: Union[str, dict] = None,
+) -> Any:
     """
         Raise RequestFailed or ServerConnectionError.
 
@@ -97,7 +100,13 @@ def make_server_request(
     # t0 = time.time()
     # dtslogger.info('server request with timeout %s' % timeout)
     if query_string is not None:
-        url += "?" + query_string
+        if isinstance(query_string, str):
+            url += "?" + query_string
+        elif isinstance(query_string, dict):
+            qs = urlencode(query_string)
+            url += "?" + qs
+        else:
+            raise ZTypeError(query_string=query_string)
     req = urllib.request.Request(url, headers=headers, data=data_sent)
     req.get_method = lambda: method
 

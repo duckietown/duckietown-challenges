@@ -130,15 +130,6 @@ def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None) -> 
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-#
-# def dtserver_submit(token, queue, data):
-#     endpoint = Endpoints.submissions
-#     method = 'POST'
-#     data = {'queue': queue, 'parameters': data}
-#     add_version_info(data)
-#     return make_server_request(token, endpoint, data=data, method=method)
-
-
 class RetireRequestDict(TypedDict):
     submission_id: SubmissionID
 
@@ -201,6 +192,58 @@ def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = No
     add_impersonate_info(data, impersonate)
 
     submissions = make_server_request(token, endpoint, data=data, method=method)
+    # submissions = cast(GetUserSubmissionResponseDict, submissions)
+    for v in submissions.values():
+        for k in ["date_submitted", "last_status_change"]:
+            v[k] = dateutil.parser.parse(v[k])
+    return submissions
+
+
+class SubmissionDict(TypedDict):
+    submission_id: SubmissionID
+    complete: bool
+    status: str
+    challenge_id: int
+    challenge_name: str
+    challenge_is_open: int
+    user_label: str
+    user_metadata: str
+
+
+# dict[11]
+#       │ │ submission_id: 12746
+#       │ │ complete: True
+#       │ │ status: success
+#       │ │ date_submitted: 2020-12-04 12:18:45
+#       │ │ last_status_change: 2020-12-04 13:24:34
+#       │ │ parameters: {hash: sha256:e985e65204be87ca534d06cf6eba77143089db4b422bdeccc318577ffa0e6355}
+#       │ │ challenge_id: 87
+#       │ │ challenge_name: aido5-LF-sim-validation
+#       │ │ challenge_is_open: 0
+#       │ │ user_label: JetBrains Research
+#       │ │ user_metadata: {}
+
+
+def dtserver_get_submissions(
+    token: str,
+    challenge_name: Optional[ChallengeName],
+    user_id: Optional[UserID],
+    impersonate: Optional[UserID] = None,
+):
+    """ Returns a dictionary with information about the submissions """
+    endpoint = Endpoints.submissions
+    method = "GET"
+    data: GetUserSubmissionRequestDict
+    data = {}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    query_string = {}
+    if challenge_name is not None:
+        query_string["challenge_name"] = challenge_name
+    if user_id is not None:
+        query_string["user_id"] = user_id
+
+    submissions = make_server_request(token, endpoint, data=data, method=method, query_string=query_string)
     # submissions = cast(GetUserSubmissionResponseDict, submissions)
     for v in submissions.values():
         for k in ["date_submitted", "last_status_change"]:
@@ -647,9 +690,17 @@ def dtserver_get_challenges(
     return r
 
 
-def dtserver_get_job(
-    token: str, job_id: JobID, impersonate: Optional[UserID] = None,
-) -> Dict[int, ChallengeDescription]:
+class JobInfoDict(TypedDict):
+    challenge_name: ChallengeName
+    job_id: int
+    step_id: int
+    status: str
+    uptodate: int
+    artefacts: Dict[RPath, ArtefactDict]
+    why: Optional[str]
+
+
+def dtserver_get_job(token: str, job_id: JobID, impersonate: Optional[UserID] = None,) -> JobInfoDict:
     endpoint = Endpoints.jobs + f"/{job_id}"
     method = "GET"
     data = {}
