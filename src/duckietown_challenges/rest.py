@@ -114,6 +114,7 @@ def make_server_request(
         endpoint=endpoint,
         method=method,
         # data_sent=data,
+        url=url,
         timeout=timeout,
     )
     try:
@@ -125,55 +126,48 @@ def make_server_request(
 
     except urllib.error.HTTPError as e:
         err_msg = e.read().decode("utf-8")
+        context["headers"] = dict(e.headers)
+        context["http_code"] = code = e.getcode()
 
-        # XXX: temporary solution with new interface
-        try:
-            result = json.loads(err_msg)
-            received_msg = result.get("msg", None)
-        except JSONDecodeError:
+        if not err_msg:
+            received_msg = "(empty received msg)"
+        else:
+            try:
+                result = json.loads(err_msg)
+                received_msg = result.get("msg", None)
+            except JSONDecodeError as json_e:
+                received_msg = f"! (Cannot decode answer from server: {json_e})\n\n{err_msg}"
 
-            if e.code == 401:
-                msg = "Not authorized to perform operation."
-                msg += f"\n\n{err_msg}"
-                raise NotAuthorized(msg, **context) from None
+            except (ValueError, KeyError) as json_e:
+                received_msg = f"! (Cannot read answer from server: {json_e})\n\n{err_msg}"
+                # msg += "\n\n" + indent(err_msg, "  > ")
+                # raise ServerConnectionError(msg, err_msg=err_msg, **context) from e
 
-            if e.code == 404:
-                msg = "Cannot find the specified object"
-                msg += f"\n\n{err_msg}"
-                raise NotFound(msg, **context) from None
-
-            if e.code == 502:
-                msg = "502: The server is currently offline"
-                msg += f"\n\n{err_msg}"
-                raise NotFound(msg, **context) from None
-
-            msg = f"Cannot read answer from server {url}"
-            # msg += "\n\n" + indent(err_msg, "  > ")
-            raise ServerConnectionError(msg, err_msg=err_msg, **context) from e
-
-        except (ValueError, KeyError) as e:
-            msg = "Cannot read answer from server."
-            # msg += "\n\n" + indent(err_msg, "  > ")
-            raise ServerConnectionError(msg, err_msg=err_msg, **context) from e
-
-        if e.code == 400:
+        if code == 400:
             msg = "Invalid request to server."
             msg += f"\n\n{received_msg}"
             raise RequestFailed(msg, **context) from None
 
-        if e.code == 401:
+        if code == 401:
             msg = "Not authorized to perform operation."
             msg += f"\n\n{received_msg}"
             raise NotAuthorized(msg, **context) from None
 
-        if e.code == 404:
-            msg = "Cannot find the specified object"
+        if code == 404:
+            msg = "Cannot find the specified resource."
             msg += f"\n\n{received_msg}"
             raise NotFound(msg, **context) from None
 
+        if code == 502:
+            msg = "502: The server is currently offline."
+            msg += f"\n\n{received_msg}"
+            raise ServerIsDown(msg, **context) from None
+
+        # XXX: temporary solution with new interface
+
         msg = f"Operation failed for {url}: {e}"
         msg += f"\n\n{err_msg}"
-        raise ServerConnectionError(msg) from e
+        raise ServerConnectionError(msg, **context) from e
     except urllib.error.URLError as e:
         if "61" in str(e.reason):
             msg = f"Server is temporarily down; cannot open url {url}"
@@ -184,6 +178,8 @@ def make_server_request(
         msg = "Timeout while connecting to server. This is either the server's fault or your fault,"
         raise ServerConnectionError(msg, **context) from None
 
+    context["headers"] = dict(res.headers)
+    context["http_code"] = res.code
     # delta = time.time() - t0
     # dtslogger.info('server request took %.1f seconds' % delta)
 
@@ -193,7 +189,7 @@ def make_server_request(
     except ValueError as e:
         msg = "Cannot read answer from server."
         # msg += "\n\n" + indent(data_s, "  > ")
-        raise ServerConnectionError(msg, data_s=data_s) from e
+        raise ServerConnectionError(msg, data_s=data_s, **context) from e
 
     if not isinstance(result, dict) or "ok" not in result:
         msg = 'Server provided invalid JSON response. Expected a dict with "ok" in it.'
@@ -226,4 +222,4 @@ def make_server_request(
     else:
         msg = result.get("msg", f"no error message in {result} ")
         msg = f"Failed request for {url}:\n{msg}"
-        raise RequestFailed(msg)
+        raise RequestFailed(msg, **context)
