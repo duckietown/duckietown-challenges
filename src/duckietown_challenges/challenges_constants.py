@@ -10,11 +10,31 @@ class ChallengesConstants:
     # status for evaluation jobs
     STATUS_JOB_TIMEOUT: ClassVar[JobStatusString] = cast(JobStatusString, "timeout")
     STATUS_JOB_EVALUATION: ClassVar[JobStatusString] = cast(JobStatusString, "evaluating")
+
+    # evaluator can report one of these 5
     STATUS_JOB_FAILED: ClassVar[JobStatusString] = cast(JobStatusString, "failed")
+    """ The submission failed PERMANENTLY - it crashed, segfault"""
+
     STATUS_JOB_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "error")  # evaluation failed
+    """ The evaluator failed PERMANENTLY - for example, I gave you an incorrect map. """
+
     STATUS_JOB_HOST_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "host-error")
-    STATUS_JOB_SUCCESS: ClassVar[JobStatusString] = cast(JobStatusString, "success")
+    """
+        The environment had a TEMPORARY error - out of memory.
+        The current submission is blacklisted for this evaluator, we will retry on a different evaluator.
+        (you can always "reset" the job)
+    """
+
     STATUS_JOB_ABORTED: ClassVar[JobStatusString] = cast(JobStatusString, "aborted")
+    """
+        The evaluation was aborted - the operator had to go to lunch.
+
+        This evaluation is ignored. Just like it didn't happen.
+
+    """
+
+    STATUS_JOB_SUCCESS: ClassVar[JobStatusString] = cast(JobStatusString, "success")
+    """ All good """
 
     ALLOWED_JOB_STATUS = [
         STATUS_JOB_EVALUATION,
@@ -29,7 +49,7 @@ class ChallengesConstants:
     # JOB_TIMEOUT_MINUTES = 30
     DTSERVER_ENV_NAME = "DTSERVER"
     DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
-    DEFAULT_TIMEOUT = 5
+    DEFAULT_TIMEOUT = 30
 
     class Endpoints:
         challenge_define = "/challenge-define"
@@ -38,6 +58,7 @@ class ChallengesConstants:
         submissions = "/api/submissions"
         components = "/api/components"
         challenges = "/api/challenges"
+        jobs = "/api/jobs"
         take_submission = "/api/take-submission"
         job_heartbeat = "/api/heartbeat"
         auth = "/api/auth"

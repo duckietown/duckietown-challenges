@@ -9,7 +9,18 @@ from zuper_commons.types import ZValueError
 from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
-from .types import ChallengeID, ChallengeName, ChallengeStepID, JobID, RPath, StepName, SubmissionID, UserID
+from .types import (
+    ChallengeID,
+    ChallengeName,
+    ChallengeStepID,
+    ComponentID,
+    JobID,
+    JobStatusString,
+    RPath,
+    StepName,
+    SubmissionID,
+    UserID,
+)
 from .utils import pad_to_screen_length
 
 Endpoints = ChallengesConstants.Endpoints
@@ -119,15 +130,6 @@ def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None) -> 
     return make_server_request(token, endpoint, data=data, method=method)
 
 
-#
-# def dtserver_submit(token, queue, data):
-#     endpoint = Endpoints.submissions
-#     method = 'POST'
-#     data = {'queue': queue, 'parameters': data}
-#     add_version_info(data)
-#     return make_server_request(token, endpoint, data=data, method=method)
-
-
 class RetireRequestDict(TypedDict):
     submission_id: SubmissionID
 
@@ -197,6 +199,58 @@ def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = No
     return submissions
 
 
+class SubmissionDict(TypedDict):
+    submission_id: SubmissionID
+    complete: bool
+    status: str
+    challenge_id: int
+    challenge_name: str
+    challenge_is_open: int
+    user_label: str
+    user_metadata: str
+
+
+# dict[11]
+#       │ │ submission_id: 12746
+#       │ │ complete: True
+#       │ │ status: success
+#       │ │ date_submitted: 2020-12-04 12:18:45
+#       │ │ last_status_change: 2020-12-04 13:24:34
+#       │ │ parameters: {hash: sha256:e985e65204be87ca534d06cf6eba77143089db4b422bdeccc318577ffa0e6355}
+#       │ │ challenge_id: 87
+#       │ │ challenge_name: aido5-LF-sim-validation
+#       │ │ challenge_is_open: 0
+#       │ │ user_label: JetBrains Research
+#       │ │ user_metadata: {}
+
+
+def dtserver_get_submissions(
+    token: str,
+    challenge_name: Optional[ChallengeName],
+    user_id: Optional[UserID],
+    impersonate: Optional[UserID] = None,
+):
+    """ Returns a dictionary with information about the submissions """
+    endpoint = Endpoints.submissions
+    method = "GET"
+    data: GetUserSubmissionRequestDict
+    data = {}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    query_string = {}
+    if challenge_name is not None:
+        query_string["challenge_name"] = challenge_name
+    if user_id is not None:
+        query_string["user_id"] = user_id
+
+    submissions = make_server_request(token, endpoint, data=data, method=method, query_string=query_string)
+    # submissions = cast(GetUserSubmissionResponseDict, submissions)
+    for v in submissions.values():
+        for k in ["date_submitted", "last_status_change"]:
+            v[k] = dateutil.parser.parse(v[k])
+    return submissions
+
+
 # data = {
 #     "image": dataclasses.asdict(br),
 #     "user_label": sub_info.user_label,
@@ -234,6 +288,12 @@ class SubmissionDict(TypedDict):
 class Submit2ResponseDict(TypedDict):
     component_id: int
     submissions: Dict[ChallengeName, SubmissionDict]
+
+
+class AddSubmissionRequest(TypedDict):
+    component_id: ComponentID
+    challenge_names: List[ChallengeName]
+    user_priority: int
 
 
 def dtserver_submit2(
@@ -283,11 +343,16 @@ def dtserver_reset_job(token: str, job_id: JobID, impersonate: Optional[UserID] 
     return make_server_request(token, endpoint, data=data, method=method)
 
 
+class StatsDict(TypedDict):
+    scores: Dict[str, object]
+    msg: str
+
+
 def dtserver_report_job(
     token: str,
     job_id: JobID,
-    result: str,  # code
-    stats: dict,  # <- data 1
+    result: JobStatusString,  # code
+    stats: StatsDict,  # <- data 1
     machine_id: str,
     process_id: str,
     evaluator_version: str,
@@ -297,12 +362,25 @@ def dtserver_report_job(
     impersonate: Optional[UserID] = None,
 ):
     """
+        result: JobStatusString, one of ChallengesConstants.ALLOWED_JOB_STATUS
+            success, failed, error, aborted, host-error
 
         uploaded: structure returned by upload_files(directory, aws_config)
          which uses S3
 
         ipfs_hashes: the files represented by IPFS
             filename -> IPFS hash
+
+            keep empty
+
+
+        for example :
+            status = 'success'
+            stats = {'msg': 'ok', 'scores': {}}
+
+
+            status = 'failed'
+            stats = {'msg': 'why it failed', 'scores': {}}
     """
     endpoint = Endpoints.take_submission
     method = "POST"
@@ -380,29 +458,51 @@ class ContainerLocationDict(TypedDict):
 
 class WorkSubmissionResultParamsDict(TypedDict):
     image_digest: str
+    """ A hash uniquely defining the submission """
+
     locations: List[ContainerLocationDict]
+    """ one or more locations. Just use first one... """
 
 
 class WorkSubmissionResultDict(TypedDict):
-    step_id: ChallengeStepID
-
-    step_name: StepName
-    submission_id: SubmissionID
-    parameters: WorkSubmissionResultParamsDict
     job_id: JobID
+    """ ONLY important thing to keep, because you need for the report step. """
+
+    step_id: ChallengeStepID
+    """ for internal/book-keeping only """
+    step_name: StepName
+    """ for internal/book-keeping only """
+    submission_id: SubmissionID
+    """ for internal/book-keeping only """
 
     challenge_id: ChallengeID
+    """ for internal/book-keeping only """
     challenge_name: ChallengeName
+    """ for internal/book-keeping only """
+
+    parameters: WorkSubmissionResultParamsDict
+    """ contains the submission's info """
+
     challenge_parameters: EvaluationParametersDict
+    """ Contains the "docker-compose"-like definitions. """
 
     protocol: str
+    """ magic protocol string """
+
     aws_config: Optional[AWSConfig]
+    """ Contains the AWS S3 configuration to upload files. goes straight to upload_files  """
+
     steps2artefacts: Dict[StepName, Dict[RPath, ArtefactDict]]
+    """ if there were previous steps, it contains the output of those steps """
+
     steps2scores: Dict[StepName, Dict[str, object]]
+    """ if there were previous steps, it contains the scores from those steps """
 
     timeout: float
+    """ Timeout for the evaluation process """
 
     submitter_name: str
+    """ nice string with the submitter name """
 
 
 def dtserver_work_submission(
@@ -417,6 +517,28 @@ def dtserver_work_submission(
     impersonate: Optional[UserID] = None,
 ) -> WorkSubmissionResultDict:
     """
+        token: Duckietown token
+
+        submission_id: if None, get any submission. If set, try to get that one.
+        reset: if submission already evaluated, reset the previous jobs.
+
+        features: dictionary of "features - these are well known
+
+        example:
+
+            features:
+                map_aido5_large_loop: 1
+                nduckiebots: 3
+                nduckies: 20
+
+        machine_id, process_id, evaluator_version: identify the identity of the evaluator.
+        machine_id, process_id: free form - valid identifier
+        evaluator_version = duckietown_challenges_runner.__version__
+
+
+        timeout: connection timeout
+        impersonate: ID to impersonate if any
+
 
         Pipeline:
 
@@ -501,7 +623,15 @@ def dtserver_job_heartbeat(
     uploaded: List[ArtefactDict],
     features: EvaluatorFeaturesDict,
     impersonate: Optional[UserID] = None,
+    query_string: str = None,
 ) -> HeartbeatResponseDict:
+    """
+        You just call every 30 seconds.
+
+        Optionally you can already send some uploaded files.
+
+
+    """
     endpoint = Endpoints.job_heartbeat
     method = "GET"
     data: HeartbeatRequestDict
@@ -518,7 +648,13 @@ def dtserver_job_heartbeat(
     add_impersonate_info(data, impersonate)
     timeout = 10
     return make_server_request(
-        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
+        query_string=query_string,
     )
 
 
@@ -552,6 +688,26 @@ def dtserver_get_challenges(
         cd = ChallengeDescription.from_yaml(challenge_desc)
         r[challenge_id] = cd
     return r
+
+
+class JobInfoDict(TypedDict):
+    challenge_name: ChallengeName
+    job_id: int
+    step_id: int
+    status: str
+    uptodate: int
+    artefacts: Dict[RPath, ArtefactDict]
+    why: Optional[str]
+
+
+def dtserver_get_job(token: str, job_id: JobID, impersonate: Optional[UserID] = None,) -> JobInfoDict:
+    endpoint = Endpoints.jobs + f"/{job_id}"
+    method = "GET"
+    data = {}
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+    res = make_server_request(token, endpoint, data=data, method=method)
+    return res
 
 
 # noinspection PyBroadException
