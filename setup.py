@@ -29,10 +29,13 @@ install_requires = [
     "oyaml",
     "numpy",
     "six",
-    "future",
     "zuper-commons-z6",
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
+    # f"duckietown-challenges-{line}",
+    "bump2version",
+    f"duckietown-build-utils-{line}",
+    # f"duckietown-docker-utils-{line}",
     "pur",  # not needed for code but for aido
     # f"aido-utils-{line}>=6.0.14",  # not needed for code but for aido
 ]
