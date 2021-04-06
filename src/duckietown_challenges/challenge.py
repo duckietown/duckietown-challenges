@@ -8,6 +8,7 @@ from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
 from zuper_commons.types import ZException, ZNotImplementedError, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
+from zuper_typing import resolve_types
 
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
@@ -376,6 +377,7 @@ class AndCondition:
 
 
 Condition = Union[SimpleCondition, AndCondition]
+resolve_types(AndCondition, refs=(Condition,))
 
 
 def describe(c: Condition) -> str:
