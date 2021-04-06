@@ -1,15 +1,17 @@
 # coding=utf-8
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import date, datetime
-from typing import Any, cast, Dict, Iterator, List, NewType, Optional, Tuple, TypedDict, Union
+from typing import Any, cast, Dict, Iterator, List, NewType, Optional, Tuple, TYPE_CHECKING, TypedDict, Union
 
 import yaml
 from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
 from zuper_commons.types import ZException, ZNotImplementedError, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
-from zuper_typing import resolve_types
+from zuper_typing import dataclass, make_list
 
+if TYPE_CHECKING:
+    from dataclasses import dataclass
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
 from .types import ChallengeName, JobStatusString, ServiceName, StepName
@@ -40,6 +42,9 @@ __all__ = [
     "Scoring_as_dict",
     "steps_from_transitions",
     "Transition",
+    "AndCondition",
+    "SimpleCondition",
+    "Condition",
 ]
 
 
@@ -62,12 +67,6 @@ class Build:
     context: str
     dockerfile: Optional[str]
     args: Dict[str, Any]
-
-    #
-    # def __init__(self, context, dockerfile, args):
-    #     self.context = context
-    #     self.dockerfile = dockerfile
-    #     self.args = args
 
     def __repr__(self):
         return nice_repr(self)
@@ -377,7 +376,7 @@ class AndCondition:
 
 
 Condition = Union[SimpleCondition, AndCondition]
-resolve_types(AndCondition, refs=(Condition,))
+AndCondition.__annotations__["subs"] = List[Condition]
 
 
 def describe(c: Condition) -> str:
@@ -582,8 +581,11 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[StepName]:
     return steps
 
 
+ListCondition = make_list(Condition)
+
+
 def from_steps_transitions(steps: List[StepName], transitions_str: List[List[str]]) -> ChallengeTransitions:
-    transitions = []
+    transitions = make_list(Transition)()
     for first_, condition, second in transitions_str:
         first_states = cast(List[StepName], first_.split(","))
         for _ in first_states:
@@ -594,7 +596,7 @@ def from_steps_transitions(steps: List[StepName], transitions_str: List[List[str
             c = SimpleCondition(first_states[0], condition)
         else:
             subs = [SimpleCondition(_, condition) for _ in first_states]
-            c = AndCondition(subs)
+            c = AndCondition(ListCondition(subs))
         transitions.append(Transition(c, second))
     return ChallengeTransitions(steps, transitions)
 
