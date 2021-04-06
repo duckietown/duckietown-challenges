@@ -1,12 +1,12 @@
 # coding=utf-8
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, cast, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import Any, cast, Dict, Iterator, List, NewType, Optional, Tuple, TypedDict, Union
 
 import yaml
 from dateutil.tz import tzutc
 from networkx import ancestors, DiGraph
-from zuper_commons.types import ZException, ZValueError
+from zuper_commons.types import ZException, ZNotImplementedError, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
 
 from .challenges_constants import ChallengesConstants
@@ -46,13 +46,14 @@ class InvalidChallengeDescription(ZException):
     pass
 
 
+EvalStateString = NewType("EvalStateString", StepName)
 # these are job statuses
-STATE_START = "START"
-STATE_ERROR = "ERROR"
-STATE_SUCCESS = "SUCCESS"
-STATE_FAILED = "FAILED"
+STATE_START = cast(EvalStateString, "START")
+STATE_ERROR = cast(EvalStateString, "ERROR")
+STATE_SUCCESS = cast(EvalStateString, "SUCCESS")
+STATE_FAILED = cast(EvalStateString, "FAILED")
 
-ALLOWED_CONDITION_TRIGGERS = ChallengesConstants.ALLOWED_JOB_STATUS
+ALLOWED_CONDITION_TRIGGERS: List[JobStatusString] = ChallengesConstants.ALLOWED_JOB_STATUS
 
 
 @dataclass(repr=False)
@@ -361,10 +362,53 @@ def nice_repr(x):
 
 
 # Transition = namedtuple("Transition", "first condition second")
+
+
+@dataclass
+class SimpleCondition:
+    step: StepName
+    status: JobStatusString
+
+
+@dataclass
+class AndCondition:
+    subs: "List[Condition]"
+
+
+Condition = Union[SimpleCondition, AndCondition]
+
+
+def describe(c: Condition) -> str:
+    if isinstance(c, SimpleCondition):
+        if c.step == STATE_START and c.status == ChallengesConstants.STATUS_JOB_SUCCESS:
+            return "At the beginning"
+        else:
+            return f"step `{c.step}` has result {c.status}"
+    elif isinstance(c, AndCondition):
+        return " and ".join(f"({describe(sub)})" for sub in c.subs)
+    else:
+        raise ZNotImplementedError(c=c)
+
+
+def get_all_steps_mentioned(c: Condition) -> Iterator[StepName]:
+    if isinstance(c, SimpleCondition):
+        yield c.step
+    elif isinstance(c, AndCondition):
+        for s in c.subs:
+            yield from get_all_steps_mentioned(s)
+    else:
+        raise ZNotImplementedError(c=c)
+
+
+#
+# @dataclass
+# class OrCondition:
+#     subs: "List[Condition]"
+
+
 @dataclass
 class Transition:
-    first: StepName
-    condition: str
+    condition: Condition
     second: StepName
 
 
@@ -380,7 +424,18 @@ class ChallengeTransitions:
     def as_list(self):
         res = []
         for transition in self.transitions:
-            res.append([transition.first, transition.condition, transition.second])
+            if isinstance(transition.condition, SimpleCondition):
+                a = transition.condition.step
+                b = transition.condition.status
+            elif isinstance(transition.condition, AndCondition):
+                st = set(_.status for _ in transition.condition.subs)
+                if len(st) != 1:
+                    raise ZNotImplementedError(transition=transition)
+                a = ",".join(_.step for _ in transition.condition.subs)
+                b = list(st)[0]
+            else:
+                raise ZNotImplementedError(transition=transition)
+            res.append([a, b, transition.second])
         return res
 
     def __repr__(self):
@@ -389,19 +444,15 @@ class ChallengeTransitions:
     def steps_explanation(self):
         ts = []
         for t in self.transitions:
-            if t.first == STATE_START:
+            if t.condition == SimpleCondition(STATE_START, ChallengesConstants.STATUS_JOB_SUCCESS):
                 ts.append(f"At the beginning execute step `{t.second}`.")
             else:
+                condition_s = describe(t.condition)
                 if t.second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-                    ts.append(
-                        f"If step `{t.first}` finishes with status `{t.condition}`, then declare the "
-                        f"submission `{t.second}`."
-                    )
+                    m = f"If {condition_s}, then declare the submission `{t.second}`."
                 else:
-                    ts.append(
-                        f"If step `{t.first}` finishes with status `{t.condition}`, then execute step `"
-                        f"{t.second}`."
-                    )
+                    m = f"If {condition_s}, then execute step `{t.second}`."
+                ts.append(m)
         return ts
 
     def top_ordered(self):
@@ -411,7 +462,8 @@ class ChallengeTransitions:
     def get_graph(self) -> DiGraph:
         G = DiGraph()
         for t in self.transitions:
-            G.add_edge(t.first, t.second)
+            for s in get_all_steps_mentioned(t.condition):
+                G.add_edge(s, t.second)
         return G
 
     def get_precs(self, x: StepName) -> List[StepName]:
@@ -422,7 +474,7 @@ class ChallengeTransitions:
 
     def get_next_steps(
         self, status: Dict[StepName, JobStatusString], step2age=None
-    ) -> Tuple[bool, Optional[str], List[StepName]]:
+    ) -> Tuple[bool, Optional[EvalStateString], List[StepName]]:
         """ status is a dictionary from step name to status.
 
             It contains at the beginning
@@ -430,7 +482,7 @@ class ChallengeTransitions:
                 START: success
 
             Returns:
-                 bool (completE)
+                 bool (complete)
                  optional status:  ['error', 'failed', 'success']
                  a list of steps to activate next
 
@@ -477,10 +529,18 @@ class ChallengeTransitions:
                     return False
             return True
 
+        def is_condition_satisfied(c: Condition):
+            if isinstance(c, SimpleCondition):
+                return c.step in status and status[c.step] == c.status and predecessors_success(c.step)
+            elif isinstance(c, AndCondition):
+                return all(is_condition_satisfied(s) for s in c.subs)
+            else:
+                raise ZNotImplementedError(c=c)
+
         to_activate = cast(List[StepName], [])
         outcomes = set()
         for t in self.transitions:
-            if t.first in status and status[t.first] == t.condition and predecessors_success(t.first):
+            if is_condition_satisfied(t.condition):
                 # logger.debug('Transition %s is activated' % str(t))
 
                 like_it_does_not_exist = [ChallengesConstants.STATUS_JOB_ABORTED]
@@ -513,7 +573,8 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[StepName]:
     steps = []
     for first, _, second in transitions:
         if first not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
-            steps.append(first)
+            firsts = ",".split(first)
+            steps.extend(firsts)
         if second not in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS]:
             steps.append(second)
     return steps
@@ -521,11 +582,18 @@ def steps_from_transitions(transitions: List[List[str]]) -> List[StepName]:
 
 def from_steps_transitions(steps: List[StepName], transitions_str: List[List[str]]) -> ChallengeTransitions:
     transitions = []
-    for first, condition, second in transitions_str:
-        assert first == STATE_START or first in steps, first
+    for first_, condition, second in transitions_str:
+        first_states = cast(List[StepName], first_.split(","))
+        for _ in first_states:
+            assert _ == STATE_START or _ in steps, (_, first_states)
         assert second in [STATE_ERROR, STATE_FAILED, STATE_SUCCESS] or second in steps, (second, steps)
         assert condition in ALLOWED_CONDITION_TRIGGERS, condition
-        transitions.append(Transition(first, condition, second))
+        if len(first_states) == 1:
+            c = SimpleCondition(first_states[0], condition)
+        else:
+            subs = [SimpleCondition(_, condition) for _ in first_states]
+            c = AndCondition(subs)
+        transitions.append(Transition(c, second))
     return ChallengeTransitions(steps, transitions)
 
 
@@ -799,11 +867,8 @@ class ChallengeDescription:
         data["date-open"] = self.date_open.isoformat() if self.date_open else None
         data["date-close"] = self.date_close.isoformat() if self.date_close else None
         # data['roles'] = self.roles
-        data["transitions"] = []
-        for t in self.ct.transitions:
-            tt = [t.first, t.condition, t.second]
-            # noinspection PyTypeChecker
-            data["transitions"].append(tt)
+        data["transitions"] = self.ct.as_list()
+
         steps = {}
         for k, v in self.steps.items():
             steps[k] = v.as_dict()
@@ -819,15 +884,6 @@ class ChallengeDescription:
 
     def __repr__(self):
         return nice_repr(self)
-
-
-#
-# def makesure_timezone(d: Optional[datetime]) -> Optional[datetime]:
-#     if d is None:
-#         return d
-#     else:
-#         secs = time.mktime(d.timetuple())
-#         return time.gmtime(secs)
 
 
 def interpret_date(d: Optional[Union[datetime, date, str]]) -> Optional[datetime]:

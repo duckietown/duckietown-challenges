@@ -1,3 +1,6 @@
+from zuper_commons.logs import ZLogger
+
+logger = ZLogger(__name__)
 from .read_challenge_definition import *
 from .test_interaction import *
 from .test_interaction_two_steps import *

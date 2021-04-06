@@ -1,5 +1,5 @@
 # coding=utf-8
-from typing import cast, ClassVar
+from typing import cast, ClassVar, List
 
 __all__ = ["ChallengesConstants"]
 
@@ -36,7 +36,7 @@ class ChallengesConstants:
     STATUS_JOB_SUCCESS: ClassVar[JobStatusString] = cast(JobStatusString, "success")
     """ All good """
 
-    ALLOWED_JOB_STATUS = [
+    ALLOWED_JOB_STATUS: List[JobStatusString] = [
         STATUS_JOB_EVALUATION,
         STATUS_JOB_SUCCESS,
         STATUS_JOB_TIMEOUT,
