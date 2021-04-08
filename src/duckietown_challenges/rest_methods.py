@@ -790,7 +790,7 @@ def dtserver_get_compatible_challenges(
     for challenge_id, challenge in challenges.items():
         if challenge.closure:
             others = ", ".join(map(q, challenge.closure))
-            msg = f"* Submitting to {q(challenge.name)} will also submit to: {others}."
-            mprint(msg)
+            # msg = f"* Submitting to {q(challenge.name)} will also submit to: {others}."
+            # mprint(msg)
     mprint("")
     return CompatibleChallenges(res, compatible)
