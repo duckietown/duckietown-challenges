@@ -42,8 +42,8 @@ class ServerIsDown(RequestException):
 
 
 class ServerConnectionError(RequestException):
-    """ The server could not be reached or completed request or
-        provided an invalid or not well-formatted answer. """
+    """The server could not be reached or completed request or
+    provided an invalid or not well-formatted answer."""
 
 
 class NotAuthorized(RequestException):
@@ -56,9 +56,9 @@ class NotFound(RequestException):
 
 class RequestFailed(RequestException):
     """
-        The server said the request was invalid.
+    The server said the request was invalid.
 
-        Answered  {'ok': False, 'error': msg}
+    Answered  {'ok': False, 'error': msg}
     """
 
 
@@ -75,9 +75,9 @@ def make_server_request(
     query_string: Union[str, dict] = None,
 ) -> Any:
     """
-        Raise RequestFailed or ServerConnectionError.
+    Raise RequestFailed or ServerConnectionError.
 
-        Returns the result in 'result'.
+    Returns the result in 'result'.
     """
     if timeout is None:
         timeout = ChallengesConstants.DEFAULT_TIMEOUT

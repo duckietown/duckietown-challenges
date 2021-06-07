@@ -204,7 +204,10 @@ services: {}
 
 """
     assert_raises_s(
-        InvalidConfiguration, "No services described", test_reading_evaluation_parameters, data,
+        InvalidConfiguration,
+        "No services described",
+        test_reading_evaluation_parameters,
+        data,
     )
 
 

@@ -10,7 +10,7 @@ from .utils import write_data_to_file
 
 
 def read_yaml_file(fn):
-    """ Reads YAML file using also !include directives. """
+    """Reads YAML file using also !include directives."""
     if not os.path.exists(fn):
         msg = "File does not exist: %s" % fn
         raise ValueError(msg)

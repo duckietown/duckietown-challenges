@@ -222,7 +222,7 @@ class ServiceDefinition:
 
 
 class EvaluationParametersDict(TypedDict):
-    """ Extremely similar to docker-compose """
+    """Extremely similar to docker-compose"""
 
     version: str
     services: Dict[str, ServiceDefinitionDict]
@@ -232,19 +232,19 @@ class EvaluationParametersDict(TypedDict):
 @dataclass
 class EvaluationParameters:
     """
-        You can specify these fields for the docker file:
+    You can specify these fields for the docker file:
 
-            version: '3'
+        version: '3'
 
-            services:
-                evaluator:
-                    image: imagename
-                    environment:
-                        var: var
-                solution: # For the solution container
-                    image: SUBMISSION_CONTAINER
-                    environment:
-                        var: var
+        services:
+            evaluator:
+                image: imagename
+                environment:
+                    var: var
+            solution: # For the solution container
+                image: SUBMISSION_CONTAINER
+                environment:
+                    var: var
 
     """
 
@@ -476,16 +476,16 @@ class ChallengeTransitions:
     def get_next_steps(
         self, status: Dict[StepName, JobStatusString], step2age=None
     ) -> Tuple[bool, Optional[EvalStateString], List[StepName]]:
-        """ status is a dictionary from step name to status.
+        """status is a dictionary from step name to status.
 
-            It contains at the beginning
+        It contains at the beginning
 
-                START: success
+            START: success
 
-            Returns:
-                 bool (complete)
-                 optional status:  ['error', 'failed', 'success']
-                 a list of steps to activate next
+        Returns:
+             bool (complete)
+             optional status:  ['error', 'failed', 'success']
+             a list of steps to activate next
 
         """
         CS = ChallengesConstants
@@ -674,7 +674,11 @@ class Score:
                 raise InvalidChallengeDescription(msg)
 
             return Score(
-                name=name, description=description, order=order, discretization=discretization, short=short,
+                name=name,
+                description=description,
+                order=order,
+                discretization=discretization,
+                short=short,
             )
         except KeyError as e:
             msg = "Missing config %s" % e

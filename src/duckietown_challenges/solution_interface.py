@@ -8,56 +8,56 @@ __all__ = ["ChallengeInterfaceEvaluator", "ChallengeInterfaceSolution"]
 
 class ChallengeInterfaceSolution(metaclass=ABCMeta):
     """
-      When a solution runs, an instance of this class
-      is passed to the solution's run() method.
+    When a solution runs, an instance of this class
+    is passed to the solution's run() method.
 
     """
 
     # Misc methods for accessing the environment
     @abstractmethod
     def get_tmp_dir(self):
-        """ Get a temporary directory in which to work. """
+        """Get a temporary directory in which to work."""
 
     # Logging methods
 
     @abstractmethod
     def info(self, s):
-        """ Writes a log message. """
+        """Writes a log message."""
 
     @abstractmethod
     def error(self, s):
-        """ Writes an error message. """
+        """Writes an error message."""
 
     @abstractmethod
     def debug(self, s):
-        """ Writes a debug message. """
+        """Writes a debug message."""
 
     # Get challenge information from the evaluator
 
     @abstractmethod
     def get_challenge_parameters(self):
         """
-            Returns a dict created by the evaluator.
+        Returns a dict created by the evaluator.
 
-            :return: a dictionary
+        :return: a dictionary
         """
 
     @abstractmethod
     def get_challenge_file(self, basename):
         """
-            Gets a file passed by the evaluator.
+        Gets a file passed by the evaluator.
 
-            :return: Returns a filename (read-only).
+        :return: Returns a filename (read-only).
 
         """
 
     @abstractmethod
     def get_challenge_files(self):
         """
-            Returns a list of basenames available for reading
-            through get_challenge_file().
+        Returns a list of basenames available for reading
+        through get_challenge_file().
 
-            :return: a list of strings
+        :return: a list of strings
 
         """
 
@@ -66,20 +66,20 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
     @abstractmethod
     def set_solution_output_dict(self, data):
         """
-            This method's invocation means that the solution
-            finished succesfully (in its own view).
+        This method's invocation means that the solution
+        finished succesfully (in its own view).
 
-            :param data: a dictionary that will be passed to the evaluator.
-            :return: None
+        :param data: a dictionary that will be passed to the evaluator.
+        :return: None
         """
 
     @abstractmethod
     def declare_failure(self, msg):
         """
-            Calling this method means that the solution has given up.
+        Calling this method means that the solution has given up.
 
-            :param msg: An error message that will be available to the user.
-            :return: None
+        :param msg: An error message that will be available to the user.
+        :return: None
         """
 
     # Artefacts methods - saving files
@@ -87,23 +87,23 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
     @abstractmethod
     def set_solution_output_file(self, basename: str, from_file: str, description=None):
         """
-            Creates an artefact called "basename" from the file `from_file`.
+        Creates an artefact called "basename" from the file `from_file`.
 
-            :param basename: Name that can be used later to refer to the file.
-            :param from_file: Path to read.
-            :param description: Optional description of the artefact.
-            :return: None
+        :param basename: Name that can be used later to refer to the file.
+        :param from_file: Path to read.
+        :param description: Optional description of the artefact.
+        :return: None
         """
 
     @abstractmethod
     def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
         """
-            Same as before, but the contents is passed as a string.
+        Same as before, but the contents is passed as a string.
 
-            :param basename: Name that can be used later to refer to the file.
-            :param contents: Contents of the file.
-            :param description: Optional description of the artefact.
-            :return: None
+        :param basename: Name that can be used later to refer to the file.
+        :param contents: Contents of the file.
+        :param description: Optional description of the artefact.
+        :return: None
         """
 
     # Multi-step-API
@@ -111,27 +111,27 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
     @abstractmethod
     def get_current_step(self) -> str:
         """
-            Returns the name of the current step.
+        Returns the name of the current step.
 
-            :return: a string
+        :return: a string
         """
 
     @abstractmethod
     def get_completed_steps(self) -> List[str]:
         """
-            Returns the previous steps as a list of string.
+        Returns the previous steps as a list of string.
 
-            :return: a list of strings
+        :return: a list of strings
         """
 
     @abstractmethod
     def get_completed_step_solution_files(self, step_name: str) -> List[str]:
         """
 
-            Returns a list of names for the files completed in a previous step.
+        Returns a list of names for the files completed in a previous step.
 
-            :param step_name: Name of previous step.
-            :return: a list of strings
+        :param step_name: Name of previous step.
+        :return: a list of strings
 
         """
 
@@ -139,22 +139,22 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
     def get_completed_step_solution_file(self, step_name: str, basename: str):
         """
 
-            Returns a filename for one of the files completed in a previous step.
+        Returns a filename for one of the files completed in a previous step.
 
-            :param step_name: Name of previous step.
-            :param basename: Name used in `set_solution_output_file()`.
-            :return: a path to a read-only file.
+        :param step_name: Name of previous step.
+        :param basename: Name used in `set_solution_output_file()`.
+        :return: a path to a read-only file.
 
         """
 
     def get_completed_step_solution_file_contents(self, step_name: str, basename: str) -> bytes:
         """
-            Same as `get_completed_step_solution_file` but returns the contents
-            directly.
+        Same as `get_completed_step_solution_file` but returns the contents
+        directly.
 
-            :param step_name: Name of previous step.
-            :param basename: Name used in `set_solution_output_file()`.
-            :return: a string with the contents of the file.
+        :param step_name: Name of previous step.
+        :param basename: Name used in `set_solution_output_file()`.
+        :return: a string with the contents of the file.
 
         """
         fn = self.get_completed_step_solution_file(step_name, basename)
@@ -168,19 +168,19 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
 
     @abstractmethod
     def get_current_step(self) -> str:
-        """ Returns the current step. """
+        """Returns the current step."""
 
     @abstractmethod
     def get_completed_steps(self) -> List[str]:
-        """ Returns the previous steps as a list of string """
+        """Returns the previous steps as a list of string"""
 
     @abstractmethod
     def get_completed_step_evaluation_files(self, step_name: str) -> List[str]:
-        """ Returns a list of names for the files completed in a previous step. """
+        """Returns a list of names for the files completed in a previous step."""
 
     @abstractmethod
     def get_completed_step_evaluation_file(self, step_name: str, basename: str):
-        """ Returns a filename for one of the files completed in a previous step."""
+        """Returns a filename for one of the files completed in a previous step."""
 
     def get_completed_step_evaluation_file_contents(self, step_name: str, basename: str) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
