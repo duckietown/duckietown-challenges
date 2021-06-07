@@ -15,8 +15,8 @@ from .exceptions import InvalidConfiguration
 
 def write_data_to_file(data, filename):
     """
-        Writes the data to the given filename.
-        If the data did not change, the file is not touched.
+    Writes the data to the given filename.
+    If the data did not change, the file is not touched.
 
     """
     if not isinstance(data, str):
@@ -46,10 +46,10 @@ def write_data_to_file(data, filename):
 
 def expand_all(filename):
     """
-        Expands ~ and ${ENV} in the string.
+    Expands ~ and ${ENV} in the string.
 
-        Raises DTConfigException if some environment variables
-        are not expanded.
+    Raises DTConfigException if some environment variables
+    are not expanded.
 
     """
     fn = filename
@@ -63,7 +63,7 @@ def expand_all(filename):
 
 def d8n_make_sure_dir_exists(filename):
     """
-        Makes sure that the path to file exists, by creating directories.
+    Makes sure that the path to file exists, by creating directories.
 
     """
     dirname = os.path.dirname(filename)
@@ -75,9 +75,9 @@ def d8n_make_sure_dir_exists(filename):
 
 def d8n_mkdirs_thread_safe(dst):
     """
-        Make directories leading to 'dst' if they don't exist yet.
+    Make directories leading to 'dst' if they don't exist yet.
 
-        This version is thread safe.
+    This version is thread safe.
 
     """
     if dst == "" or os.path.exists(dst):
@@ -96,7 +96,7 @@ def d8n_mkdirs_thread_safe(dst):
 
 @decorator.decorator
 def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
-    """ Decorator for a function that takes a (clsname, dict) """
+    """Decorator for a function that takes a (clsname, dict)"""
     # def f2(x, *args, **kwargs):
     if not isinstance(data, dict):
         msg = "Expected dict"
@@ -118,16 +118,25 @@ def wrap_config_reader2(f, cls, data: dict, *args, **kwargs):
     try:
         res = f(cls, data2, *args, **kwargs)
     except KeyError as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
+        msg = "Could not interpret the configuration data using %s:%s()" % (
+            cls.__name__,
+            f.__name__,
+        )
         msg += '\nMissing configuration "%s". Specified: %s' % (e.args, list(data))
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         raise InvalidConfiguration(msg) from e
     except InvalidConfiguration as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
+        msg = "Could not interpret the configuration data using %s:%s()" % (
+            cls.__name__,
+            f.__name__,
+        )
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         raise InvalidConfiguration(msg) from e
     except BaseException as e:
-        msg = "Could not interpret the configuration data using %s:%s()" % (cls.__name__, f.__name__,)
+        msg = "Could not interpret the configuration data using %s:%s()" % (
+            cls.__name__,
+            f.__name__,
+        )
         msg += "\n\n" + indent(write(data), "  > ") + "\n"
         # raise_wrapped(InvalidConfiguration, e, msg, compact=False)
         raise InvalidConfiguration(msg) from e
@@ -278,16 +287,16 @@ def remove_escapes(s):
 
 
 def get_length_on_screen(s):
-    """ Returns the length of s without the escapes """
+    """Returns the length of s without the escapes"""
     return len(remove_escapes(s))
 
 
 def pad_to_screen_length(s, desired_screen_length, pad=" ", last=None, align_right=False):
     """
-        Pads a string so that it will appear of the given size
-        on the terminal.
+    Pads a string so that it will appear of the given size
+    on the terminal.
 
-        align_right: aligns right instead of left (default)
+    align_right: aligns right instead of left (default)
     """
     assert isinstance(desired_screen_length, int)
     # todo: assert pad = 1

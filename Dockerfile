@@ -2,7 +2,7 @@ ARG AIDO_REGISTRY
 
 FROM  ${AIDO_REGISTRY}/library/ubuntu:20.04
 
-ARG PIP_INDEX_URL
+ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 
 
@@ -26,10 +26,9 @@ ENV PYTHONIOENCODING=utf8
 
 WORKDIR /project
 
-RUN pip3 install -U "pip>=20.2"
 COPY requirements.* ./
 RUN cat requirements.* > .requirements.txt
-RUN  pip3 install --use-feature=2020-resolver -r .requirements.txt
+RUN python3 -m pip install  -r .requirements.txt
 
 
 COPY  . .
@@ -41,7 +40,7 @@ RUN python3 setup.py install
 RUN python3 -c "import duckietown_challenges; print(duckietown_challenges.__file__)"
 RUN dt-challenges-cli -h || true
 
-RUN pip3 list
+RUN python3 -m pip list
 RUN pipdeptree
 
 ENTRYPOINT ["dt-challenges-cli"]

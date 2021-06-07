@@ -42,8 +42,8 @@ class ServerIsDown(RequestException):
 
 
 class ServerConnectionError(RequestException):
-    """ The server could not be reached or completed request or
-        provided an invalid or not well-formatted answer. """
+    """The server could not be reached or completed request or
+    provided an invalid or not well-formatted answer."""
 
 
 class NotAuthorized(RequestException):
@@ -56,9 +56,9 @@ class NotFound(RequestException):
 
 class RequestFailed(RequestException):
     """
-        The server said the request was invalid.
+    The server said the request was invalid.
 
-        Answered  {'ok': False, 'error': msg}
+    Answered  {'ok': False, 'error': msg}
     """
 
 
@@ -75,14 +75,12 @@ def make_server_request(
     query_string: Union[str, dict] = None,
 ) -> Any:
     """
-        Raise RequestFailed or ServerConnectionError.
+    Raise RequestFailed or ServerConnectionError.
 
-        Returns the result in 'result'.
+    Returns the result in 'result'.
     """
     if timeout is None:
         timeout = ChallengesConstants.DEFAULT_TIMEOUT
-
-    # import urllib.request
 
     server = get_duckietown_server_url()
     url = server + endpoint
@@ -149,14 +147,15 @@ def make_server_request(
             raise RequestFailed(msg, **context) from None
 
         if code == 401:
-            msg = "Not authorized to perform operation."
-            msg += f"\n\n{received_msg}"
-            raise NotAuthorized(msg, **context) from None
+            # msg = "Not authorized to perform operation."
+            # msg += f"\n\n{received_msg}"
+            context.pop("headers")
+            raise NotAuthorized(err_msg, **context) from None
 
         if code == 404:
             msg = "Cannot find the specified resource."
             msg += f"\n\n{received_msg}"
-            raise NotFound(msg, **context) from None
+            raise NotFound(msg) from None
 
         if code == 502:
             msg = "502: The server is currently offline."
@@ -222,4 +221,4 @@ def make_server_request(
     else:
         msg = result.get("msg", f"no error message in {result} ")
         msg = f"Failed request for {url}:\n{msg}"
-        raise RequestFailed(msg, **context)
+        raise RequestFailed(msg)

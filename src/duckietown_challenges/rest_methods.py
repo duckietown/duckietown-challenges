@@ -120,7 +120,7 @@ class UserInfoResponseDict(TypedDict):
 
 
 def get_dtserver_user_info(token: str, impersonate: Optional[UserID] = None) -> UserInfoResponseDict:
-    """ Returns a dictionary with information about the user """
+    """Returns a dictionary with information about the user"""
     endpoint = Endpoints.user_info
     method = "GET"
     data: UserInfoRequestDict
@@ -183,7 +183,7 @@ class GetUserSubmissionRequestDict(TypedDict):
 
 
 def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = None):
-    """ Returns a dictionary with information about the user submissions """
+    """Returns a dictionary with information about the user submissions"""
     endpoint = Endpoints.submissions
     method = "GET"
     data: GetUserSubmissionRequestDict
@@ -230,7 +230,7 @@ def dtserver_get_submissions(
     user_id: Optional[UserID],
     impersonate: Optional[UserID] = None,
 ):
-    """ Returns a dictionary with information about the submissions """
+    """Returns a dictionary with information about the submissions"""
     endpoint = Endpoints.submissions
     method = "GET"
     data: GetUserSubmissionRequestDict
@@ -362,25 +362,25 @@ def dtserver_report_job(
     impersonate: Optional[UserID] = None,
 ):
     """
-        result: JobStatusString, one of ChallengesConstants.ALLOWED_JOB_STATUS
-            success, failed, error, aborted, host-error
+    result: JobStatusString, one of ChallengesConstants.ALLOWED_JOB_STATUS
+        success, failed, error, aborted, host-error
 
-        uploaded: structure returned by upload_files(directory, aws_config)
-         which uses S3
+    uploaded: structure returned by upload_files(directory, aws_config)
+     which uses S3
 
-        ipfs_hashes: the files represented by IPFS
-            filename -> IPFS hash
+    ipfs_hashes: the files represented by IPFS
+        filename -> IPFS hash
 
-            keep empty
-
-
-        for example :
-            status = 'success'
-            stats = {'msg': 'ok', 'scores': {}}
+        keep empty
 
 
-            status = 'failed'
-            stats = {'msg': 'why it failed', 'scores': {}}
+    for example :
+        status = 'success'
+        stats = {'msg': 'ok', 'scores': {}}
+
+
+        status = 'failed'
+        stats = {'msg': 'why it failed', 'scores': {}}
     """
     endpoint = Endpoints.take_submission
     method = "POST"
@@ -397,7 +397,12 @@ def dtserver_report_job(
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(
-        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
     )
 
 
@@ -517,67 +522,67 @@ def dtserver_work_submission(
     impersonate: Optional[UserID] = None,
 ) -> WorkSubmissionResultDict:
     """
-        token: Duckietown token
+    token: Duckietown token
 
-        submission_id: if None, get any submission. If set, try to get that one.
-        reset: if submission already evaluated, reset the previous jobs.
+    submission_id: if None, get any submission. If set, try to get that one.
+    reset: if submission already evaluated, reset the previous jobs.
 
-        features: dictionary of "features - these are well known
+    features: dictionary of "features - these are well known
 
-        example:
+    example:
 
-            features:
-                map_aido5_large_loop: 1
-                nduckiebots: 3
-                nduckies: 20
+        features:
+            map_aido5_large_loop: 1
+            nduckiebots: 3
+            nduckies: 20
 
-        machine_id, process_id, evaluator_version: identify the identity of the evaluator.
-        machine_id, process_id: free form - valid identifier
-        evaluator_version = duckietown_challenges_runner.__version__
-
-
-        timeout: connection timeout
-        impersonate: ID to impersonate if any
+    machine_id, process_id, evaluator_version: identify the identity of the evaluator.
+    machine_id, process_id: free form - valid identifier
+    evaluator_version = duckietown_challenges_runner.__version__
 
 
-        Pipeline:
-
-        1) get a job using
-
-            res = dtserver_work_submission(...)
-
-        2) Take
-
-            aws_config = res['aws_config']
-
-        3) Use upload_files:
-
-            uploaded = upload_files(directory, aws_config)
-
-        4) Use your code to upload IPFS, get
-
-            ipfs_hashes = {
-                'rel/filename' : '/ipfs/<hash>'
-            }
-
-        5) Put the statistics in a "scores" dictionary.
-
-            stats = {'metric1': 1.0, 'metric2': 2.0}
-
-        5) Give this structure to the server using
-
-            dtserver_report_job(...,
-                uploaded=uploaded,
-                ipfs_hashes_hashes,
-                stats=stats)
+    timeout: connection timeout
+    impersonate: ID to impersonate if any
 
 
+    Pipeline:
 
-        Used to get a job from the server.
+    1) get a job using
 
-        Returns a dict containing among others.
+        res = dtserver_work_submission(...)
 
-            aws_config: credentials to pass to upload_files
+    2) Take
+
+        aws_config = res['aws_config']
+
+    3) Use upload_files:
+
+        uploaded = upload_files(directory, aws_config)
+
+    4) Use your code to upload IPFS, get
+
+        ipfs_hashes = {
+            'rel/filename' : '/ipfs/<hash>'
+        }
+
+    5) Put the statistics in a "scores" dictionary.
+
+        stats = {'metric1': 1.0, 'metric2': 2.0}
+
+    5) Give this structure to the server using
+
+        dtserver_report_job(...,
+            uploaded=uploaded,
+            ipfs_hashes_hashes,
+            stats=stats)
+
+
+
+    Used to get a job from the server.
+
+    Returns a dict containing among others.
+
+        aws_config: credentials to pass to upload_files
 
     """
     endpoint = Endpoints.take_submission
@@ -594,7 +599,12 @@ def dtserver_work_submission(
     add_version_info(data)
     add_impersonate_info(data, impersonate)
     return make_server_request(
-        token, endpoint, data=data, method=method, timeout=timeout, suppress_user_msg=True,
+        token,
+        endpoint,
+        data=data,
+        method=method,
+        timeout=timeout,
+        suppress_user_msg=True,
     )
 
 
@@ -626,9 +636,9 @@ def dtserver_job_heartbeat(
     query_string: str = None,
 ) -> HeartbeatResponseDict:
     """
-        You just call every 30 seconds.
+    You just call every 30 seconds.
 
-        Optionally you can already send some uploaded files.
+    Optionally you can already send some uploaded files.
 
 
     """
@@ -700,7 +710,11 @@ class JobInfoDict(TypedDict):
     why: Optional[str]
 
 
-def dtserver_get_job(token: str, job_id: JobID, impersonate: Optional[UserID] = None,) -> JobInfoDict:
+def dtserver_get_job(
+    token: str,
+    job_id: JobID,
+    impersonate: Optional[UserID] = None,
+) -> JobInfoDict:
     endpoint = Endpoints.jobs + f"/{job_id}"
     method = "GET"
     data = {}

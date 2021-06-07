@@ -15,7 +15,7 @@ class InvalidConfiguration(ChallengeException):
 
 
 class InvalidSubmission(ChallengeException):
-    """ Can be raised by evaluator """
+    """Can be raised by evaluator"""
 
     pass
 

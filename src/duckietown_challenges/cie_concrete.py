@@ -170,14 +170,14 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
             raise InvalidEnvironment(str(e))
 
     def get_current_step(self):
-        """ Returns the current step. """
+        """Returns the current step."""
         try:
             return os.environ[ENV_CHALLENGE_STEP_NAME]
         except KeyError as e:
             raise InvalidEnvironment(str(e))
 
     def get_completed_steps(self):
-        """ Returns the previous steps as a list of string """
+        """Returns the previous steps as a list of string"""
         p = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
         if not os.path.exists(p):
             msg = "Directory not found %s" % p
@@ -186,7 +186,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         return list(dirnames)
 
     def get_completed_step_solution_files(self, step_name):
-        """ Returns a list of names for the files completed in a previous step. """
+        """Returns a list of names for the files completed in a previous step."""
         if step_name not in self.get_completed_steps():
             msg = 'No step "%s".' % step_name
             raise KeyError(msg)
@@ -194,7 +194,7 @@ class ChallengeInterfaceSolutionConcrete(ChallengeInterfaceSolution):
         return get_completed_step_solution_files(self.root, step_name)
 
     def get_completed_step_solution_file(self, step_name, basename):
-        """ Returns a filename for one of the files completed in a previous step."""
+        """Returns a filename for one of the files completed in a previous step."""
         return get_completed_step_solution_file(self.root, step_name, basename)
 
 
@@ -234,7 +234,13 @@ def get_completed_step_solution_file(root, step_name, basename):
     #     msg = 'No file %r' % basename
     #     raise KeyError(msg)
 
-    fn = os.path.join(root, CHALLENGE_PREVIOUS_STEPS_DIR, step_name, CHALLENGE_SOLUTION_OUTPUT_DIR, basename,)
+    fn = os.path.join(
+        root,
+        CHALLENGE_PREVIOUS_STEPS_DIR,
+        step_name,
+        CHALLENGE_SOLUTION_OUTPUT_DIR,
+        basename,
+    )
     if not os.path.exists(fn):
         msg = "Cannot find %s; know %s" % (fn, available)
         raise KeyError(msg)
@@ -427,14 +433,14 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
             raise InvalidEnvironment(str(e))
 
     def get_current_step(self):
-        """ Returns the current step. """
+        """Returns the current step."""
         try:
             return os.environ[ENV_CHALLENGE_STEP_NAME]
         except KeyError as e:
             raise InvalidEnvironment(str(e))
 
     def get_completed_steps(self):
-        """ Returns the previous steps as a list of string """
+        """Returns the previous steps as a list of string"""
         p = os.path.join(self.root, CHALLENGE_PREVIOUS_STEPS_DIR)
         if not os.path.exists(p):
             msg = f"Directory not found {p}"
@@ -443,7 +449,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         return list(dirnames)
 
     def get_completed_step_evaluation_files(self, step_name):
-        """ Returns a list of names for the files completed in a previous step. """
+        """Returns a list of names for the files completed in a previous step."""
         if step_name not in self.get_completed_steps():
             msg = f"No step {step_name!r}"
             raise KeyError(msg)
@@ -455,7 +461,7 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
         # return list(os.listdir(d))
 
     def get_completed_step_evaluation_file(self, step_name, basename):
-        """ Returns a filename for one of the files completed in a previous step."""
+        """Returns a filename for one of the files completed in a previous step."""
         # if basename not in self.get_completed_step_evaluation_files(step_name):
         #     msg = 'No file %r' % basename
         #     raise KeyError(msg)
