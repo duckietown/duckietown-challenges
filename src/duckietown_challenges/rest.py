@@ -149,9 +149,10 @@ def make_server_request(
             raise RequestFailed(msg, **context) from None
 
         if code == 401:
-            msg = "Not authorized to perform operation."
-            msg += f"\n\n{received_msg}"
-            raise NotAuthorized(msg, **context) from None
+            # msg = "Not authorized to perform operation."
+            # msg += f"\n\n{received_msg}"
+            context.pop("headers")
+            raise NotAuthorized(err_msg, **context) from None
 
         if code == 404:
             msg = "Cannot find the specified resource."
