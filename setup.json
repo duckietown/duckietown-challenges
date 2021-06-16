@@ -1,0 +1,32 @@
+{
+  "install_requires": [
+    "PyYAML",
+    "bump2version",
+    "decorator",
+    "duckietown-build-utils-daffy",
+    "networkx>=2.2",
+    "numpy",
+    "oyaml",
+    "pur",
+    "python-dateutil",
+    "six",
+    "termcolor",
+    "zuper-commons-z6",
+    "zuper-ipce-z6>=6"
+  ],
+  "tests_require": [],
+  "srcdir": "src",
+  "package_name": "duckietown-challenges-daffy",
+  "entry_points": {
+    "console_scripts": []
+  },
+  "zip_safe": true,
+  "include_package_data": true,
+  "modules": [
+    "duckietown_challenges"
+  ],
+  "version": "7.3.2106160908",
+  "author": "",
+  "author_email": "",
+  "url": ""
+}
