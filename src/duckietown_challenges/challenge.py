@@ -785,10 +785,6 @@ class ChallengeDescription:
 
     def __post_init__(self):
 
-        # check_isinstance(self.date_open, datetime)
-        # check_isinstance(self.date_close, datetime)
-        # logger.info(f'received {self.date_open.tzinfo} {id(self.date_open)}   {self.date_close.tzinfo}'
-        #               f' {id(self.date_close)}  ')
         if self.date_open.tzinfo is None:
             raise ValueError(self.date_open)
         if self.date_close.tzinfo is None:
@@ -837,7 +833,9 @@ class ChallengeDescription:
 
         closure = data.pop("closure", [])
         dependencies_ = data.pop("dependencies", {})
-        dependencies = object_from_ipce(dependencies_, Dict[str, ChallengeDependency])
+        dependencies: Dict[ChallengeName, ChallengeDependency] = object_from_ipce(
+            dependencies_, Dict[ChallengeName, ChallengeDependency]
+        )
         ct = from_steps_transitions(list(Steps), transitions)
 
         assert date_open.tzinfo is not None and date_close.tzinfo is not None
@@ -928,7 +926,7 @@ def add_timezone(d: Union[str, datetime]) -> datetime:
 
 @dataclass(repr=False)
 class SubmissionDescription:
-    challenge_names: Optional[List[str]]
+    challenge_names: Optional[List[ChallengeName]]
     protocols: List[str]
     user_label: Optional[str]
     user_metadata: Dict[str, object]
