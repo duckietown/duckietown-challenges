@@ -82,8 +82,6 @@ def make_server_request(
     if timeout is None:
         timeout = ChallengesConstants.DEFAULT_TIMEOUT
 
-    # import urllib.request
-
     server = get_duckietown_server_url()
     url = server + endpoint
     # logger.debug(url=url)
@@ -157,7 +155,7 @@ def make_server_request(
         if code == 404:
             msg = "Cannot find the specified resource."
             msg += f"\n\n{received_msg}"
-            raise NotFound(msg, **context) from None
+            raise NotFound(msg) from None
 
         if code == 502:
             msg = "502: The server is currently offline."
@@ -223,4 +221,4 @@ def make_server_request(
     else:
         msg = result.get("msg", f"no error message in {result} ")
         msg = f"Failed request for {url}:\n{msg}"
-        raise RequestFailed(msg, **context)
+        raise RequestFailed(msg)
