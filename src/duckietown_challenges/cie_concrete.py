@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ContextManager, Dict, Optional
 
-from duckietown_challenges import ChallengesConstants
-from . import logger, ENV_CHALLENGE_STEP_NAME
+from .challenges_constants import ChallengesConstants
+from . import logger
 from .types import JobStatusString
 from .constants import (
     CHALLENGE_DESCRIPTION_DIR,
@@ -26,11 +26,13 @@ from .constants import (
     CHALLENGE_TMP_SUBDIR,
     DEFAULT_ROOT,
     ENV_CHALLENGE_NAME,
+    ENV_CHALLENGE_STEP_NAME,
 )
 from .exceptions import InvalidEnvironment, InvalidEvaluator, InvalidSubmission
 from .solution_interface import ChallengeInterfaceEvaluator, ChallengeInterfaceSolution
 from .utils import d8n_make_sure_dir_exists
 from .yaml_utils import read_yaml_file, write_yaml
+from .challenge_evaluator import ChallengeEvaluator
 
 
 @dataclass
@@ -531,7 +533,7 @@ SPECIAL_INVALID_EVALUATOR = "invalid-evaluator"
 SPECIAL_INVALID_SUBMISSION = "invalid-submission"
 
 
-def wrap_evaluator(evaluator, root=DEFAULT_ROOT):
+def wrap_evaluator(evaluator: ChallengeEvaluator, root=DEFAULT_ROOT):
     from .col_logging import setup_logging_color
 
     setup_logging_color()
