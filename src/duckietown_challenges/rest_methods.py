@@ -3,6 +3,8 @@ from typing import Dict, List, Optional, TypedDict, Union
 
 import dateutil.parser
 import termcolor
+
+from dt_shell import _get_installed_distributions
 from zuper_commons.timing import now_utc
 from zuper_commons.types import ZValueError
 
@@ -732,15 +734,10 @@ def add_version_info(data):
         pass
 
 
-# noinspection PyUnresolvedReferences,PyBroadException,PyCompatibility,PyProtectedMember
 def get_packages_version() -> Dict[str, VersionInfo]:
-    try:
-        from pip import get_installed_distributions
-    except:
-        from pip._internal.utils.misc import get_installed_distributions
 
     packages = {}
-    for i in get_installed_distributions(local_only=False):
+    for i in _get_installed_distributions(local_only=False):
         pkg = {"version": i._version, "location": i.location}
         packages[i.project_name] = pkg
 
