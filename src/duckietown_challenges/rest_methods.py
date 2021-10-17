@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import cast, Dict, List, Optional, TypedDict, Union
 
 import dateutil.parser
 import termcolor
 
-from dt_shell import _get_installed_distributions
 from zuper_commons.timing import now_utc
 from zuper_commons.types import ZValueError
-
 from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
@@ -734,8 +732,25 @@ def add_version_info(data):
         pass
 
 
-def get_packages_version() -> Dict[str, VersionInfo]:
+def _get_installed_distributions(
+    local_only: bool = True,
+    user_only: bool = False,
+    paths: Optional[List[str]] = None,
+):
+    """Return a list of installed Distribution objects."""
+    from pip._internal.metadata import get_environment
+    from pip._internal.metadata.pkg_resources import Distribution as _Dist
 
+    env = get_environment(paths)
+    dists = env.iter_installed_distributions(
+        local_only=local_only,
+        user_only=user_only,
+        skip=[],
+    )
+    return [cast(_Dist, dist)._dist for dist in dists]
+
+
+def get_packages_version() -> Dict[str, VersionInfo]:
     packages = {}
     for i in _get_installed_distributions(local_only=False):
         pkg = {"version": i._version, "location": i.location}
