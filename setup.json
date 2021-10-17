@@ -12,7 +12,8 @@
     "six",
     "termcolor",
     "zuper-commons-z6",
-    "zuper-ipce-z6>=6"
+    "zuper-ipce-z6>=6",
+    "zuper-typing-z6"
   ],
   "tests_require": [],
   "srcdir": "src",
