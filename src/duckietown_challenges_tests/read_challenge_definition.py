@@ -253,19 +253,19 @@ def assert_raises_s(E, contained, f, *args):
 
 
 def test_reading(s):
-    d = yaml.load(s)
+    d = yaml.load(s, Loader=yaml.Loader)
     c0 = ChallengeDescription.from_yaml(d)
     return c0
 
 
 def test_reading_service(s):
-    d = yaml.load(s)
+    d = yaml.load(s, Loader=yaml.Loader)
     c0 = ServiceDefinition.from_yaml(d)
     return c0
 
 
 def test_reading_evaluation_parameters(s):
-    d = yaml.load(s)
+    d = yaml.load(s, Loader=yaml.Loader)
     c0 = EvaluationParameters.from_yaml(d)
     return c0
 
