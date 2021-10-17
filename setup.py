@@ -30,6 +30,7 @@ install_requires = [
     "numpy",
     "six",
     "zuper-commons-z6",
+    "zuper-typing-z6",
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
     "bump2version",
