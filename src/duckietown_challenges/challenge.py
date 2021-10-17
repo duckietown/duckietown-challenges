@@ -258,19 +258,21 @@ class EvaluationParameters:
     # noinspection PyArgumentList
     @classmethod
     @wrap_config_reader2
-    def from_yaml(cls, d: EvaluationParametersDict) -> "EvaluationParameters":
-
-        services_ = d.get("services")
+    def from_yaml(cls, d0: EvaluationParametersDict) -> "EvaluationParameters":
+        d = dict(d0)
+        services_ = d.pop("services")
         if not isinstance(services_, dict):
             msg = "Expected dict"
             raise ZValueError(msg, got=services_)
 
         if not services_:
             msg = "No services described."
-            raise ValueError(msg)
+            raise ZValueError(msg)
 
-        version = d.get("version", "3")
-
+        version = d.pop("version", "3")
+        if d:
+            msg = "Extra field in the configuration"
+            raise ZValueError(msg, d0=d0, extra=list(d))
         services = {}
         for k, v in services_.items():
             services[k] = ServiceDefinition.from_yaml(v)

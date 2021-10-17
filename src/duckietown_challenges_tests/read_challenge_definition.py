@@ -2,17 +2,14 @@ import traceback
 
 import yaml
 
-# from comptests import comptest, run_module_tests
-
-from duckietown_challenges import (
-    ChallengeDescription,
-    ServiceDefinition,
-    EvaluationParameters,
-)
-
+from duckietown_challenges import ChallengeDescription, EvaluationParameters, ServiceDefinition
 from duckietown_challenges.utils import InvalidConfiguration
 
 # language=yaml
+from zuper_commons.types import ZException
+
+# from comptests import comptest, run_module_tests
+
 data = """
 
 challenge: "challenge-short"
@@ -194,7 +191,7 @@ version: '3'
 services:
 
 """
-    assert_raises_s(InvalidConfiguration, "Expected dict", test_reading_evaluation_parameters, data)
+    assert_raises_s(InvalidConfiguration, "Expected dict", chek_reading_evalparams, data)
 
 
 # @comptest
@@ -207,7 +204,7 @@ services: {}
     assert_raises_s(
         InvalidConfiguration,
         "No services described",
-        test_reading_evaluation_parameters,
+        chek_reading_evalparams,
         data,
     )
 
@@ -219,7 +216,8 @@ version: '3'
 
 
 """
-    assert_raises_s(InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data)
+    s = """Missing configuration "('services',)"""
+    assert_raises_s(InvalidConfiguration, s, chek_reading_evalparams, data)
 
 
 # @comptest
@@ -233,38 +231,39 @@ services:
         image: SUBMISSION_CONTAINER
 another:
 """
-    assert_raises_s(InvalidConfiguration, "'another'", test_reading_evaluation_parameters, data)
+    s = "Extra field in the configuration"
+    assert_raises_s(InvalidConfiguration, s, chek_reading_evalparams, data)
 
 
 def assert_raises_s(E, contained, f, *args):
     try:
         f(*args)
-    except E:
+    except E as e:
         s = traceback.format_exc()
         if contained not in s:
-            msg = "Expected %r in error:\n%s" % (contained, s)
-            raise Exception(msg)
+            msg = "Expected a substring in the error"
+            raise ZException(msg, expected_substring=contained, s=s) from e
     except BaseException as e:
         msg = "Expected to get %s but found %s: %s" % (E, type(e), e)
-        raise Exception(msg)
+        raise ZException(msg)
     else:
-        msg = "Expected to find exception %s" % str(E)
-        raise Exception(msg)
+        msg = "Expected to find exception %s but none happened." % str(E)
+        raise ZException(msg)
 
 
-def test_reading(s):
+def check_reading_description(s):
     d = yaml.load(s, Loader=yaml.Loader)
     c0 = ChallengeDescription.from_yaml(d)
     return c0
 
 
-def test_reading_service(s):
+def check_reading_service(s):
     d = yaml.load(s, Loader=yaml.Loader)
     c0 = ServiceDefinition.from_yaml(d)
     return c0
 
 
-def test_reading_evaluation_parameters(s):
+def chek_reading_evalparams(s):
     d = yaml.load(s, Loader=yaml.Loader)
     c0 = EvaluationParameters.from_yaml(d)
     return c0

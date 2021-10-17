@@ -1,14 +1,13 @@
 import os
 import tempfile
 
-
 from duckietown_challenges import (
     ChallengeInterfaceEvaluator,
     ChallengeInterfaceSolution,
-    read_challenge_results,
-    wrap_solution,
-    wrap_evaluator,
     ChallengesConstants,
+    read_challenge_results,
+    wrap_evaluator,
+    wrap_solution,
 )
 from duckietown_challenges.challenge_evaluator import ChallengeEvaluator
 from duckietown_challenges.challenge_solution import ChallengeSolution
@@ -74,19 +73,23 @@ class S1(ChallengeSolution):
 from multiprocessing import Process
 
 
+def process_evaluator(E, root):
+    wrap_evaluator(E, root=root)
+
+
+def process_solution(S, root):
+    wrap_solution(S, root=root)
+
+
 def run_interaction(S, E):
     root = tempfile.mkdtemp()
     print("Root: %s" % root)
+    os.environ["challenge_name"] = "test-challenge"
+    os.environ["challenge_step_name"] = "test-challenge-step"
 
-    def process_evaluator():
-        wrap_evaluator(E, root=root)
-
-    def process_solution():
-        wrap_solution(S, root=root)
-
-    p_e = Process(target=process_evaluator)
+    p_e = Process(target=process_evaluator, args=(E, root))
     p_e.start()
-    p_s = Process(target=process_solution)
+    p_s = Process(target=process_solution, args=(S, root))
     p_s.start()
     p_e.join()
 
@@ -98,37 +101,44 @@ def test_interaction1():
     S = S1()
     E = E1()
     cr = run_interaction(S, E)
-    assert cr.get_status() == ChallengesConstants.STATUS_JOB_SUCCESS
+    status = cr.get_status()
+    assert status == ChallengesConstants.STATUS_JOB_SUCCESS, status
     assert cr.scores[SCORE1] == SCORE1_VAL, cr.scores
 
 
+class ENoScores(ChallengeEvaluator):
+    def prepare(self, cie):
+        cie.set_challenge_parameters({K1: V1})
+
+    def score(self, cie):
+        pass
+
+
+class SDummy2(ChallengeSolution):
+    def run(self, cis):
+        cis.set_solution_output_dict({K1: V1})
+
+
 def test_no_scores():
-    class ENoScores(ChallengeEvaluator):
-        def prepare(self, cie):
-            cie.set_challenge_parameters({K1: V1})
+    cr = run_interaction(SDummy2(), ENoScores())
+    status = cr.get_status()
+    assert status == ChallengesConstants.STATUS_JOB_ERROR, status
 
-        def score(self, cie):
-            pass
 
-    class SDummy(ChallengeSolution):
-        def run(self, cis):
-            cis.set_solution_output_dict({K1: V1})
+class EDummy(ChallengeEvaluator):
+    def prepare(self, cie):
+        cie.set_challenge_parameters({K1: V1})
 
-    cr = run_interaction(SDummy(), ENoScores())
-    assert cr.get_status() == ChallengesConstants.STATUS_JOB_ERROR
+    def score(self, cie):
+        pass
+
+
+class SDummy(ChallengeSolution):
+    def run(self, cis):
+        pass  # cis.set_solution_output_dict({K1: V1})
 
 
 def test_no_solution_output():
-    class EDummy(ChallengeEvaluator):
-        def prepare(self, cie):
-            cie.set_challenge_parameters({K1: V1})
-
-        def score(self, cie):
-            pass
-
-    class SDummy(ChallengeSolution):
-        def run(self, cis):
-            pass  # cis.set_solution_output_dict({K1: V1})
-
     cr = run_interaction(SDummy(), EDummy())
-    assert cr.get_status() == ChallengesConstants.STATUS_JOB_FAILED
+    status = cr.get_status()
+    assert status == ChallengesConstants.STATUS_JOB_FAILED, status
