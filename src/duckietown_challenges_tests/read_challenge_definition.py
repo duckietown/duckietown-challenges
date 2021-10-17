@@ -1,7 +1,8 @@
 import traceback
 
 import yaml
-from comptests import comptest, run_module_tests
+
+# from comptests import comptest, run_module_tests
 
 from duckietown_challenges import (
     ChallengeDescription,
@@ -98,8 +99,8 @@ transitions:
 """
 
 
-@comptest
-def read_challenge_1():
+# @comptest
+def test_read_challenge_1():
     d = yaml.load(data, Loader=yaml.Loader)
 
     c0: ChallengeDescription = ChallengeDescription.from_yaml(d)
@@ -186,8 +187,8 @@ def read_challenge_1():
     assert steps == [], steps
 
 
-@comptest
-def empty_services():
+# @comptest
+def test_empty_services():
     data = """
 version: '3'
 services:
@@ -196,8 +197,8 @@ services:
     assert_raises_s(InvalidConfiguration, "Expected dict", test_reading_evaluation_parameters, data)
 
 
-@comptest
-def empty_services2():
+# @comptest
+def test_empty_services2():
     data = """
 version: '3'
 services: {}
@@ -211,8 +212,8 @@ services: {}
     )
 
 
-@comptest
-def missing_services():
+# @comptest
+def test_missing_services():
     data = """
 version: '3'
 
@@ -221,8 +222,8 @@ version: '3'
     assert_raises_s(InvalidConfiguration, "'services'", test_reading_evaluation_parameters, data)
 
 
-@comptest
-def extra_field():
+# @comptest
+def test_extra_field():
     data = """
 version: '3'
 services:
@@ -269,5 +270,7 @@ def test_reading_evaluation_parameters(s):
     return c0
 
 
-if __name__ == "__main__":
-    run_module_tests()
+#
+#
+# if __name__ == "__main__":
+#     run_module_tests()

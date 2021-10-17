@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-from comptests import run_module_tests
 
 from duckietown_challenges import (
     ChallengeInterfaceEvaluator,
@@ -133,7 +132,3 @@ def test_no_solution_output():
 
     cr = run_interaction(SDummy(), EDummy())
     assert cr.get_status() == ChallengesConstants.STATUS_JOB_FAILED
-
-
-if __name__ == "__main__":
-    run_module_tests()

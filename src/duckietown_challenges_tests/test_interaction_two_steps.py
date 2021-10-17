@@ -3,20 +3,18 @@ import os
 import shutil
 from multiprocessing import Process
 
-from comptests import comptest, run_module_tests
-
 from duckietown_challenges import (
-    wrap_evaluator,
-    wrap_solution,
-    read_challenge_results,
-    tempfile,
+    CHALLENGE_PREVIOUS_STEPS_DIR,
     ChallengeEvaluator,
     ChallengeInterfaceEvaluator,
-    ChallengeSolution,
     ChallengeInterfaceSolution,
+    ChallengeSolution,
     ENV_CHALLENGE_NAME,
     ENV_CHALLENGE_STEP_NAME,
-    CHALLENGE_PREVIOUS_STEPS_DIR,
+    read_challenge_results,
+    tempfile,
+    wrap_evaluator,
+    wrap_solution,
 )
 
 
@@ -147,10 +145,11 @@ class S2(ChallengeSolution):
         cis.set_solution_output_dict({})
 
 
-@comptest
+# @comptest
 def test_interaction_two_steps():
     run_interaction_two_steps(step1_name, S1(), E1(), step2_name, S2(), E2())
 
 
-if __name__ == "__main__":
-    run_module_tests()
+#
+# if __name__ == "__main__":
+#     run_module_tests()
