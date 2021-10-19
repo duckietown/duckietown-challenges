@@ -1,4 +1,6 @@
+import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import cast, Dict, List, Optional, TypedDict, Union
 
 import dateutil.parser
@@ -174,40 +176,20 @@ def dtserver_retire_same_label(
 
 
 class GetUserSubmissionRequestDict(TypedDict):
-    pass
-
-
-#
-# class  GetUserSubmissionResponseDict(TypedDict):
-#     pass
-
-
-def dtserver_get_user_submissions(token: str, impersonate: Optional[UserID] = None):
-    """Returns a dictionary with information about the user submissions"""
-    endpoint = Endpoints.submissions
-    method = "GET"
-    data: GetUserSubmissionRequestDict
-    data = {}
-    add_version_info(data)
-    add_impersonate_info(data, impersonate)
-
-    submissions = make_server_request(token, endpoint, data=data, method=method)
-    # submissions = cast(GetUserSubmissionResponseDict, submissions)
-    for v in submissions.values():
-        for k in ["date_submitted", "last_status_change"]:
-            v[k] = dateutil.parser.parse(v[k])
-    return submissions
+    challenge_name: ChallengeName
 
 
 class SubmissionDict(TypedDict):
     submission_id: SubmissionID
     complete: bool
     status: str
-    challenge_id: int
-    challenge_name: str
+    challenge_id: ChallengeID
+    challenge_name: ChallengeName
     challenge_is_open: int
     user_label: str
     user_metadata: str
+    last_status_change: datetime
+    date_submitted: datetime
 
 
 # dict[11]
@@ -224,12 +206,35 @@ class SubmissionDict(TypedDict):
 #       │ │ user_metadata: {}
 
 
+def dtserver_get_user_submissions(
+    token: str, impersonate: Optional[UserID] = None, challenge_name: Optional[ChallengeName] = None
+) -> Dict[SubmissionID, SubmissionDict]:
+    """Returns a dictionary with information about the user submissions"""
+    endpoint = Endpoints.submissions
+    method = "GET"
+    data: GetUserSubmissionRequestDict
+    data = {}
+    if challenge_name:
+        data["challenge_name"] = challenge_name
+    print(json.dumps(data, indent=3))
+    add_version_info(data)
+    add_impersonate_info(data, impersonate)
+
+    submissions = make_server_request(token, endpoint, data=data, method=method)
+    submissions = {int(k): v for k, v in submissions.items()}
+    # submissions = cast(Dict[SubmissionID, GetUserSubmissionResponseDict], submissions)
+    for v in submissions.values():
+        for k in ["date_submitted", "last_status_change"]:
+            v[k] = dateutil.parser.parse(v[k])
+    return submissions
+
+
 def dtserver_get_submissions(
     token: str,
     challenge_name: Optional[ChallengeName],
     user_id: Optional[UserID],
     impersonate: Optional[UserID] = None,
-):
+) -> Dict[SubmissionID, SubmissionDict]:
     """Returns a dictionary with information about the submissions"""
     endpoint = Endpoints.submissions
     method = "GET"
@@ -244,6 +249,7 @@ def dtserver_get_submissions(
         query_string["user_id"] = user_id
 
     submissions = make_server_request(token, endpoint, data=data, method=method, query_string=query_string)
+    submissions = {int(k): v for k, v in submissions.items()}
     # submissions = cast(GetUserSubmissionResponseDict, submissions)
     for v in submissions.values():
         for k in ["date_submitted", "last_status_change"]:
@@ -279,7 +285,7 @@ class ChallengeInfoDict(TypedDict):
     queue_name: ChallengeName  ## XXX: redundan
 
 
-class SubmissionDict(TypedDict):
+class SubmissionResponseDict(TypedDict):
     submission_id: SubmissionID
     existing: bool
     challenge: ChallengeInfoDict
@@ -287,7 +293,7 @@ class SubmissionDict(TypedDict):
 
 class Submit2ResponseDict(TypedDict):
     component_id: int
-    submissions: Dict[ChallengeName, SubmissionDict]
+    submissions: Dict[ChallengeName, SubmissionResponseDict]
 
 
 class AddSubmissionRequest(TypedDict):
@@ -314,7 +320,13 @@ def dtserver_submit2(
     return make_server_request(token, endpoint, data=data, method=method)
 
 
+class GetInfoResponse(TypedDict):
+    pass
+
+
 def dtserver_get_info(token, submission_id: SubmissionID, impersonate: Optional[UserID] = None):
+    if submission_id is None:
+        raise TypeError(type(submission_id))
     endpoint = Endpoints.submission_single + f"/{submission_id}"
     method = "GET"
     data = {}

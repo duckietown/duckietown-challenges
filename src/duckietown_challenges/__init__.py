@@ -21,6 +21,5 @@ from .challenge_evaluator import *
 from .challenge_solution import *
 from .challenge_results import *
 from .cie_concrete import *
-from .follow import *
 from .rest_methods import *
 from .submission_read import *
