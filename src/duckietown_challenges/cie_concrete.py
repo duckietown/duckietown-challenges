@@ -11,7 +11,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ContextManager, Dict, Optional
+from typing import ContextManager, Dict, Iterator, Optional
 
 from .challenges_constants import ChallengesConstants
 from . import logger
@@ -647,7 +647,7 @@ def wrap_scorer(evaluator, root=DEFAULT_ROOT):
 
 
 @contextmanager
-def scoring_context(root=DEFAULT_ROOT) -> ContextManager[ChallengeInterfaceEvaluator]:
+def scoring_context(root=DEFAULT_ROOT) -> Iterator[ChallengeInterfaceEvaluator]:
     logger.info("Environment variables", environment=dict(os.environ))
 
     from .col_logging import setup_logging_color
