@@ -439,12 +439,15 @@ class UploadStorage(TypedDict):
 
 # @dataclass
 class ArtefactDict(TypedDict):
-    artefact_id: Optional[ArtefactID]
     size: int
     mime_type: str
     rpath: RPath
     sha256hex: str
     storage: UploadStorage
+
+
+class ArtefactDictWithID(ArtefactDict):
+    artefact_id: Optional[ArtefactID]
 
 
 EvaluatorFeaturesDict = Dict[str, Union[str, int, float, bool]]
