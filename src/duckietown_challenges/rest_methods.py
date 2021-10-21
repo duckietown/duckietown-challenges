@@ -12,6 +12,7 @@ from .challenge import ChallengeDescription, EvaluationParametersDict
 from .challenges_constants import ChallengesConstants
 from .rest import make_server_request
 from .types import (
+    ArtefactID,
     ChallengeID,
     ChallengeName,
     ChallengeStepID,
@@ -436,8 +437,9 @@ class UploadStorage(TypedDict):
     s3: S3ObjectDict
 
 
-@dataclass
+# @dataclass
 class ArtefactDict(TypedDict):
+    artefact_id: Optional[ArtefactID]
     size: int
     mime_type: str
     rpath: RPath

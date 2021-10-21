@@ -14,6 +14,8 @@ ChallengeStepID = NewType("ChallengeStepID", int)
 ServiceName = NewType("ServiceName", str)
 ComponentID = NewType("ComponentID", int)
 
+ArtefactID = NewType("ArtefactID", int)
+
 
 class RESTResult(TypedDict, total=False):
     result: object
