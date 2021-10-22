@@ -27,7 +27,7 @@ SCORE1_VAL = 42
 DUMMY_DATA = "djeoijdo"
 
 
-class E1(ChallengeEvaluator):
+class E1a(ChallengeEvaluator):
     def prepare(self, cie):
         assert isinstance(cie, ChallengeInterfaceEvaluator)
         cie.set_challenge_parameters({K1: V1})
@@ -51,7 +51,7 @@ class E1(ChallengeEvaluator):
         cie.set_challenge_file(FN3, fn)
 
 
-class S1(ChallengeSolution):
+class S1a(ChallengeSolution):
     def run(self, cis):
         assert isinstance(cis, ChallengeInterfaceSolution)
 
@@ -99,16 +99,16 @@ def run_interaction(S, E):
 
 
 def test_interaction1():
-    S = S1()
-    E = E1()
+    S = S1a()
+    E = E1a()
     cr = run_interaction(S, E)
     status = cr.get_status()
-    try:
-        assert status == ChallengesConstants.STATUS_JOB_SUCCESS, status
-        assert cr.scores[SCORE1] == SCORE1_VAL, cr.scores
-    except:
-        logger.info(cr=cr)
-        raise SkipTest("This is a flaky test")
+    # try:
+    assert status == ChallengesConstants.STATUS_JOB_SUCCESS, status
+    assert cr.scores[SCORE1] == SCORE1_VAL, cr.scores
+    # except:
+    #     logger.info(cr=cr)
+    #     raise SkipTest("This is a flaky test")
 
 
 class ENoScores(ChallengeEvaluator):

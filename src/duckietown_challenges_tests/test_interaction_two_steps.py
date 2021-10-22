@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from . import logger
 from multiprocessing import Process
 
 from duckietown_challenges import (
@@ -23,61 +24,74 @@ def set_step(sname):
     os.environ[ENV_CHALLENGE_STEP_NAME] = sname
 
 
-def step1_evaluator(root1):
+def i2_step1_evaluator(root1, e1):
     set_step(step1_name)
-    wrap_evaluator(E1, root=root1)
+    wrap_evaluator(e1, root=root1)
 
 
-def step1_solution(root1):
+def i2_step1_solution(root1, s1):
     set_step(step1_name)
-    wrap_solution(S1, root=root1)
+    wrap_solution(s1, root=root1)
 
 
-def run_interaction_two_steps(step1_name, S1, E1, step2_name, S2, E2):
-    _ = S1, E1  # XXX
+def i2_step2_evaluator(root2, e2):
+    set_step(step2_name)
+    wrap_evaluator(e2, root=root2)
+
+
+def i2_step2_solution(root2, s2):
+    set_step(step2_name)
+    wrap_solution(s2, root=root2)
+
+
+def run_interaction_two_steps(step1_name, s1, e1, step2_name, s2, e2):
     root1 = tempfile.mkdtemp()
     os.makedirs(os.path.join(root1, CHALLENGE_PREVIOUS_STEPS_DIR))
-    print("Root: %s" % root1)
+    logger.info("Root: %s" % root1)
 
-    p_e = Process(target=step1_evaluator, args=(root1,))
+    p_e = Process(target=i2_step1_evaluator, args=(root1, e1))
     p_e.start()
-    p_s = Process(target=step1_solution, args=(root1,))
+    p_s = Process(target=i2_step1_solution, args=(root1, s1))
     p_s.start()
     p_s.join()
     p_e.join()
 
     cr1 = read_challenge_results(root1)
 
-    print("cr1: %s" % json.dumps(cr1.to_yaml(), indent=4))
+    logger.info("cr1: %s" % json.dumps(cr1.to_yaml(), indent=4))
 
     if cr1.status in ["error", "failed"]:
         return cr1, None
 
     root2 = tempfile.mkdtemp()
-    print("Root2: %s" % root2)
+    logger.info("Root2: %s" % root2)
 
     os.makedirs(os.path.join(root2, CHALLENGE_PREVIOUS_STEPS_DIR))
     l = os.path.join(root2, CHALLENGE_PREVIOUS_STEPS_DIR, step1_name)
     # os.link(root1, l)
     shutil.copytree(root1, l)
 
-    def step2_evaluator():
-        set_step(step2_name)
-        wrap_evaluator(E2, root=root2)
-
-    def step2_solution():
-        set_step(step2_name)
-        wrap_solution(S2, root=root2)
-
-    p_e = Process(target=step2_evaluator)
+    p_e = Process(
+        target=i2_step2_evaluator,
+        args=(
+            root2,
+            e2,
+        ),
+    )
     p_e.start()
-    p_s = Process(target=step2_solution)
+    p_s = Process(
+        target=i2_step2_solution,
+        args=(
+            root2,
+            s2,
+        ),
+    )
     p_s.start()
     p_s.join()
     p_e.join()
 
     cr2 = read_challenge_results(root2)
-    print("cr2: %s" % json.dumps(cr2.to_yaml(), indent=4))
+    logger.info("cr2: %s" % json.dumps(cr2.to_yaml(), indent=4))
     return cr1, cr2
 
 

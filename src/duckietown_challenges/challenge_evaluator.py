@@ -1,10 +1,10 @@
 # coding=utf-8
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 __all__ = ["ChallengeEvaluator", "ChallengeScorer"]
 
 
-class ChallengeEvaluator(metaclass=ABCMeta):
+class ChallengeEvaluator(ABC):
     @abstractmethod
     def prepare(self, cie):
         pass
@@ -14,7 +14,7 @@ class ChallengeEvaluator(metaclass=ABCMeta):
         pass
 
 
-class ChallengeScorer(metaclass=ABCMeta):
+class ChallengeScorer(ABC):
     @abstractmethod
     def score(self, cie):
         pass

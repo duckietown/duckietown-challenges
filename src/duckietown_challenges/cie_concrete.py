@@ -557,6 +557,7 @@ def wrap_evaluator(evaluator: ChallengeEvaluator, root=DEFAULT_ROOT):
         try:
             evaluator.prepare(cie)
         except (BaseException, KeyboardInterrupt) as e:
+            logger.info(evaluator=evaluator)
             msg = "Preparation aborted"
             cie.set_challenge_parameters({SPECIAL_ABORT: msg})
             raise Exception(msg) from e
