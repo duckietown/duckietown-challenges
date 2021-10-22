@@ -295,8 +295,9 @@ class ChallengeInterfaceEvaluatorConcrete(ChallengeInterfaceEvaluator):
     def internal_checks(self):
         root = self.root
         path = Path(root)
-        files = list(map(str, path.rglob("*.*")))
+        files = list(map(str, path.rglob("*")))
         logger.info(f"ChallengeInterfaceEvaluatorConcrete", root=root, files=files)
+        files = list(os.listdir(root))
         if not files:
             msg = "Invalid environment: challenges directory is empty. Not mounted correctly?"
             raise InvalidEnvironment(msg=msg, root=root, files=files)
