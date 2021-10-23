@@ -977,6 +977,7 @@ class SubmissionDescription:
         description = data.pop("description", None)
         user_label = data.pop("user-label", None)
         user_metadata = data.pop("user-payload", None)
+        validation_challenge = data.pop("validation_challenge", None)
 
         return SubmissionDescription(
             challenge_names=challenges,
