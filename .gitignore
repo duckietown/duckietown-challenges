@@ -6,5 +6,7 @@ dist
 *pyc
 out-comptests
 .idea/ *egg-info
-requirements.resolved
 *.egg-info
+
+# otherwise CI thinks index not clean
+*.resolved
