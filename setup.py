@@ -34,6 +34,7 @@ install_requires = [
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
     "bump2version",
+    "pip",
     f"duckietown-build-utils-{line}",
     "pur",  # not needed for code but for aido
 ]
