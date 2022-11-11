@@ -12,11 +12,19 @@ RUN apt-get update \
 	git \
 	docker.io \
 	python3 \
-	python3-pip \
-    && curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose \
-    && chmod +x /usr/local/bin/docker-compose \
-    && apt-get remove -y curl \
-    && rm -rf /var/lib/apt/lists/*
+	python3-pip
+
+ARG TARGETPLATFORM
+RUN echo PLATFORM=$TARGETPLATFORM \
+    && case ${TARGETPLATFORM} in \
+         "linux/amd64")  URL=https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64  ;; \
+         "linux/arm64")  URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64  ;; \
+         "linux/arm/v7") URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64 ;; \
+         "linux/arm/v6") URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64  ;; \
+    esac \
+    && curl -f -L ${URL} \
+    -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose
 
 RUN usermod -G docker -a root
 
