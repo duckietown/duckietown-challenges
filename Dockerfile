@@ -17,7 +17,7 @@ RUN apt-get update \
 ARG TARGETPLATFORM
 RUN echo PLATFORM=$TARGETPLATFORM \
     && case ${TARGETPLATFORM} in \
-         "linux/amd64")  URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-Linux-x86_64  ;; \
+         "linux/amd64")  URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-x86_64  ;; \
          "linux/arm64")  URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64  ;; \
          "linux/arm/v7") URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64 ;; \
          "linux/arm/v6") URL=https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-linux-aarch64  ;; \
