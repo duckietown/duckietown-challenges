@@ -1,7 +1,6 @@
 import os
 
 from zuper_commons.types import ZException
-
 from .challenge import SubmissionDescription
 from .yaml_utils import read_yaml_file
 
@@ -12,26 +11,20 @@ class CouldNotReadSubInfo(ZException):
     pass
 
 
-def read_submission_info(dirname) -> SubmissionDescription:
+def read_submission_info(fn: str) -> SubmissionDescription:
     """
         Raises CouldNotReadSubInfo
 
-    :param dirname:
+    :param fn: filename
     :return:
     """
-    if not os.path.exists(dirname):
-        msg = "Could not find directory:\n   %s" % dirname
-        raise CouldNotReadSubInfo(msg)
-
-    bn = "submission.yaml"
-    fn = os.path.join(dirname, bn)
 
     if not os.path.exists(fn):
         msg = "I expected to find the file %s" % fn
 
-        msg += "\n\nThese are the contents of the directory %s:" % dirname
-        for x in os.listdir(dirname):
-            msg += "\n- %s" % x
+        # msg += "\n\nThese are the contents of the directory %s:" % dirname
+        # for x in os.listdir(dirname):
+        #     msg += "\n- %s" % x
 
         raise CouldNotReadSubInfo(msg)
 
@@ -43,5 +36,5 @@ def read_submission_info(dirname) -> SubmissionDescription:
     try:
         return SubmissionDescription.from_yaml(data)
     except BaseException as e:
-        msg = "Could not read file %r: %s" % (fn, e)
+        msg = f"Could not read file {fn!r}: {e}"
         raise CouldNotReadSubInfo(msg) from e

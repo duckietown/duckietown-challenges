@@ -5,13 +5,16 @@ from typing import Any, cast, Dict, Iterator, List, NewType, Optional, Tuple, TY
 
 import yaml
 from dateutil.tz import tzutc
+from duckietown_build_utils import DockerCompleteImageName
 from networkx import ancestors, DiGraph
+
 from zuper_commons.types import ZException, ZNotImplementedError, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
 from zuper_typing import dataclass, make_list
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
+
 from .challenges_constants import ChallengesConstants
 from .exceptions import InvalidConfiguration
 from .types import ChallengeName, JobStatusString, ServiceName, StepName
@@ -933,14 +936,15 @@ class SubmissionDescription:
     user_label: Optional[str]
     user_metadata: Dict[str, object]
     description: Optional[str]
+    image: Optional[DockerCompleteImageName]  # optional docker image
 
     def __post_init_(self):
         if self.challenge_names is not None:
             if not isinstance(self.challenge_names, list):
-                msg = "Expected a list of strings for challenge names, got %s" % self.challenge_names
+                msg = f"Expected a list of strings for challenge names, got {self.challenge_names}"
                 raise ValueError(msg)
         if not isinstance(self.protocols, list):
-            msg = "Expected a list of strings for protocols names, got %s" % self.protocols
+            msg = f"Expected a list of strings for protocols names, got {self.protocols}"
             raise ValueError(msg)
 
     def __repr__(self):
@@ -953,6 +957,7 @@ class SubmissionDescription:
             user_label=self.user_label,
             user_metadata=self.user_metadata,
             description=self.description,
+            image=self.image,
         )
 
     # noinspection PyArgumentList
@@ -977,6 +982,7 @@ class SubmissionDescription:
         description = data.pop("description", None)
         user_label = data.pop("user-label", None)
         user_metadata = data.pop("user-payload", None)
+        image = data.pop("image", None)
         validation_challenge = data.pop("validation_challenge", None)
 
         return SubmissionDescription(
@@ -985,4 +991,5 @@ class SubmissionDescription:
             description=description,
             user_label=user_label,
             user_metadata=user_metadata,
+            image=image,
         )
