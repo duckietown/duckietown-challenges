@@ -2,7 +2,7 @@ ARG DOCKER_REGISTRY
 
 FROM library/ubuntu:20.04
 
-ARG PIP_INDEX_URL="https://pypi.org/simple"
+ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 
 
