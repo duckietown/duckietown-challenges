@@ -13,6 +13,8 @@ from . import logger
 from .challenges_constants import ChallengesConstants
 from .constants import HEADER_MESSAGING_TOKEN
 
+DUCKIETOWN_USER_AGENT = "duckietown-challenges"
+
 
 class Storage:
     done = False
@@ -88,6 +90,7 @@ def make_server_request(
     headers = {}
     if token is not None:
         headers[HEADER_MESSAGING_TOKEN] = token
+    headers["User-Agent"] = DUCKIETOWN_USER_AGENT
 
     if data is not None:
         data = json.dumps(data)
@@ -134,10 +137,14 @@ def make_server_request(
                 result = json.loads(err_msg)
                 received_msg = result.get("msg", None)
             except JSONDecodeError as json_e:
-                received_msg = f"! (Cannot decode answer from server: {json_e})\n\n{err_msg}"
+                received_msg = (
+                    f"! (Cannot decode answer from server: {json_e})\n\n{err_msg}"
+                )
 
             except (ValueError, KeyError) as json_e:
-                received_msg = f"! (Cannot read answer from server: {json_e})\n\n{err_msg}"
+                received_msg = (
+                    f"! (Cannot read answer from server: {json_e})\n\n{err_msg}"
+                )
                 # msg += "\n\n" + indent(err_msg, "  > ")
                 # raise ServerConnectionError(msg, err_msg=err_msg, **context) from e
 

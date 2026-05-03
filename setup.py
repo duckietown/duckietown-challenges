@@ -19,7 +19,8 @@ def get_version(filename):
     return version
 
 
-line = "daffy"
+package_line = "ente"
+dependency_line = "daffy"
 
 install_requires = [
     "termcolor",
@@ -35,7 +36,7 @@ install_requires = [
     "networkx>=2.2",
     "bump2version",
     "pip",
-    f"duckietown-build-utils-{line}",
+    f"duckietown-build-utils-{dependency_line}",
     "pur",  # not needed for code but for aido
 ]
 
@@ -46,9 +47,10 @@ if system_version < (3, 7):
 version = get_version(filename="src/duckietown_challenges/__init__.py")
 
 setup(
-    name=f"duckietown-challenges-{line}",
+    name=f"duckietown-challenges-{package_line}",
     version=version,
-    download_url="http://github.com/duckietown/duckietown-challenges/tarball/%s" % version,
+    download_url="http://github.com/duckietown/duckietown-challenges/tarball/%s"
+    % version,
     package_dir={"": "src"},
     packages=find_packages("src"),
     install_requires=install_requires,

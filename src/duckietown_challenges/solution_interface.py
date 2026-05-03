@@ -82,27 +82,29 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
         :return: None
         """
 
-    # Artefacts methods - saving files
+    # Artifact methods - saving files
 
     @abstractmethod
     def set_solution_output_file(self, basename: str, from_file: str, description=None):
         """
-        Creates an artefact called "basename" from the file `from_file`.
+        Creates an artifact called "basename" from the file `from_file`.
 
         :param basename: Name that can be used later to refer to the file.
         :param from_file: Path to read.
-        :param description: Optional description of the artefact.
+        :param description: Optional description of the artifact.
         :return: None
         """
 
     @abstractmethod
-    def set_solution_output_file_from_data(self, basename: str, contents: bytes, description=None):
+    def set_solution_output_file_from_data(
+        self, basename: str, contents: bytes, description=None
+    ):
         """
         Same as before, but the contents is passed as a string.
 
         :param basename: Name that can be used later to refer to the file.
         :param contents: Contents of the file.
-        :param description: Optional description of the artefact.
+        :param description: Optional description of the artifact.
         :return: None
         """
 
@@ -147,7 +149,9 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
 
         """
 
-    def get_completed_step_solution_file_contents(self, step_name: str, basename: str) -> bytes:
+    def get_completed_step_solution_file_contents(
+        self, step_name: str, basename: str
+    ) -> bytes:
         """
         Same as `get_completed_step_solution_file` but returns the contents
         directly.
@@ -163,7 +167,6 @@ class ChallengeInterfaceSolution(metaclass=ABCMeta):
 
 
 class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
-
     # Methods for the
 
     @abstractmethod
@@ -182,7 +185,9 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
     def get_completed_step_evaluation_file(self, step_name: str, basename: str):
         """Returns a filename for one of the files completed in a previous step."""
 
-    def get_completed_step_evaluation_file_contents(self, step_name: str, basename: str) -> bytes:
+    def get_completed_step_evaluation_file_contents(
+        self, step_name: str, basename: str
+    ) -> bytes:
         fn = self.get_completed_step_evaluation_file(step_name, basename)
         with open(fn, "rb") as f:
             return f.read()
@@ -241,7 +246,9 @@ class ChallengeInterfaceEvaluator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_evaluation_file_from_data(self, basename, contents: bytes, description=None):
+    def set_evaluation_file_from_data(
+        self, basename, contents: bytes, description=None
+    ):
         pass
 
     @abstractmethod

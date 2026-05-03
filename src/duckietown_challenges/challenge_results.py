@@ -55,7 +55,10 @@ class ChallengeResults:
     @wrap_config_reader2
     def from_yaml(cls, d0):
         status = d0.pop("status")
-        msg = d0.pop("msg")
+        # Accept "message" as fallback for "msg" (emitted by dt-duckiematrix evaluator)
+        msg = d0.pop("msg", None)
+        if msg is None:
+            msg = d0.pop("message", None)
         scores = d0.pop("scores")
         stats = d0.pop("stats", {})
         ipfs_hashes = d0.pop("ipfs_hashes", {})

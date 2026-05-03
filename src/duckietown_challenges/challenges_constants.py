@@ -1,5 +1,5 @@
 # coding=utf-8
-from typing import cast, ClassVar, List
+from typing import ClassVar, List, cast
 
 __all__ = ["ChallengesConstants"]
 
@@ -9,16 +9,22 @@ from .types import JobStatusString
 class ChallengesConstants:
     # status for evaluation jobs
     STATUS_JOB_TIMEOUT: ClassVar[JobStatusString] = cast(JobStatusString, "timeout")
-    STATUS_JOB_EVALUATION: ClassVar[JobStatusString] = cast(JobStatusString, "evaluating")
+    STATUS_JOB_EVALUATION: ClassVar[JobStatusString] = cast(
+        JobStatusString, "evaluating"
+    )
 
     # evaluator can report one of these 5
     STATUS_JOB_FAILED: ClassVar[JobStatusString] = cast(JobStatusString, "failed")
     """ The submission failed PERMANENTLY - it crashed, segfault"""
 
-    STATUS_JOB_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "error")  # evaluation failed
+    STATUS_JOB_ERROR: ClassVar[JobStatusString] = cast(
+        JobStatusString, "error"
+    )  # evaluation failed
     """ The evaluator failed PERMANENTLY - for example, I gave you an incorrect map. """
 
-    STATUS_JOB_HOST_ERROR: ClassVar[JobStatusString] = cast(JobStatusString, "host-error")
+    STATUS_JOB_HOST_ERROR: ClassVar[JobStatusString] = cast(
+        JobStatusString, "host-error"
+    )
     """
         The environment had a TEMPORARY error - out of memory.
         The current submission is blacklisted for this evaluator, we will retry on a different evaluator.
@@ -48,7 +54,7 @@ class ChallengesConstants:
 
     # JOB_TIMEOUT_MINUTES = 30
     DTSERVER_ENV_NAME = "DTSERVER"
-    DEFAULT_DTSERVER = "https://challenges.duckietown.org/v4"
+    DEFAULT_DTSERVER = "https://staging-challenges.duckietown.com"
     DEFAULT_TIMEOUT = 30
 
     class Endpoints:

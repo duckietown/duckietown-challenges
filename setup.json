@@ -17,7 +17,7 @@
   ],
   "tests_require": [],
   "srcdir": "src",
-  "package_name": "duckietown-challenges-daffy",
+  "package_name": "duckietown-challenges-ente",
   "entry_points": {
     "console_scripts": []
   },
