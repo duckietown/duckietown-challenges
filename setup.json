@@ -2,12 +2,15 @@
   "install_requires": [
     "PyYAML",
     "bump2version",
+    "packaging",
     "decorator",
-    "duckietown-build-utils-daffy",
+    "duckietown-docker-utils-ente",
     "networkx>=2.2",
     "numpy",
     "oyaml",
     "pur",
+    "requests",
+    "requirements-parser",
     "python-dateutil",
     "six",
     "termcolor",
@@ -24,7 +27,8 @@
   "zip_safe": true,
   "include_package_data": true,
   "modules": [
-    "duckietown_challenges"
+    "duckietown_challenges",
+    "duckietown_build_utils"
   ],
   "version": "6.3.13",
   "author": "",

@@ -1,13 +1,23 @@
 # coding=utf-8
 from dataclasses import field
 from datetime import date, datetime
-from typing import Any, cast, Dict, Iterator, List, NewType, Optional, Tuple, TYPE_CHECKING, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    NewType,
+    Optional,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+)
 
 import yaml
 from dateutil.tz import tzutc
-from duckietown_build_utils import DockerCompleteImageName
-from networkx import ancestors, DiGraph
-
+from networkx import DiGraph, ancestors
 from zuper_commons.types import ZException, ZNotImplementedError, ZValueError
 from zuper_ipce import ipce_from_object, object_from_ipce
 from zuper_typing import dataclass, make_list
@@ -16,6 +26,7 @@ if TYPE_CHECKING:
     from dataclasses import dataclass
 
 from .challenges_constants import ChallengesConstants
+from .docker_support import DockerCompleteImageName, parse_complete_tag
 from .exceptions import InvalidConfiguration
 from .types import ChallengeName, JobStatusString, ServiceName, StepName
 from .utils import indent, safe_yaml_dump, wrap_config_reader2
@@ -119,8 +130,6 @@ class ServiceDefinition:
 
     def equivalent(self, other):
         if self.image != ChallengesConstants.SUBMISSION_CONTAINER_TAG:
-            from duckietown_build_utils import parse_complete_tag, DockerCompleteImageName  # FIXME
-
             br2 = parse_complete_tag(other.image)
 
             try:
@@ -190,7 +199,7 @@ class ServiceDefinition:
                 internal = s.get("internal", None)
                 external = s.get("internal", None)
             elif isinstance(s, str):
-                if not ":" in s:
+                if ":" not in s:
                     # raise InvalidConfiguration(s)
                     internal = int(s)
                     external = None

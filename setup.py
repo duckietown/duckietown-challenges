@@ -20,7 +20,7 @@ def get_version(filename):
 
 
 package_line = "ente"
-dependency_line = "daffy"
+dependency_line = "ente"
 
 install_requires = [
     "termcolor",
@@ -35,8 +35,11 @@ install_requires = [
     "zuper-ipce-z6>=6",
     "networkx>=2.2",
     "bump2version",
+    "packaging",
     "pip",
-    f"duckietown-build-utils-{dependency_line}",
+    "requests",
+    "requirements-parser",
+    f"duckietown-docker-utils-{dependency_line}",
     "pur",  # not needed for code but for aido
 ]
 

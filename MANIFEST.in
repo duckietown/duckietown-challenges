@@ -5,6 +5,7 @@ exclude project.pp1.yaml
 exclude Makefile*
 exclude Dockerfile*
 exclude *.mk
+exclude dependencies-py3*txt
 exclude requirements*txt
 exclude MANIFEST.in
 exclude README*
